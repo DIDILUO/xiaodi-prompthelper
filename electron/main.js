@@ -967,8 +967,57 @@ function initLogger() {
   }
 }
 
-function log(message, extra) {
-  const line = `[${new Date().toISOString()}] ${message}${extra ? ` ${JSON.stringify(extra)}` : ''}\n`;
+function normalizeLogLevel(level) {
+  const raw = String(level || 'info').trim().toLowerCase();
+  if (raw === 'error' || raw === 'fatal') return 'ERROR';
+  if (raw === 'warn' || raw === 'warning') return 'WARN';
+  if (raw === 'debug' || raw === 'trace') return 'DEBUG';
+  return 'INFO';
+}
+
+function serializeLogExtra(extra) {
+  if (extra === undefined || extra === null) return '';
+  const seen = new WeakSet();
+  try {
+    return JSON.stringify(extra, (_key, value) => {
+      if (value instanceof Error) {
+        return {
+          name: value.name,
+          message: value.message,
+          stack: value.stack
+        };
+      }
+      if (typeof value === 'string' && value.length > 4000) {
+        const rest = value.length - 4000;
+        return `${value.slice(0, 4000)}...(truncated ${rest} chars)`;
+      }
+      if (Buffer.isBuffer(value)) {
+        return `[Buffer length=${value.length}]`;
+      }
+      if (value && typeof value === 'object') {
+        if (seen.has(value)) return '[Circular]';
+        seen.add(value);
+      }
+      return value;
+    });
+  } catch {
+    return '"[unserializable extra]"';
+  }
+}
+
+function mapRendererConsoleLevel(level) {
+  const n = Number(level);
+  if (n >= 3) return 'error';
+  if (n === 2) return 'warn';
+  if (n === 1) return 'info';
+  return 'debug';
+}
+
+function log(message, extra, level = 'info') {
+  const levelText = normalizeLogLevel(level);
+  const extraText = serializeLogExtra(extra);
+  const suffix = extraText ? ` ${extraText}` : '';
+  const line = `[${new Date().toISOString()}] [${levelText}] ${String(message || '')}${suffix}\n`;
   try {
     if (logFile) fs.appendFileSync(logFile, line);
   } catch {}
@@ -2138,7 +2187,18 @@ function createWindow() {
     }
   });
   win.webContents.on('console-message', (event, level, message, line, sourceId) => {
-    log('renderer', { level, message, line, sourceId });
+    const rendererLevel = mapRendererConsoleLevel(level);
+    log(
+      'renderer',
+      {
+        level: rendererLevel,
+        rawLevel: Number(level),
+        message,
+        line,
+        sourceId
+      },
+      rendererLevel
+    );
   });
 
   if (!DEV_SERVER_URL) {
@@ -2715,7 +2775,7 @@ app.whenReady().then(() => {
       const rendererText = rendererLogs
         .map((line) => {
           const ts = line?.ts || '--:--:--';
-          const type = line?.typeLabel || line?.type || 'ϵͳ';
+          const type = line?.typeLabel || line?.type || '系统';
           const level = line?.level || 'info';
           const message = line?.message || '';
           return `[${ts}] [${type}] [${level}] ${message}`;

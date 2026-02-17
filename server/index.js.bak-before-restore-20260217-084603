@@ -680,7 +680,7 @@ app.get("/queue/result/:id", (req, res) => {
   pruneQueueResults();
   const id = String(req.params?.id || "").trim();
   if (!id) {
-    return res.status(400).json({ ok: false, error: "id_required", message: "id 必填" });
+    return res.status(400).json({ ok: false, error: "id_required", message: "id ����" });
   }
   const entry = queueResults.get(id);
   if (!entry) {
@@ -699,7 +699,7 @@ app.get("/queue/result/:id/wait", (req, res) => {
   pruneQueueResults();
   const id = String(req.params?.id || "").trim();
   if (!id) {
-    return res.status(400).json({ ok: false, error: "id_required", message: "id 蹇呭～" });
+    return res.status(400).json({ ok: false, error: "id_required", message: "id ����" });
   }
   const waitMs = clampWaitMs(req.query?.timeoutMs ?? req.query?.waitMs, QUEUE_RESULT_WAIT_MAX_MS);
   const entry = queueResults.get(id);
@@ -738,7 +738,7 @@ app.post("/queue/result", (req, res) => {
   const body = req.body || {};
   const id = String(body?.id || "").trim();
   if (!id) {
-    return res.status(400).json({ ok: false, error: "id_required", message: "id 必填" });
+    return res.status(400).json({ ok: false, error: "id_required", message: "id ����" });
   }
   const status = String(body?.status || "done").trim() || "done";
   const payload = body?.payload !== undefined ? body.payload : {};
@@ -913,7 +913,6 @@ app.post("/ps/log", (req, res) => {
 });
 
 app.get("/ps/logs", (req, res) => {
-  markPsSeen();
   const since = Number(req.query?.since);
   const startId = Number.isFinite(since) && since > 0 ? Math.floor(since) : 0;
   const logs = startId > 0 ? psPluginLogs.filter((item) => item.id > startId) : [...psPluginLogs];
@@ -953,7 +952,7 @@ app.put("/chat/history", (req, res) => {
   const body = req.body || {};
   const list = Array.isArray(body.messages) ? body.messages : null;
   if (!list) {
-    return res.status(400).json({ ok: false, error: "invalid_messages", message: "messages 必须是数组" });
+    return res.status(400).json({ ok: false, error: "invalid_messages", message: "messages ����������" });
   }
   const normalized = list
     .filter((m) => m && (m.role === "user" || m.role === "assistant"))
@@ -985,7 +984,7 @@ app.get("/chat/models", async (req, res) => {
     return res.status(400).json({
       ok: false,
       error: "chat_config_incomplete",
-      message: "聊天 API 配置不完整（地址 / Key）"
+      message: "聊天 API 配置不完整（地址 / Key�?
     });
   }
   try {
@@ -1038,7 +1037,7 @@ app.post("/chat/send", async (req, res) => {
   const text = String(body.text || "").trim();
   const images = Array.isArray(body.images) ? body.images : [];
   if (!text && !images.length) {
-    return res.status(400).json({ ok: false, error: "empty_message", message: "文本和图片不能同时为空" });
+    return res.status(400).json({ ok: false, error: "empty_message", message: "文本和图片不能同时为�? });
   }
 
   const settings = readSettings();
@@ -1051,7 +1050,7 @@ app.post("/chat/send", async (req, res) => {
     return res.status(400).json({
       ok: false,
       error: "chat_config_incomplete",
-      message: "聊天 API 配置不完整（地址 / Key / 模型）"
+      message: "聊天 API 配置不完整（地址 / Key / 模型�?
     });
   }
 
@@ -1179,7 +1178,7 @@ app.post("/chat/send", async (req, res) => {
       latest.messages[idx] = {
         ...latest.messages[idx],
         status: "error",
-        text: isAbort ? "已停止生成" : "请求失败",
+        text: isAbort ? "已停止生�? : "请求失败",
         error: isAbort ? "abort" : String(err?.message || err)
       };
       writeHistory(latest);
@@ -1188,7 +1187,7 @@ app.post("/chat/send", async (req, res) => {
     return res.status(isAbort ? 499 : 500).json({
       ok: false,
       error: isAbort ? "aborted" : "chat_failed",
-      message: isAbort ? "已停止生成" : String(err?.message || err)
+      message: isAbort ? "已停止生�? : String(err?.message || err)
     });
   }
 });
