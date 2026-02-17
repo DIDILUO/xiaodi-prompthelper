@@ -1,0 +1,291 @@
+{
+  "source": "webui/src/ce8k/index-CE8kT8gA.js.bak-externalize-icons-20260217-075224",
+  "target": "webui/src/ce8k/index-CE8kT8gA.js",
+  "count": 47,
+  "naming": "icon-<index>-<varName-lower>.svg",
+  "loading": "new URL(\"./icons/<file>\", import.meta.url).href",
+  "items": [
+    {
+      "index": 1,
+      "varName": "b3",
+      "file": "webui/src/ce8k/icons/icon-01-b3.svg",
+      "firstId": "暂用图标"
+    },
+    {
+      "index": 2,
+      "varName": "xg",
+      "file": "webui/src/ce8k/icons/icon-02-xg.svg",
+      "firstId": "新设置"
+    },
+    {
+      "index": 3,
+      "varName": "Cg",
+      "file": "webui/src/ce8k/icons/icon-03-cg.svg",
+      "firstId": "连接中"
+    },
+    {
+      "index": 4,
+      "varName": "Ng",
+      "file": "webui/src/ce8k/icons/icon-04-ng.svg",
+      "firstId": "连接中"
+    },
+    {
+      "index": 5,
+      "varName": "S1",
+      "file": "webui/src/ce8k/icons/icon-05-s1.svg",
+      "firstId": "重新连接"
+    },
+    {
+      "index": 6,
+      "varName": "S3",
+      "file": "webui/src/ce8k/icons/icon-06-s3.svg",
+      "firstId": "首页 2"
+    },
+    {
+      "index": 7,
+      "varName": "w3",
+      "file": "webui/src/ce8k/icons/icon-07-w3.svg",
+      "firstId": "无图片"
+    },
+    {
+      "index": 8,
+      "varName": "x3",
+      "file": "webui/src/ce8k/icons/icon-08-x3.svg",
+      "firstId": "文件夹"
+    },
+    {
+      "index": 9,
+      "varName": "C3",
+      "file": "webui/src/ce8k/icons/icon-09-c3.svg",
+      "firstId": "上箭头"
+    },
+    {
+      "index": 10,
+      "varName": "w1",
+      "file": "webui/src/ce8k/icons/icon-10-w1.svg",
+      "firstId": "控制台"
+    },
+    {
+      "index": 11,
+      "varName": "Mg",
+      "file": "webui/src/ce8k/icons/icon-11-mg.svg",
+      "firstId": "聊天记录"
+    },
+    {
+      "index": 12,
+      "varName": "Mh",
+      "file": "webui/src/ce8k/icons/icon-12-mh.svg",
+      "firstId": "复制 2"
+    },
+    {
+      "index": 13,
+      "varName": "N3",
+      "file": "webui/src/ce8k/icons/icon-13-n3.svg",
+      "firstId": "已编辑"
+    },
+    {
+      "index": 14,
+      "varName": "M3",
+      "file": "webui/src/ce8k/icons/icon-14-m3.svg",
+      "firstId": "重新回复"
+    },
+    {
+      "index": 15,
+      "varName": "A3",
+      "file": "webui/src/ce8k/icons/icon-15-a3.svg",
+      "firstId": "创建分支"
+    },
+    {
+      "index": 16,
+      "varName": "k3",
+      "file": "webui/src/ce8k/icons/icon-16-k3.svg",
+      "firstId": "发送"
+    },
+    {
+      "index": 17,
+      "varName": "kg",
+      "file": "webui/src/ce8k/icons/icon-17-kg.svg",
+      "firstId": "跑图"
+    },
+    {
+      "index": 18,
+      "varName": "j3",
+      "file": "webui/src/ce8k/icons/icon-18-j3.svg",
+      "firstId": "跑图/json提示词已编辑状态"
+    },
+    {
+      "index": 19,
+      "varName": "jg",
+      "file": "webui/src/ce8k/icons/icon-19-jg.svg",
+      "firstId": "跑图/使用上传区图片跑图"
+    },
+    {
+      "index": 20,
+      "varName": "Tg",
+      "file": "webui/src/ce8k/icons/icon-20-tg.svg",
+      "firstId": "上传全图"
+    },
+    {
+      "index": 21,
+      "varName": "T3",
+      "file": "webui/src/ce8k/icons/icon-21-t3.svg",
+      "firstId": "上传本地图片"
+    },
+    {
+      "index": 22,
+      "varName": "E3",
+      "file": "webui/src/ce8k/icons/icon-22-e3.svg",
+      "firstId": "缩小图片"
+    },
+    {
+      "index": 23,
+      "varName": "Eg",
+      "file": "webui/src/ce8k/icons/icon-23-eg.svg",
+      "firstId": "导出到画布"
+    },
+    {
+      "index": 24,
+      "varName": "ah",
+      "file": "webui/src/ce8k/icons/icon-24-ah.svg",
+      "firstId": "下拉框图标"
+    },
+    {
+      "index": 25,
+      "varName": "R3",
+      "file": "webui/src/ce8k/icons/icon-25-r3.svg",
+      "firstId": "鍥鹃拤锛屽紑"
+    },
+    {
+      "index": 26,
+      "varName": "L3",
+      "file": "webui/src/ce8k/icons/icon-26-l3.svg",
+      "firstId": "鍥鹃拤锛屾湭寮€"
+    },
+    {
+      "index": 27,
+      "varName": "D3",
+      "file": "webui/src/ce8k/icons/icon-27-d3.svg",
+      "firstId": ""
+    },
+    {
+      "index": 28,
+      "varName": "O3",
+      "file": "webui/src/ce8k/icons/icon-28-o3.svg",
+      "firstId": "自动折叠窗口"
+    },
+    {
+      "index": 29,
+      "varName": "z3",
+      "file": "webui/src/ce8k/icons/icon-29-z3.svg",
+      "firstId": "暂停 1"
+    },
+    {
+      "index": 30,
+      "varName": "C1",
+      "file": "webui/src/ce8k/icons/icon-30-c1.svg",
+      "firstId": ""
+    },
+    {
+      "index": 31,
+      "varName": "_3",
+      "file": "webui/src/ce8k/icons/icon-31-_3.svg",
+      "firstId": "待添加"
+    },
+    {
+      "index": 32,
+      "varName": "U3",
+      "file": "webui/src/ce8k/icons/icon-32-u3.svg",
+      "firstId": "预览-打开 1"
+    },
+    {
+      "index": 33,
+      "varName": "H3",
+      "file": "webui/src/ce8k/icons/icon-33-h3.svg",
+      "firstId": "预览-关闭 1"
+    },
+    {
+      "index": 34,
+      "varName": "B3",
+      "file": "webui/src/ce8k/icons/icon-34-b3.svg",
+      "firstId": "日志类型"
+    },
+    {
+      "index": 35,
+      "varName": "Rg",
+      "file": "webui/src/ce8k/icons/icon-35-rg.svg",
+      "firstId": "已编辑"
+    },
+    {
+      "index": 36,
+      "varName": "rc",
+      "file": "webui/src/ce8k/icons/icon-36-rc.svg",
+      "firstId": "更多"
+    },
+    {
+      "index": 37,
+      "varName": "ih",
+      "file": "webui/src/ce8k/icons/icon-37-ih.svg",
+      "firstId": "重命名"
+    },
+    {
+      "index": 38,
+      "varName": "sc",
+      "file": "webui/src/ce8k/icons/icon-38-sc.svg",
+      "firstId": "置顶"
+    },
+    {
+      "index": 39,
+      "varName": "rh",
+      "file": "webui/src/ce8k/icons/icon-39-rh.svg",
+      "firstId": "取消置顶"
+    },
+    {
+      "index": 40,
+      "varName": "sh",
+      "file": "webui/src/ce8k/icons/icon-40-sh.svg",
+      "firstId": "删除"
+    },
+    {
+      "index": 41,
+      "varName": "P3",
+      "file": "webui/src/ce8k/icons/icon-41-p3.svg",
+      "firstId": "图片图标"
+    },
+    {
+      "index": 42,
+      "varName": "q3",
+      "file": "webui/src/ce8k/icons/icon-42-q3.svg",
+      "firstId": "栅格化图像"
+    },
+    {
+      "index": 43,
+      "varName": "$3",
+      "file": "webui/src/ce8k/icons/icon-43-3.svg",
+      "firstId": "智能对象"
+    },
+    {
+      "index": 44,
+      "varName": "Q3",
+      "file": "webui/src/ce8k/icons/icon-44-q3.svg",
+      "firstId": "淇濆瓨纭洏 1"
+    },
+    {
+      "index": 45,
+      "varName": "I3",
+      "file": "webui/src/ce8k/icons/icon-45-i3.svg",
+      "firstId": "居中预览"
+    },
+    {
+      "index": 46,
+      "varName": "G3",
+      "file": "webui/src/ce8k/icons/icon-46-g3.svg",
+      "firstId": "预览全图"
+    },
+    {
+      "index": 47,
+      "varName": "Y3",
+      "file": "webui/src/ce8k/icons/icon-47-y3.svg",
+      "firstId": "小图预览"
+    }
+  ]
+}

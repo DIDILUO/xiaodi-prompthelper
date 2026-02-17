@@ -1,0 +1,62 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小迪桥接插件</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <sp-theme color="dark" scale="medium">
+      <main class="app">
+        <header class="header">
+          <sp-heading size="M">小迪桥接插件</sp-heading>
+          <sp-body class="version">v0.1.0</sp-body>
+        </header>
+
+        <section>
+          <sp-body>插件端口</sp-body>
+          <div class="inline-row">
+            <sp-textfield id="bridgePort" type="number" value="17325"></sp-textfield>
+            <sp-button id="applyPortBtn" type="button">应用</sp-button>
+          </div>
+          <sp-body class="hint">用于连接桌面端与 Ps 插件的本地端口（默认 17325），大部分情况下保持默认即可。</sp-body>
+          <div class="status-line">
+            <sp-body>插件连接状态</sp-body>
+            <sp-body id="statusChip" class="is-warn">待连接</sp-body>
+          </div>
+        </section>
+
+        <sp-divider size="m"></sp-divider>
+
+        <section>
+          <sp-heading size="S">抓图上报</sp-heading>
+          <div class="button-grid">
+            <sp-button id="heartbeatBtn" type="button">发送心跳</sp-button>
+            <sp-button id="captureSelectionBtn" type="button">上传选区</sp-button>
+            <sp-button id="captureCanvasBtn" type="button">上传全图</sp-button>
+          </div>
+        </section>
+
+        <sp-divider size="m"></sp-divider>
+
+        <section>
+          <sp-heading size="S">回传测试</sp-heading>
+          <sp-textarea
+            id="importDataInput"
+            rows="4"
+            placeholder="粘贴 data:image/png;base64,... 或纯 base64"
+          ></sp-textarea>
+          <div class="button-grid single">
+            <sp-button id="importToPsBtn" type="button">回传到当前文档</sp-button>
+          </div>
+        </section>
+
+        <sp-divider size="m"></sp-divider>
+
+      </main>
+    </sp-theme>
+
+    <script src="./index.js"></script>
+  </body>
+</html>

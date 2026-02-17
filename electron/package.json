@@ -1,0 +1,15 @@
+﻿{
+  "name": "prompthelper-bridge-electron",
+  "version": "0.0.1",
+  "description": "PromptHelper Bridge Shell",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node scripts/start-electron.cjs",
+    "build": "npx electron-packager . \"小迪助词器\" --platform=win32 --arch=x64 --out=dist-build\\pkg-%RANDOM% --overwrite"
+  },
+  "devDependencies": {
+    "electron": "^40.2.1",
+    "electron-packager": "^17.1.2"
+  }
+}

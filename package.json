@@ -1,0 +1,13 @@
+{
+  "name": "prompthelper-bridge",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1",
+    "dev:webui": "npm run dev --prefix webui",
+    "dev:electron": "set ELECTRON_DEV_SERVER_URL=http://127.0.0.1:5173 && npm run start --prefix electron",
+    "build:watch": "npm run build:watch --prefix webui",
+    "sync:assets": "powershell -ExecutionPolicy Bypass -File scripts/sync-electron-assets.ps1",
+    "build": "npm run build --prefix webui && npm run sync:assets && npm run build --prefix electron"
+  }
+}

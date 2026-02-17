@@ -1,0 +1,195 @@
+(function initFloatingToggle() {
+  const root = document.getElementById("root");
+  const toggleButton = document.getElementById("toggle");
+  const quickDivider = document.getElementById("quick-divider");
+  const quickGroup = document.getElementById("quick-group");
+  const quickButtons = Array.from(document.querySelectorAll(".quick-btn"));
+
+  if (!root || !toggleButton || !quickGroup || !quickDivider) return;
+
+  const statusColorMap = {
+    warn: "#f0b75b",
+    ok: "#32cc65",
+    connected: "#3d77ff",
+    busy: "#3d77ff",
+    error: "#ff3d3d"
+  };
+
+  const state = {
+    visible: true,
+    status: "connected",
+    opacity: 1,
+    quickButtonsVisible: true
+  };
+
+  const cfg = {
+    dragStripHeight: 20,
+    toggleHeight: 48,
+    quickButtonSize: 48,
+    quickButtonGap: 12,
+    quickGroupTopGap: 24,
+    quickPaddingY: 0,
+    dividerHeight: 1,
+    dividerMarginY: 12,
+    opacityMin: 0.35,
+    opacityMax: 1,
+    opacityDefault: 1
+  };
+
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+  const applyLayout = () => {
+    const rootStyle = document.documentElement.style;
+    const dragStripHeight = Math.max(12, Math.round(Number(cfg.dragStripHeight) || 20));
+    const toggleHeight = Math.max(36, Math.round(Number(cfg.toggleHeight) || 48));
+    const quickButtonSize = Math.max(28, Math.round(Number(cfg.quickButtonSize) || 48));
+    const quickButtonGap = Math.max(4, Math.round(Number(cfg.quickButtonGap) || 12));
+    const quickGroupTopGap = Math.max(0, Math.round(Number(cfg.quickGroupTopGap) || 24));
+    const quickPaddingY = Math.max(0, Math.round(Number(cfg.quickPaddingY) || 0));
+    const dividerHeight = Math.max(1, Math.round(Number(cfg.dividerHeight) || 1));
+    const dividerMarginY = Math.max(0, Math.round(Number(cfg.dividerMarginY) || 12));
+    rootStyle.setProperty("--drag-strip-height", `${dragStripHeight}px`);
+    rootStyle.setProperty("--toggle-height", `${toggleHeight}px`);
+    rootStyle.setProperty("--quick-button-size", `${quickButtonSize}px`);
+    rootStyle.setProperty("--quick-button-gap", `${quickButtonGap}px`);
+    rootStyle.setProperty("--quick-group-top-gap", `${quickGroupTopGap}px`);
+    rootStyle.setProperty("--quick-padding-y", `${quickPaddingY}px`);
+    rootStyle.setProperty("--divider-height", `${dividerHeight}px`);
+    rootStyle.setProperty("--divider-margin-y", `${dividerMarginY}px`);
+  };
+
+  const applyVisual = () => {
+    const color = statusColorMap[String(state.status || "").toLowerCase()] || statusColorMap.warn;
+    toggleButton.style.color = "#ffffff";
+    toggleButton.style.setProperty("--status-color", color);
+    const opacity = clamp(Number(state.opacity) || cfg.opacityDefault, cfg.opacityMin, cfg.opacityMax);
+    root.style.opacity = String(opacity);
+    const percent = Math.round(opacity * 100);
+    const title = `${state.visible ? "Hide main window" : "Show main window"} (${percent}%)`;
+    toggleButton.title = title;
+    root.title = title;
+    const hideQuickButtons = !state.quickButtonsVisible;
+    quickGroup.classList.toggle("is-hidden", hideQuickButtons);
+    quickDivider.classList.toggle("is-hidden", hideQuickButtons);
+  };
+
+  const applyPayload = (payload) => {
+    if (!payload || typeof payload !== "object") return;
+    if (typeof payload.visible === "boolean") state.visible = !!payload.visible;
+    if (typeof payload.status === "string") state.status = String(payload.status);
+    if (typeof payload.opacity === "number") {
+      state.opacity = clamp(Number(payload.opacity) || cfg.opacityDefault, cfg.opacityMin, cfg.opacityMax);
+    }
+    if (typeof payload.quickButtonsVisible === "boolean") {
+      state.quickButtonsVisible = !!payload.quickButtonsVisible;
+    } else if (typeof payload.visible === "boolean") {
+      state.quickButtonsVisible = !!payload.visible;
+    }
+  };
+
+  const loadConfig = async () => {
+    if (!window.shell || typeof window.shell.getFloatingToggleConfig !== "function") return;
+    try {
+      const payload = await window.shell.getFloatingToggleConfig();
+      if (!payload || payload.ok === false) return;
+      if (typeof payload.dragStripHeight === "number") cfg.dragStripHeight = payload.dragStripHeight;
+      if (typeof payload.toggleHeight === "number") cfg.toggleHeight = payload.toggleHeight;
+      if (typeof payload.opacityMin === "number") cfg.opacityMin = payload.opacityMin;
+      if (typeof payload.opacityMax === "number") cfg.opacityMax = payload.opacityMax;
+      if (typeof payload.opacityDefault === "number") cfg.opacityDefault = payload.opacityDefault;
+      if (typeof payload.quickButtonSize === "number") cfg.quickButtonSize = payload.quickButtonSize;
+      if (typeof payload.quickButtonGap === "number") cfg.quickButtonGap = payload.quickButtonGap;
+      if (typeof payload.quickGroupTopGap === "number") cfg.quickGroupTopGap = payload.quickGroupTopGap;
+      if (typeof payload.quickPaddingY === "number") cfg.quickPaddingY = payload.quickPaddingY;
+      if (typeof payload.dividerHeight === "number") cfg.dividerHeight = payload.dividerHeight;
+      if (typeof payload.dividerMarginY === "number") cfg.dividerMarginY = payload.dividerMarginY;
+      state.opacity = clamp(Number(state.opacity) || cfg.opacityDefault, cfg.opacityMin, cfg.opacityMax);
+      applyLayout();
+      applyVisual();
+    } catch {}
+  };
+
+  const loadState = async () => {
+    if (!window.shell || typeof window.shell.getFloatingToggleState !== "function") return;
+    try {
+      const payload = await window.shell.getFloatingToggleState();
+      applyPayload(payload);
+      applyVisual();
+    } catch {}
+  };
+
+  const toggleVisibility = async () => {
+    if (!window.shell || typeof window.shell.toggleMainWindowVisibility !== "function") return;
+    try {
+      const result = await window.shell.toggleMainWindowVisibility();
+      if (result && typeof result.visible === "boolean") {
+        state.visible = !!result.visible;
+      } else {
+        state.visible = !state.visible;
+      }
+      applyVisual();
+    } catch {}
+  };
+
+  const emitQuickAction = async (action, trigger) => {
+    if (!action || !window.shell || typeof window.shell.floatingQuickAction !== "function") return;
+    try {
+      await window.shell.floatingQuickAction({ action, trigger });
+    } catch {}
+  };
+
+  toggleButton.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    void toggleVisibility();
+  });
+
+  quickButtons.forEach((button) => {
+    const action = String(button.getAttribute("data-action") || "").trim().toLowerCase();
+    if (!action) return;
+    button.addEventListener("pointerenter", () => {
+      button.classList.add("is-active");
+      void emitQuickAction(action, "hover-enter");
+    });
+    button.addEventListener("pointerleave", () => {
+      button.classList.remove("is-active");
+      void emitQuickAction(action, "hover-leave");
+    });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void emitQuickAction(action, "click");
+    });
+  });
+
+  toggleButton.addEventListener(
+    "wheel",
+    async (ev) => {
+      ev.preventDefault();
+      const step = ev.deltaY < 0 ? 0.05 : -0.05;
+      state.opacity = clamp((Number(state.opacity) || 1) + step, cfg.opacityMin, cfg.opacityMax);
+      applyVisual();
+      if (window.shell && typeof window.shell.setFloatingToggleOpacity === "function") {
+        try {
+          const result = await window.shell.setFloatingToggleOpacity(state.opacity);
+          if (result && typeof result.opacity === "number") {
+            state.opacity = clamp(Number(result.opacity) || cfg.opacityDefault, cfg.opacityMin, cfg.opacityMax);
+            applyVisual();
+          }
+        } catch {}
+      }
+    },
+    { passive: false }
+  );
+
+  if (window.shell && typeof window.shell.onFloatingToggleState === "function") {
+    window.shell.onFloatingToggleState((payload) => {
+      applyPayload(payload);
+      applyVisual();
+    });
+  }
+
+  applyLayout();
+  applyVisual();
+  void loadConfig();
+  void loadState();
+})();

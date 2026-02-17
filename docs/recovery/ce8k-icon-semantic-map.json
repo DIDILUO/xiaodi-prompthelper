@@ -1,0 +1,288 @@
+{
+  "count": 47,
+  "mappedVars": 47,
+  "items": [
+    {
+      "varName": "b3",
+      "oldFile": "icon-01-b3.svg",
+      "newFile": "brand-logo.svg",
+      "semantic": "brand-logo"
+    },
+    {
+      "varName": "xg",
+      "oldFile": "icon-02-xg.svg",
+      "newFile": "settings.svg",
+      "semantic": "settings"
+    },
+    {
+      "varName": "Cg",
+      "oldFile": "icon-03-cg.svg",
+      "newFile": "api-connecting-primary.svg",
+      "semantic": "api-connecting-primary"
+    },
+    {
+      "varName": "Ng",
+      "oldFile": "icon-04-ng.svg",
+      "newFile": "api-connecting-secondary.svg",
+      "semantic": "api-connecting-secondary"
+    },
+    {
+      "varName": "S1",
+      "oldFile": "icon-05-s1.svg",
+      "newFile": "api-reconnect.svg",
+      "semantic": "api-reconnect"
+    },
+    {
+      "varName": "S3",
+      "oldFile": "icon-06-s3.svg",
+      "newFile": "home.svg",
+      "semantic": "home"
+    },
+    {
+      "varName": "w3",
+      "oldFile": "icon-07-w3.svg",
+      "newFile": "preview-placeholder.svg",
+      "semantic": "preview-placeholder"
+    },
+    {
+      "varName": "x3",
+      "oldFile": "icon-08-x3.svg",
+      "newFile": "folder.svg",
+      "semantic": "folder"
+    },
+    {
+      "varName": "C3",
+      "oldFile": "icon-09-c3.svg",
+      "newFile": "chevron-up.svg",
+      "semantic": "chevron-up"
+    },
+    {
+      "varName": "w1",
+      "oldFile": "icon-10-w1.svg",
+      "newFile": "console.svg",
+      "semantic": "console"
+    },
+    {
+      "varName": "Mg",
+      "oldFile": "icon-11-mg.svg",
+      "newFile": "chat-history.svg",
+      "semantic": "chat-history"
+    },
+    {
+      "varName": "Mh",
+      "oldFile": "icon-12-mh.svg",
+      "newFile": "copy.svg",
+      "semantic": "copy"
+    },
+    {
+      "varName": "N3",
+      "oldFile": "icon-13-n3.svg",
+      "newFile": "edited.svg",
+      "semantic": "edited"
+    },
+    {
+      "varName": "M3",
+      "oldFile": "icon-14-m3.svg",
+      "newFile": "rerun.svg",
+      "semantic": "rerun"
+    },
+    {
+      "varName": "A3",
+      "oldFile": "icon-15-a3.svg",
+      "newFile": "branch.svg",
+      "semantic": "branch"
+    },
+    {
+      "varName": "k3",
+      "oldFile": "icon-16-k3.svg",
+      "newFile": "send.svg",
+      "semantic": "send"
+    },
+    {
+      "varName": "kg",
+      "oldFile": "icon-17-kg.svg",
+      "newFile": "run.svg",
+      "semantic": "run"
+    },
+    {
+      "varName": "j3",
+      "oldFile": "icon-18-j3.svg",
+      "newFile": "run-json-edited.svg",
+      "semantic": "run-json-edited"
+    },
+    {
+      "varName": "jg",
+      "oldFile": "icon-19-jg.svg",
+      "newFile": "run-upload-zone.svg",
+      "semantic": "run-upload-zone"
+    },
+    {
+      "varName": "Tg",
+      "oldFile": "icon-20-tg.svg",
+      "newFile": "upload-full-image.svg",
+      "semantic": "upload-full-image"
+    },
+    {
+      "varName": "T3",
+      "oldFile": "icon-21-t3.svg",
+      "newFile": "upload-local-image.svg",
+      "semantic": "upload-local-image"
+    },
+    {
+      "varName": "E3",
+      "oldFile": "icon-22-e3.svg",
+      "newFile": "upload-size.svg",
+      "semantic": "upload-size"
+    },
+    {
+      "varName": "Eg",
+      "oldFile": "icon-23-eg.svg",
+      "newFile": "export-canvas.svg",
+      "semantic": "export-canvas"
+    },
+    {
+      "varName": "ah",
+      "oldFile": "icon-24-ah.svg",
+      "newFile": "dropdown.svg",
+      "semantic": "dropdown"
+    },
+    {
+      "varName": "R3",
+      "oldFile": "icon-25-r3.svg",
+      "newFile": "pin-on.svg",
+      "semantic": "pin-on"
+    },
+    {
+      "varName": "L3",
+      "oldFile": "icon-26-l3.svg",
+      "newFile": "pin-off.svg",
+      "semantic": "pin-off"
+    },
+    {
+      "varName": "D3",
+      "oldFile": "icon-27-d3.svg",
+      "newFile": "minimize.svg",
+      "semantic": "minimize"
+    },
+    {
+      "varName": "O3",
+      "oldFile": "icon-28-o3.svg",
+      "newFile": "auto-minimize.svg",
+      "semantic": "auto-minimize"
+    },
+    {
+      "varName": "z3",
+      "oldFile": "icon-29-z3.svg",
+      "newFile": "stop-run-queue.svg",
+      "semantic": "stop-run-queue"
+    },
+    {
+      "varName": "C1",
+      "oldFile": "icon-30-c1.svg",
+      "newFile": "close-delete.svg",
+      "semantic": "close-delete"
+    },
+    {
+      "varName": "_3",
+      "oldFile": "icon-31-_3.svg",
+      "newFile": "add.svg",
+      "semantic": "add"
+    },
+    {
+      "varName": "U3",
+      "oldFile": "icon-32-u3.svg",
+      "newFile": "preview-open.svg",
+      "semantic": "preview-open"
+    },
+    {
+      "varName": "H3",
+      "oldFile": "icon-33-h3.svg",
+      "newFile": "preview-close.svg",
+      "semantic": "preview-close"
+    },
+    {
+      "varName": "B3",
+      "oldFile": "icon-34-b3.svg",
+      "newFile": "log-filter.svg",
+      "semantic": "log-filter"
+    },
+    {
+      "varName": "Rg",
+      "oldFile": "icon-35-rg.svg",
+      "newFile": "new-chat.svg",
+      "semantic": "new-chat"
+    },
+    {
+      "varName": "rc",
+      "oldFile": "icon-36-rc.svg",
+      "newFile": "more.svg",
+      "semantic": "more"
+    },
+    {
+      "varName": "ih",
+      "oldFile": "icon-37-ih.svg",
+      "newFile": "rename.svg",
+      "semantic": "rename"
+    },
+    {
+      "varName": "sc",
+      "oldFile": "icon-38-sc.svg",
+      "newFile": "pin.svg",
+      "semantic": "pin"
+    },
+    {
+      "varName": "rh",
+      "oldFile": "icon-39-rh.svg",
+      "newFile": "unpin.svg",
+      "semantic": "unpin"
+    },
+    {
+      "varName": "sh",
+      "oldFile": "icon-40-sh.svg",
+      "newFile": "delete.svg",
+      "semantic": "delete"
+    },
+    {
+      "varName": "P3",
+      "oldFile": "icon-41-p3.svg",
+      "newFile": "image.svg",
+      "semantic": "image"
+    },
+    {
+      "varName": "q3",
+      "oldFile": "icon-42-q3.svg",
+      "newFile": "rasterize.svg",
+      "semantic": "rasterize"
+    },
+    {
+      "varName": "$3",
+      "oldFile": "icon-43-3.svg",
+      "newFile": "smart-object.svg",
+      "semantic": "smart-object"
+    },
+    {
+      "varName": "Q3",
+      "oldFile": "icon-44-q3.svg",
+      "newFile": "save-disk.svg",
+      "semantic": "save-disk"
+    },
+    {
+      "varName": "I3",
+      "oldFile": "icon-45-i3.svg",
+      "newFile": "preview-center.svg",
+      "semantic": "preview-center"
+    },
+    {
+      "varName": "G3",
+      "oldFile": "icon-46-g3.svg",
+      "newFile": "preview-full.svg",
+      "semantic": "preview-full"
+    },
+    {
+      "varName": "Y3",
+      "oldFile": "icon-47-y3.svg",
+      "newFile": "preview-thumb.svg",
+      "semantic": "preview-thumb"
+    }
+  ]
+}

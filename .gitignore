@@ -1,0 +1,10 @@
+﻿node_modules/
+*/node_modules/
+webui/dist/
+webui/.vite/
+electron/dist-build/
+electron/webui/dist/
+electron/server/node_modules/
+server/node_modules/
+*.log
+logs/

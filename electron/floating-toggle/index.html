@@ -1,0 +1,52 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'"
+  />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="./floating-toggle.css" />
+</head>
+<body>
+  <div id="root">
+    <div id="drag-strip" aria-label="drag-window"></div>
+    <button id="toggle" type="button" aria-label="toggle-main-window">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect class="icon-shell-window" x="2.5" y="4.5" width="19" height="15" rx="1.6" stroke="currentColor" stroke-width="1.5" />
+        <path class="icon-terminal-mark" d="M6.5 9.5L10 12L6.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        <path class="icon-terminal-line" d="M12.5 15.5H18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        <circle class="icon-status-dot" cx="18.4" cy="6.8" r="2.1" />
+      </svg>
+    </button>
+    <div id="quick-divider" aria-hidden="true"></div>
+    <div id="quick-group" role="toolbar" aria-label="quick-panels">
+      <div class="quick-main-group" role="group" aria-label="quick-main-tools">
+        <button class="quick-btn" data-action="identity" type="button" aria-label="quick-identity">
+          <img class="quick-icon quick-icon-image" src="./icons/identity.svg" alt="quick-identity" />
+        </button>
+        <button class="quick-btn" data-action="chat-preset" type="button" aria-label="quick-chat-preset">
+          <img class="quick-icon quick-icon-image" src="./icons/chat-preset.svg" alt="quick-chat-preset" />
+        </button>
+        <button class="quick-btn" data-action="image-preset" type="button" aria-label="quick-image-preset">
+          <img class="quick-icon quick-icon-image" src="./icons/image-preset.svg" alt="quick-image-preset" />
+        </button>
+        <button class="quick-btn" data-action="history" type="button" aria-label="quick-history">
+          <img class="quick-icon quick-icon-image" src="./icons/history.svg" alt="quick-history" />
+        </button>
+      </div>
+      <div class="quick-dev-divider" aria-hidden="true"></div>
+      <div class="quick-dev-group" role="group" aria-label="quick-dev-tools">
+        <button class="quick-btn quick-btn-return-test" data-action="return-test" type="button" aria-label="quick-return-test" title="回传测试">
+          <img class="quick-icon quick-icon-image" src="./icons/return-test.svg" alt="quick-return-test" />
+        </button>
+        <button class="quick-btn quick-btn-restart" data-action="global-restart" type="button" aria-label="quick-global-restart" title="全局重启">
+          <img class="quick-icon quick-icon-image" src="./icons/global-restart.svg" alt="quick-global-restart" />
+        </button>
+      </div>
+    </div>
+  </div>
+  <script src="./floating-toggle.js"></script>
+</body>
+</html>

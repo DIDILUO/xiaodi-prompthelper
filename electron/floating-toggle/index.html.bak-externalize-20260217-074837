@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'"
+  />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="./floating-toggle.css" />
+</head>
+<body>
+  <div id="root">
+    <div id="drag-strip" aria-label="drag-window"></div>
+    <button id="toggle" type="button" aria-label="toggle-main-window">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="2.5" y="4.5" width="19" height="15" rx="1.6" stroke="currentColor" stroke-width="1.5" />
+        <path d="M6.5 9.5L10 12L6.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M12.5 15.5H18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+    </button>
+    <div id="quick-divider" aria-hidden="true"></div>
+    <div id="quick-group" role="toolbar" aria-label="quick-panels">
+      <button class="quick-btn" data-action="identity" type="button" aria-label="quick-identity">
+        <svg class="quick-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M20 11.5V7L15.5 2H5C4.44772 2 4 2.44772 4 3V21C4 21.5523 4.44772 22 5 22H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="17" cy="16" r="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M21 22C21 19.7908 19.2092 18 17 18C14.7908 18 13 19.7908 13 22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M15 2V7H20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <button class="quick-btn" data-action="chat-preset" type="button" aria-label="quick-chat-preset">
+        <svg class="quick-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M11 3V21H16V3H11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+          <path d="M16 3V21H21V3H16Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+          <path d="M9 3.5L7.25 21L3 20.5L5 3L9 3.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+          <path d="M18.5 9V7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M13.5 9V7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <button class="quick-btn" data-action="image-preset" type="button" aria-label="quick-image-preset">
+        <svg class="quick-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M4 5C4 3.34314 5.4327 2 7.2 2H20V18C20 18 9.99075 18 7.2 18C4.68113 18 4 18.3421 4 20V5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+          <path d="M20 22V18H6C4.89543 18 4 18.8955 4 20C4 21.1045 4.89543 22 6 22H20Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <button class="quick-btn" data-action="history" type="button" aria-label="quick-history">
+        <img class="quick-icon quick-icon-image" src="./chat-history.svg" alt="quick-history" />
+      </button>
+      <button class="quick-btn quick-btn-return-test" data-action="return-test" type="button" aria-label="quick-return-test" title="回传测试">
+        <svg class="quick-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="4.2" y="4.5" width="15.6" height="15" rx="2" stroke="currentColor" stroke-width="1.5" />
+          <path d="M8 12H16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          <path d="M12 8L16 12L12 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <button class="quick-btn quick-btn-restart" data-action="global-restart" type="button" aria-label="quick-global-restart" title="全局重启">
+        <svg class="quick-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M19 12A7 7 0 1 1 16.8 6.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          <path d="M19 4V9H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+    </div>
+  </div>
+  <script src="./floating-toggle.js"></script>
+</body>
+</html>

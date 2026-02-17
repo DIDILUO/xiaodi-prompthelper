@@ -1,0 +1,14 @@
+﻿{
+    "switchedAt":  "2026-02-17T07:00:33",
+    "mode":  "ce8k-dist-single-version",
+    "backupPath":  "e:\\小迪助词器\\prompthelper-bridge-recovered-ce8k\\docs\\recovery\\ce8k-switch-backups\\20260217-070032",
+    "archivedMixedSourcePath":  "e:\\小迪助词器\\prompthelper-bridge-recovered-ce8k\\docs\\recovery\\source-archives\\mixed-source-20260217-070032",
+    "activeEntry":  "webui/src/main.jsx",
+    "activeCe8kFiles":  [
+                            "webui/src/ce8k/index-CE8kT8gA.js",
+                            "webui/src/ce8k/index-ix9wj4V7.css",
+                            "webui/src/ce8k/gemini-Ya-0wby6.svg",
+                            "webui/src/ce8k/upload-sel-C-5w65V4.svg",
+                            "webui/src/ce8k/AlimamaFangYuanTiVF-Thin_1-B6XaKOtb.ttf"
+                        ]
+}

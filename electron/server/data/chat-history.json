@@ -1,0 +1,37 @@
+{
+  "updatedAt": 1770919304556,
+  "messages": [
+    {
+      "id": "msg-user-1770918951333-pu13w4",
+      "role": "user",
+      "text": "你好",
+      "images": [],
+      "createdAt": "2026-02-12T17:55:51.334Z",
+      "status": "done"
+    },
+    {
+      "id": "msg-assistant-1770918951334-3u93ut",
+      "role": "assistant",
+      "text": "已停止生成",
+      "createdAt": "2026-02-12T17:55:51.334Z",
+      "status": "error",
+      "error": "abort"
+    },
+    {
+      "id": "msg-user-1770919304553-cik6l5",
+      "role": "user",
+      "text": "你好",
+      "images": [],
+      "createdAt": "2026-02-12T18:01:44.553Z",
+      "status": "done"
+    },
+    {
+      "id": "msg-assistant-1770919304553-6fuldy",
+      "role": "assistant",
+      "text": "已停止生成",
+      "createdAt": "2026-02-12T18:01:44.553Z",
+      "status": "error",
+      "error": "abort"
+    }
+  ]
+}
