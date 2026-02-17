@@ -1,0 +1,178 @@
+﻿# 控制台日志规格与优化方案（v4）
+
+更新时间：2026-02-17  
+适用范围：`webui` 大控制台、微型控制台、`electron/main.js` 主进程日志导出、`server/index.js` 插件日志通道
+
+## 1. 本版目标
+
+1. 文档与当前实现保持一致，避免“文档说一套，代码跑一套”。
+2. 在不破坏可运行版本的前提下，提升日志可读性并抑制刷屏。
+3. 导出日志可同时覆盖用户上报与开发定位两类场景。
+
+## 2. 当前真实日志链路
+
+### 2.1 渲染层（大控制台）
+
+来源文件：`docs/recovery/source-archives/mixed-source-20260217-070032/App.jsx`  
+核心入口：
+
+1. `appendLog(level, message, type, extra)`
+2. `appendTraceLog({ level, type, domain, phase, message, startedAt, endedAt, requestId, guide })`
+
+当前结构：
+
+```ts
+type ConsoleViewLog = {
+  id: string;
+  ts: string; // HH:mm:ss
+  level: "info" | "warn" | "error";
+  type: "system" | "api" | "bridge" | "dev";
+  typeLabel: "系统" | "API" | "桥接" | "开发";
+  message: string;
+  state?: "info" | "running" | "success" | "warn" | "error";
+};
+```
+
+约束：
+
+1. 内存上限 200 条（超出丢弃最旧）。
+2. 微型控制台状态词限制 7 字。
+3. Bridge 状态日志仅在状态变化时写入。
+
+### 2.2 Bridge 服务与插件日志
+
+来源文件：`server/index.js`
+
+1. `POST /ps/log`：插件主动上报。
+2. `GET /ps/logs?since=...`：UI 增量拉取。
+3. `GET /status`：返回 `psPluginLogLatestId`。
+
+当前结构：
+
+```ts
+type PsPluginLog = {
+  id: number;
+  level: "info" | "warn" | "error"; // 入站后归一化
+  message: string;
+  detail: string;
+  scene: string;
+  source: string;
+  at: number; // ms
+};
+```
+
+当前防护：
+
+1. `level` 统一归一化（`warning -> warn`，其他异常值回落 `info`）。
+2. `message/detail/scene/source` 长度裁剪，避免超长文本污染 UI 与导出。
+
+### 2.3 主进程日志与导出
+
+来源文件：`electron/main.js`
+
+1. `log(message, extra, level)` 写入主进程日志。
+2. `shell:export-logs` 统一导出渲染层 + 主进程 + dev 节选。
+
+主进程单行格式：
+
+```txt
+[ISO8601] [LEVEL] message {jsonExtra}
+```
+
+说明：`LEVEL` 归一化为 `INFO/WARN/ERROR/DEBUG`，并支持循环对象、错误对象、超长字符串安全序列化。
+
+### 2.4 开发期进程日志（真实样本）
+
+来源：`.tmp-logs/*.log`
+
+近期真实样本（2026-02-17）：
+
+1. `VITE v7.3.1 ready in ...`
+2. `page reload src/ce8k/index-CE8kT8gA.js`
+3. `hmr update /src/ce8k/index-ix9wj4V7.css`
+4. `Port 5173 is already in use`
+
+导出前处理（已实现）：
+
+1. 去 ANSI 控制符，避免颜色转义污染导出文本。
+2. dev 日志仅保留尾部最近 320 行，并标记省略行数。
+3. stdout / stderr 分节导出，便于区分启动与编译异常。
+
+## 3. 展示与文案规范
+
+1. 一条日志只表达一件事，结果优先。
+2. 优先输出“成功/失败/状态变更”，减少中间态刷屏。
+3. 推荐格式：`动作 + 结果 + 关键上下文（耗时/数量/原因）`。
+4. 修复指引只在失败场景追加。
+
+推荐模板：
+
+1. `聊天 API 连通验证成功`
+2. `聊天 API 连通验证失败：{原因}`
+3. `跑图请求已返回：收到 {n} 张，耗时 {ms}ms`
+4. `插件连接状态变更：插件已连接/插件连接中/插件待连接`
+5. `回传失败：{原因}` + `修复指引: ...`
+
+## 4. 修复指引映射规则
+
+来源：`getFixGuideForError(...)`
+
+优先级：
+
+1. 场景优先（`bridge` > `api` 通用）
+2. 关键字匹配
+3. 通用兜底
+
+必须覆盖：
+
+1. `invalid file token used / import_file_token_missing / import_temp_file_path_empty`
+2. `encodeImageData returned empty / empty png payload / image data with alpha cannot be encoded as jpeg`
+3. `no selection / 无选区`
+4. `429`
+
+## 5. 去刷屏策略
+
+### 5.1 已落地
+
+1. Bridge 状态变更去重。
+2. UI 日志总量上限 200。
+3. 插件日志 level 归一化。
+4. 插件日志文本字段裁剪。
+5. 导出日志补齐 dev stdout/stderr 节选。
+6. dev 节选去 ANSI + 尾部行数摘要。
+
+### 5.2 后续可选项（未启用）
+
+1. 插件重复日志折叠（同 fingerprint 时间窗去重）。
+2. 渲染层日志按 `requestId` 分组导出。
+3. 导出增加桥接状态快照。
+
+## 6. 导出规范（当前实现）
+
+当前导出为单文件，包含：
+
+1. 渲染层日志（`consoleLogs`）
+2. 主进程日志（`main.log` 尾部）
+3. 开发日志（`webui-dev.out*.log` / `webui-dev.err*.log` 节选）
+
+导出头部包含：
+
+1. 导出时间
+2. 应用版本（`app.getVersion()`）
+3. 渲染日志条数
+4. 开发日志节数
+
+## 7. 验收清单
+
+1. 大控制台结构可渲染且不破坏现有 UI。
+2. 插件异常文本不会造成超长污染。
+3. 导出日志可定位 UI、主进程、dev 启动三类问题。
+4. 常见错误可给出正确修复指引。
+
+## 8. 实施顺序
+
+1. 文档先行（本文件）。
+2. `server/index.js`：插件日志归一化与安全裁剪（已完成）。
+3. `electron/main.js`：导出补齐 dev 节选（已完成）。
+4. `electron/main.js`：dev 去 ANSI + 尾部行数摘要（已完成）。
+5. 验证：`node --check` + 手动导出确认结构。

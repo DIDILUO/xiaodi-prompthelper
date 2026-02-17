@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import cors from "cors";
 import fs from "fs";
 import path from "path";
@@ -18,6 +18,7 @@ const QUEUE_NEXT_WAIT_MAX_MS = 30 * 1000;
 const QUEUE_RESULT_WAIT_MAX_MS = 30 * 1000;
 const PS_HEARTBEAT_TIMEOUT_MS = 4000;
 const PS_PLUGIN_LOG_LIMIT = 200;
+const PS_PLUGIN_LOG_TEXT_LIMIT = 2000;
 const EVENT_STREAM_HEARTBEAT_MS = 15 * 1000;
 const EVENT_STREAM_BUFFER_LIMIT = 300;
 let psLastSeenAt = 0;
@@ -224,11 +225,26 @@ function isPsConnected() {
   return Date.now() - psLastSeenAt <= PS_HEARTBEAT_TIMEOUT_MS;
 }
 
+function normalizePsPluginLogLevel(rawLevel) {
+  const level = String(rawLevel || "info").trim().toLowerCase();
+  if (level === "error") return "error";
+  if (level === "warn" || level === "warning") return "warn";
+  return "info";
+}
+
+function sanitizePsPluginLogText(rawText, limit = PS_PLUGIN_LOG_TEXT_LIMIT) {
+  const text = String(rawText || "").trim();
+  if (!text) return "";
+  const cap = Math.max(120, Number(limit) || PS_PLUGIN_LOG_TEXT_LIMIT);
+  if (text.length <= cap) return text;
+  return `${text.slice(0, cap)}...(truncated ${text.length - cap} chars)`;
+}
+
 function pushPsPluginLog(rawEntry = {}) {
-  const level = String(rawEntry?.level || "info").trim().toLowerCase();
-  const message = String(rawEntry?.message || "").trim();
-  const detail = String(rawEntry?.detail || "").trim();
-  const scene = String(rawEntry?.scene || "").trim();
+  const level = normalizePsPluginLogLevel(rawEntry?.level);
+  const message = sanitizePsPluginLogText(rawEntry?.message);
+  const detail = sanitizePsPluginLogText(rawEntry?.detail);
+  const scene = sanitizePsPluginLogText(rawEntry?.scene, 96);
   if (!message && !detail) return null;
   const next = {
     id: ++psPluginLogSeq,
@@ -236,7 +252,7 @@ function pushPsPluginLog(rawEntry = {}) {
     message,
     detail,
     scene,
-    source: String(rawEntry?.source || "ps-plugin").trim(),
+    source: sanitizePsPluginLogText(rawEntry?.source || "ps-plugin", 64) || "ps-plugin",
     at: Number.isFinite(Number(rawEntry?.at)) ? Number(rawEntry.at) : Date.now()
   };
   psPluginLogs.push(next);
@@ -699,7 +715,7 @@ app.get("/queue/result/:id/wait", (req, res) => {
   pruneQueueResults();
   const id = String(req.params?.id || "").trim();
   if (!id) {
-    return res.status(400).json({ ok: false, error: "id_required", message: "id 蹇呭～" });
+    return res.status(400).json({ ok: false, error: "id_required", message: "id 必填" });
   }
   const waitMs = clampWaitMs(req.query?.timeoutMs ?? req.query?.waitMs, QUEUE_RESULT_WAIT_MAX_MS);
   const entry = queueResults.get(id);
@@ -913,6 +929,7 @@ app.post("/ps/log", (req, res) => {
 });
 
 app.get("/ps/logs", (req, res) => {
+  // webui 会轮询此接口抓取插件日志，不能用它刷新插件在线心跳。
   const since = Number(req.query?.since);
   const startId = Number.isFinite(since) && since > 0 ? Math.floor(since) : 0;
   const logs = startId > 0 ? psPluginLogs.filter((item) => item.id > startId) : [...psPluginLogs];

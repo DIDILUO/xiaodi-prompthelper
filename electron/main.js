@@ -1023,6 +1023,92 @@ function log(message, extra, level = 'info') {
   } catch {}
 }
 
+function readFileTailUtf8(filePath, maxBytes = 180 * 1024) {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) return '';
+    const stat = fs.statSync(filePath);
+    if (!stat.isFile()) return '';
+    const size = Number(stat.size || 0);
+    if (size <= 0) return '';
+    const cap = Math.max(4096, Number(maxBytes) || 180 * 1024);
+    const start = Math.max(0, size - cap);
+    const length = Math.max(0, size - start);
+    if (length <= 0) return '';
+    const fd = fs.openSync(filePath, 'r');
+    try {
+      const buffer = Buffer.alloc(length);
+      fs.readSync(fd, buffer, 0, length, start);
+      return buffer.toString('utf-8');
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return '';
+  }
+}
+
+function stripAnsiControlCodes(text) {
+  return String(text || '').replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, '');
+}
+
+function summarizeDevLogText(rawText, maxLines = 320) {
+  const plain = stripAnsiControlCodes(String(rawText || ''))
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
+  if (!plain) return '';
+  const cap = Math.max(40, Number(maxLines) || 320);
+  const lines = plain.split('\n');
+  if (lines.length <= cap) return plain;
+  const dropped = lines.length - cap;
+  const tail = lines.slice(-cap).join('\n').trim();
+  return `[dev-log] 已省略较早日志 ${dropped} 行，仅保留最近 ${cap} 行\n${tail}`;
+}
+
+function resolveLatestFileInDir(dir, pattern, fallbackName = '') {
+  try {
+    if (!dir || !fs.existsSync(dir)) return '';
+    if (fallbackName) {
+      const preferred = path.join(dir, fallbackName);
+      if (fs.existsSync(preferred)) return preferred;
+    }
+    const list = fs.readdirSync(dir)
+      .filter((name) => pattern.test(name))
+      .map((name) => {
+        const fullPath = path.join(dir, name);
+        const mtimeMs = Number(fs.statSync(fullPath).mtimeMs || 0);
+        return { fullPath, mtimeMs };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+    return list[0]?.fullPath || '';
+  } catch {
+    return '';
+  }
+}
+
+function readDevLogSections() {
+  const devLogsDir = path.resolve(__dirname, '..', '.tmp-logs');
+  if (!fs.existsSync(devLogsDir)) return [];
+  const sections = [];
+  const webuiOut = resolveLatestFileInDir(devLogsDir, /^webui-dev\.out(?:-\d{8}-\d{6})?\.log$/i, 'webui-dev.out.log');
+  const webuiErr = resolveLatestFileInDir(devLogsDir, /^webui-dev\.err(?:-\d{8}-\d{6})?\.log$/i, 'webui-dev.err.log');
+  const candidates = [
+    { label: 'webui dev stdout', filePath: webuiOut },
+    { label: 'webui dev stderr', filePath: webuiErr }
+  ];
+  candidates.forEach((item) => {
+    const rawText = readFileTailUtf8(item.filePath);
+    const text = summarizeDevLogText(rawText);
+    if (!text) return;
+    sections.push({
+      label: item.label,
+      filePath: item.filePath,
+      text
+    });
+  });
+  return sections;
+}
+
 function parseBridgePort(value) {
   const raw = Number(value);
   if (!Number.isFinite(raw)) return null;
@@ -2770,7 +2856,18 @@ app.whenReady().then(() => {
       const outFile = saveResult.filePath;
       const outDir = path.dirname(outFile);
       fs.mkdirSync(outDir, { recursive: true });
-      const runtimeLog = logFile && fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf-8') : '';
+      const runtimeLog = readFileTailUtf8(logFile, 600 * 1024);
+      const devLogSections = readDevLogSections();
+      const devLogsText = devLogSections.length
+        ? devLogSections
+          .map((item) => [
+            `### ${item.label}`,
+            `path: ${item.filePath}`,
+            item.text || '(空)',
+            ''
+          ].join('\n'))
+          .join('\n')
+        : '';
       const rendererLogs = Array.isArray(payload?.consoleLogs) ? payload.consoleLogs : [];
       const rendererText = rendererLogs
         .map((line) => {
@@ -2784,12 +2881,18 @@ app.whenReady().then(() => {
       const output = [
         '=== 小迪助词器日志 ===',
         `导出时间: ${new Date().toLocaleString('zh-CN', { hour12: false })}`,
+        `应用版本: ${app.getVersion()}`,
+        `渲染日志条数: ${rendererLogs.length}`,
+        `开发日志节数: ${devLogSections.length}`,
         '',
         '--- 渲染层日志 ---',
         rendererText || '(无)',
         '',
         '--- 主进程日志(Electron) ---',
         runtimeLog || '(无)',
+        '',
+        '--- 开发进程日志(节选) ---',
+        devLogsText || '(无)',
         ''
       ].join('\n');
       fs.writeFileSync(outFile, output, 'utf-8');

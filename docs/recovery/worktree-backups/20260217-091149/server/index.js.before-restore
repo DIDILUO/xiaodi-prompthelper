@@ -225,6 +225,14 @@ function isPsConnected() {
   return Date.now() - psLastSeenAt <= PS_HEARTBEAT_TIMEOUT_MS;
 }
 
+function sanitizePsPluginLogText(raw, limit = PS_PLUGIN_LOG_TEXT_LIMIT) {
+  const text = String(raw || "").trim();
+  if (!text) return "";
+  const cap = Math.max(120, Number(limit) || PS_PLUGIN_LOG_TEXT_LIMIT);
+  if (text.length <= cap) return text;
+  return `${text.slice(0, cap)}...(truncated ${text.length - cap} chars)`;
+}
+
 function normalizePsPluginLogLevel(rawLevel) {
   const level = String(rawLevel || "info").trim().toLowerCase();
   if (level === "error") return "error";
@@ -232,19 +240,11 @@ function normalizePsPluginLogLevel(rawLevel) {
   return "info";
 }
 
-function sanitizePsPluginLogText(rawText, limit = PS_PLUGIN_LOG_TEXT_LIMIT) {
-  const text = String(rawText || "").trim();
-  if (!text) return "";
-  const cap = Math.max(120, Number(limit) || PS_PLUGIN_LOG_TEXT_LIMIT);
-  if (text.length <= cap) return text;
-  return `${text.slice(0, cap)}...(truncated ${text.length - cap} chars)`;
-}
-
 function pushPsPluginLog(rawEntry = {}) {
   const level = normalizePsPluginLogLevel(rawEntry?.level);
   const message = sanitizePsPluginLogText(rawEntry?.message);
   const detail = sanitizePsPluginLogText(rawEntry?.detail);
-  const scene = sanitizePsPluginLogText(rawEntry?.scene, 96);
+  const scene = sanitizePsPluginLogText(rawEntry?.scene, 80);
   if (!message && !detail) return null;
   const next = {
     id: ++psPluginLogSeq,
@@ -252,7 +252,7 @@ function pushPsPluginLog(rawEntry = {}) {
     message,
     detail,
     scene,
-    source: sanitizePsPluginLogText(rawEntry?.source || "ps-plugin", 64) || "ps-plugin",
+    source: sanitizePsPluginLogText(rawEntry?.source || "ps-plugin", 48) || "ps-plugin",
     at: Number.isFinite(Number(rawEntry?.at)) ? Number(rawEntry.at) : Date.now()
   };
   psPluginLogs.push(next);
@@ -715,7 +715,7 @@ app.get("/queue/result/:id/wait", (req, res) => {
   pruneQueueResults();
   const id = String(req.params?.id || "").trim();
   if (!id) {
-    return res.status(400).json({ ok: false, error: "id_required", message: "id 必填" });
+    return res.status(400).json({ ok: false, error: "id_required", message: "id 韫囧懎锝? });
   }
   const waitMs = clampWaitMs(req.query?.timeoutMs ?? req.query?.waitMs, QUEUE_RESULT_WAIT_MAX_MS);
   const entry = queueResults.get(id);
@@ -929,7 +929,7 @@ app.post("/ps/log", (req, res) => {
 });
 
 app.get("/ps/logs", (req, res) => {
-  // webui 会轮询此接口抓取插件日志，不能用它刷新插件在线心跳。
+  markPsSeen();
   const since = Number(req.query?.since);
   const startId = Number.isFinite(since) && since > 0 ? Math.floor(since) : 0;
   const logs = startId > 0 ? psPluginLogs.filter((item) => item.id > startId) : [...psPluginLogs];
@@ -969,7 +969,7 @@ app.put("/chat/history", (req, res) => {
   const body = req.body || {};
   const list = Array.isArray(body.messages) ? body.messages : null;
   if (!list) {
-    return res.status(400).json({ ok: false, error: "invalid_messages", message: "messages 必须是数组" });
+    return res.status(400).json({ ok: false, error: "invalid_messages", message: "messages 蹇呴』鏄暟缁? });
   }
   const normalized = list
     .filter((m) => m && (m.role === "user" || m.role === "assistant"))
@@ -1001,7 +1001,7 @@ app.get("/chat/models", async (req, res) => {
     return res.status(400).json({
       ok: false,
       error: "chat_config_incomplete",
-      message: "聊天 API 配置不完整（地址 / Key）"
+      message: "鑱婂ぉ API 閰嶇疆涓嶅畬鏁达紙鍦板潃 / Key锛?
     });
   }
   try {
@@ -1047,14 +1047,14 @@ app.post("/chat/stop", (req, res) => {
 
 app.post("/chat/send", async (req, res) => {
   if (activeChat) {
-    return res.status(409).json({ ok: false, error: "chat_busy", message: "当前已有消息在生成中" });
+    return res.status(409).json({ ok: false, error: "chat_busy", message: "褰撳墠宸叉湁娑堟伅鍦ㄧ敓鎴愪腑" });
   }
 
   const body = req.body || {};
   const text = String(body.text || "").trim();
   const images = Array.isArray(body.images) ? body.images : [];
   if (!text && !images.length) {
-    return res.status(400).json({ ok: false, error: "empty_message", message: "文本和图片不能同时为空" });
+    return res.status(400).json({ ok: false, error: "empty_message", message: "鏂囨湰鍜屽浘鐗囦笉鑳藉悓鏃朵负绌? });
   }
 
   const settings = readSettings();
@@ -1067,7 +1067,7 @@ app.post("/chat/send", async (req, res) => {
     return res.status(400).json({
       ok: false,
       error: "chat_config_incomplete",
-      message: "聊天 API 配置不完整（地址 / Key / 模型）"
+      message: "鑱婂ぉ API 閰嶇疆涓嶅畬鏁达紙鍦板潃 / Key / 妯″瀷锛?
     });
   }
 
@@ -1195,7 +1195,7 @@ app.post("/chat/send", async (req, res) => {
       latest.messages[idx] = {
         ...latest.messages[idx],
         status: "error",
-        text: isAbort ? "已停止生成" : "请求失败",
+        text: isAbort ? "宸插仠姝㈢敓鎴? : "璇锋眰澶辫触",
         error: isAbort ? "abort" : String(err?.message || err)
       };
       writeHistory(latest);
@@ -1204,7 +1204,7 @@ app.post("/chat/send", async (req, res) => {
     return res.status(isAbort ? 499 : 500).json({
       ok: false,
       error: isAbort ? "aborted" : "chat_failed",
-      message: isAbort ? "已停止生成" : String(err?.message || err)
+      message: isAbort ? "宸插仠姝㈢敓鎴? : String(err?.message || err)
     });
   }
 });
@@ -1233,3 +1233,4 @@ const shutdown = () => {
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+
