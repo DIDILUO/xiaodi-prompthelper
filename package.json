@@ -1,6 +1,6 @@
 {
   "name": "prompthelper-bridge",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1",
@@ -8,6 +8,11 @@
     "dev:electron": "set ELECTRON_DEV_SERVER_URL=http://127.0.0.1:5173 && npm run start --prefix electron",
     "build:watch": "npm run build:watch --prefix webui",
     "sync:assets": "powershell -ExecutionPolicy Bypass -File scripts/sync-electron-assets.ps1",
-    "build": "npm run build --prefix webui && npm run sync:assets && npm run build --prefix electron"
+    "sync:assets:js": "node scripts/sync-electron-assets.js",
+    "build": "npm run build --prefix webui && npm run sync:assets && npm run build --prefix electron",
+    "build:staged": "npm run build",
+    "split:ce8k": "node scripts/split-ce8k.mjs",
+    "rebuild:ce8k": "node scripts/rebuild-ce8k-from-chunks.mjs",
+    "validate:p7": "node scripts/p7-acceptance-gate.mjs"
   }
 }

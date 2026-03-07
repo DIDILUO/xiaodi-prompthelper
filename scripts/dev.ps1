@@ -1,7 +1,14 @@
-﻿$ErrorActionPreference = "Stop"
+﻿<#
+@phb-version-tag: recovered-ce8k-r17
+@phb-version: 0.0.1-recovered-r17
+@phb-version-note: CE8K reverse-recovered baseline; naming refactor batch17 complete.
+@phb-updated-at: 2026-02-18
+#>
+$ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$logDir = Join-Path $repoRoot ".tmp-logs"
+$workspaceRoot = Split-Path -Parent $repoRoot
+$logDir = Join-Path $workspaceRoot "日志文件\01-开发日志\dev-logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
 function Resolve-LogFilePath {
@@ -55,6 +62,37 @@ function Test-PortReady {
   }
 }
 
+function Stop-ProcessTreeSafe {
+  param(
+    [Parameter(Mandatory = $true)]
+    [System.Diagnostics.Process]$Process
+  )
+
+  if ($null -eq $Process) { return }
+  try {
+    if ($Process.HasExited) { return }
+  }
+  catch {
+    return
+  }
+
+  $pid = 0
+  try { $pid = [int]$Process.Id } catch { $pid = 0 }
+  if ($pid -le 0) { return }
+
+  try {
+    & taskkill /PID $pid /T /F | Out-Null
+  }
+  catch {
+    try {
+      Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+    }
+    catch {
+      # best-effort cleanup
+    }
+  }
+}
+
 $webuiArgs = @("/c", "npm run dev --prefix webui")
 $webuiProc = Start-Process `
   -FilePath "cmd.exe" `
@@ -85,9 +123,7 @@ if (-not $ready) {
     Write-Host "----- webui stderr (tail) -----"
     Get-Content -Path $webuiErrLog -Tail 120
   }
-  if ($null -ne $webuiProc -and -not $webuiProc.HasExited) {
-    Stop-Process -Id $webuiProc.Id -Force
-  }
+  Stop-ProcessTreeSafe -Process $webuiProc
   exit 1
 }
 
@@ -99,7 +135,5 @@ try {
   exit $LASTEXITCODE
 }
 finally {
-  if ($null -ne $webuiProc -and -not $webuiProc.HasExited) {
-    Stop-Process -Id $webuiProc.Id -Force
-  }
+  Stop-ProcessTreeSafe -Process $webuiProc
 }
