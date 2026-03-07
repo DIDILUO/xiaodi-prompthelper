@@ -1,12 +1,13 @@
 {
   "name": "webui",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port 5173 --strictPort",
-    "build": "vite build",
-    "build:watch": "vite build --watch",
+    "clean:dist": "node ./scripts/clean-dist.mjs",
+    "build": "npm run clean:dist && vite build",
+    "build:watch": "npm run clean:dist && vite build --watch",
     "preview": "vite preview"
   },
   "dependencies": {

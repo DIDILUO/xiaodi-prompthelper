@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720" fill="none">
+  <rect width="720" height="720" rx="28" fill="#FFFFFF"/>
+  <rect x="56" y="56" width="220" height="220" rx="16" fill="#000000"/>
+  <rect x="88" y="88" width="156" height="156" rx="12" fill="#FFFFFF"/>
+  <rect x="124" y="124" width="84" height="84" rx="10" fill="#000000"/>
+  <rect x="444" y="56" width="220" height="220" rx="16" fill="#000000"/>
+  <rect x="476" y="88" width="156" height="156" rx="12" fill="#FFFFFF"/>
+  <rect x="512" y="124" width="84" height="84" rx="10" fill="#000000"/>
+  <rect x="56" y="444" width="220" height="220" rx="16" fill="#000000"/>
+  <rect x="88" y="476" width="156" height="156" rx="12" fill="#FFFFFF"/>
+  <rect x="124" y="512" width="84" height="84" rx="10" fill="#000000"/>
+  <rect x="330" y="316" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="386" y="316" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="442" y="316" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="330" y="372" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="442" y="372" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="386" y="428" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="442" y="428" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="498" y="428" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="330" y="484" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="386" y="484" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="442" y="484" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="498" y="484" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="330" y="540" width="40" height="40" rx="6" fill="#000000"/>
+  <rect x="442" y="540" width="40" height="40" rx="6" fill="#000000"/>
+  <text x="360" y="676" text-anchor="middle" font-size="34" font-family="Arial, sans-serif" fill="#5B5B5B">
+    WECHAT GROUP QR PLACEHOLDER
+  </text>
+</svg>
