@@ -1,12 +1,14 @@
 ﻿{
   "name": "prompthelper-bridge-electron",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "PromptHelper Bridge Shell",
   "main": "main.js",
   "type": "commonjs",
   "scripts": {
     "start": "node scripts/start-electron.cjs",
-    "build": "npx electron-packager . \"小迪助词器\" --platform=win32 --arch=x64 --out=dist-build\\pkg-%RANDOM% --overwrite"
+    "build": "node scripts/package-staged.cjs",
+    "build:staged": "node scripts/package-staged.cjs",
+    "build:legacy-ignore": "npx electron-packager . \"小迪助词器\" --platform=win32 --arch=x64 --icon=assets\\app-icon.ico --out=..\\..\\构建文件\\01-发布产物\\legacy-ignore\\pkg-%RANDOM% --ignore=\"^/scripts($|/)\" --ignore=\"^/assets($|/)\" --ignore=\"^/node_modules($|/)\" --ignore=\"^/server/data($|/)\" --ignore=\"^/package-lock\\.json$\" --ignore=\"^/server/package-lock\\.json$\" --overwrite"
   },
   "devDependencies": {
     "electron": "^40.2.1",

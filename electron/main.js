@@ -1,49 +1,68 @@
-﻿const { app, BrowserWindow, ipcMain, shell, dialog, screen } = require('electron');
+﻿/*
+ * @phb-version-tag: recovered-ce8k-r17
+ * @phb-version: 0.0.1-recovered-r17
+ * @phb-version-note: CE8K reverse-recovered baseline; naming refactor batch17 complete.
+ * @phb-updated-at: 2026-02-18
+ */
+const { app, BrowserWindow, ipcMain, shell, dialog, screen, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const crypto = require('crypto');
+const {
+  FLOAT_WIN_DRAG_STRIP_HEIGHT,
+  FLOAT_WIN_TOGGLE_HEIGHT,
+  FLOAT_WIN_QUICK_BUTTON_SIZE,
+  FLOAT_WIN_QUICK_BUTTON_GAP,
+  FLOAT_WIN_QUICK_GROUP_TOP_GAP,
+  FLOAT_WIN_QUICK_BUTTON_COUNT,
+  FLOAT_WIN_QUICK_MAIN_BUTTON_COUNT,
+  FLOAT_WIN_DIVIDER_HEIGHT,
+  FLOAT_WIN_DIVIDER_MARGIN_Y,
+  FLOAT_WIN_QUICK_PADDING_Y,
+  FLOAT_WIN_OUTER_GAP,
+  FLOAT_WIN_RESIZE_ANIMATION_MS,
+  FLOAT_WIN_COLLAPSED_HEIGHT,
+  FLOAT_WIN_EXPANDED_HEIGHT,
+  FLOAT_WIN_MARGIN,
+  FLOAT_WIN_OPACITY_MIN,
+  FLOAT_WIN_OPACITY_MAX,
+  FLOAT_WIN_OPACITY_DEFAULT,
+  getFloatingToggleCollapsedWidth,
+  getFloatingToggleExpandedWidth
+} = require('./renderer/floating-toggle/layout-config');
+const {
+  SHELL_CHANNELS,
+  SHELL_EVENT_CHANNELS,
+  buildShellOkResponse,
+  buildShellErrorResponse
+} = require('./shell-ipc-contract');
 
 let win;
-let normalBounds = { width: 360, height: 880 };
-let minBounds = { width: 320, height: 600 };
+const MAIN_WINDOW_DEFAULT_WIDTH = 300;
+const MAIN_WINDOW_DEFAULT_HEIGHT = 880;
+let normalBounds = { width: MAIN_WINDOW_DEFAULT_WIDTH, height: MAIN_WINDOW_DEFAULT_HEIGHT };
+let minBounds = { width: MAIN_WINDOW_DEFAULT_WIDTH, height: 1 };
+let pendingScaledBoundsRequest = null;
+let internalMainResizeExpectation = null;
 let floatWin = null;
 let floatingToggleEnabled = true;
 let floatingToggleStatus = 'connected';
-let mainAlwaysOnTop = false;
+let mainAlwaysOnTop = true;
 let autoMinimizeOnBlur = false;
-const FLOAT_WIN_SIZE = 56;
-const FLOAT_WIN_DRAG_STRIP_HEIGHT = 20;
-const FLOAT_WIN_TOGGLE_HEIGHT = 48;
-const FLOAT_WIN_QUICK_BUTTON_SIZE = 40;
-const FLOAT_WIN_QUICK_BUTTON_GAP = 8;
-const FLOAT_WIN_QUICK_GROUP_TOP_GAP = 16;
-const FLOAT_WIN_QUICK_BUTTON_COUNT = 6;
-const FLOAT_WIN_DIVIDER_HEIGHT = 1;
-const FLOAT_WIN_DIVIDER_MARGIN_Y = 12;
-const FLOAT_WIN_QUICK_PADDING_Y = 12;
-const FLOAT_WIN_OUTER_GAP = 4;
-const FLOAT_WIN_RESIZE_ANIMATION_MS = 140;
-const FLOAT_WIN_COLLAPSED_HEIGHT = FLOAT_WIN_DRAG_STRIP_HEIGHT
-  + FLOAT_WIN_TOGGLE_HEIGHT
-  + (FLOAT_WIN_OUTER_GAP * 2);
-const FLOAT_WIN_EXPANDED_HEIGHT = FLOAT_WIN_COLLAPSED_HEIGHT
-  + FLOAT_WIN_QUICK_GROUP_TOP_GAP
-  + (FLOAT_WIN_QUICK_BUTTON_SIZE * FLOAT_WIN_QUICK_BUTTON_COUNT)
-  + (FLOAT_WIN_QUICK_BUTTON_GAP * (FLOAT_WIN_QUICK_BUTTON_COUNT - 1))
-  + FLOAT_WIN_QUICK_PADDING_Y;
-const FLOAT_WIN_MARGIN = 8;
-const FLOAT_WIN_OPACITY_MIN = 0.35;
-const FLOAT_WIN_OPACITY_MAX = 1;
-const FLOAT_WIN_OPACITY_DEFAULT = 1;
 const MAIN_ALWAYS_ON_TOP_LEVEL = 'screen-saver';
+// Release default: disable internal quick actions (global-restart).
+// Set PHB_ENABLE_INTERNAL_QUICK_ACTIONS=1 to force-enable when needed.
+const ENABLE_INTERNAL_FLOATING_QUICK_ACTIONS =
+  !app.isPackaged || String(process.env.PHB_ENABLE_INTERNAL_QUICK_ACTIONS || '').trim() === '1';
+const FLOATING_TOGGLE_INTERNAL_QUICK_ACTIONS = ['global-restart'];
 const FLOATING_QUICK_ACTION_SET = new Set([
   'history',
   'identity',
   'chat-preset',
   'image-preset',
-  'return-test',
-  'global-restart'
+  'instruction-mode',
+  ...(ENABLE_INTERNAL_FLOATING_QUICK_ACTIONS ? FLOATING_TOGGLE_INTERNAL_QUICK_ACTIONS : [])
 ]);
 const FLOATING_QUICK_TRIGGER_SET = new Set(['hover-enter', 'hover-leave', 'click']);
 let floatingToggleOpacity = FLOAT_WIN_OPACITY_DEFAULT;
@@ -57,6 +76,7 @@ let blurMinimizeTimer = null;
 let alwaysOnTopReapplyTimer = null;
 let lastFloatingBounds = null;
 let serverProc = null;
+let serverProcStartedAt = 0;
 const BRIDGE_PORT_DEFAULT = 17325;
 const BRIDGE_PORT_MIN = 1;
 const BRIDGE_PORT_MAX = 65535;
@@ -66,6 +86,8 @@ let stateFile = null;
 let bridgeConfigFile = null;
 let bridgeConfigState = {};
 let saveTimer = null;
+let displayTopologyChangeHandler = null;
+let lastMainDisplayScaleFactor = 1;
 const DEV_SERVER_URL = process.env.ELECTRON_DEV_SERVER_URL;
 const DEV_SERVER_ORIGIN = (() => {
   if (!DEV_SERVER_URL) return '';
@@ -86,6 +108,11 @@ const PS_CACHE_MAX_ITEMS = 24;
 const BRIDGE_REQUEST_TIMEOUT_MS = 8000;
 const BRIDGE_ACTION_TIMEOUT_MS = 45000;
 const BRIDGE_RESULT_WAIT_WINDOW_MS = 25000;
+const BRIDGE_PROTOCOL_VERSION = 2;
+const BRIDGE_CAPTURE_LEGACY_FALLBACK_MAX_VERSION = 1;
+const FORCE_LEGACY_CAPTURE_RELAY = String(process.env.PHB_FORCE_LEGACY_CAPTURE_RELAY || '').trim() === '1';
+const CAPTURE_INLINE_MAX_BYTES = 8 * 1024 * 1024;
+const CAPTURE_PAYLOAD_HARD_LIMIT_BYTES = 256 * 1024 * 1024;
 const GENERATED_CACHE_MAX_FILES_DEFAULT = 120;
 const GENERATED_CACHE_MAX_FILES_MIN = 10;
 const GENERATED_CACHE_MAX_FILES_MAX = 500;
@@ -98,11 +125,72 @@ const CACHE_RETENTION_DAYS_DEFAULT = {
 const CACHE_RETENTION_DAYS_MIN = 0;
 const CACHE_RETENTION_DAYS_MAX = 3650;
 const CACHE_POLICY_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+// Legacy monolithic snapshot file (kept only for migration/fallback).
 const CHAT_CACHE_FILE_BASENAME = 'chat-sessions.json';
+// New sharded chat persistence: one index + one file per session.
+const CHAT_INDEX_FILE_BASENAME = 'chat-index.json';
+const CHAT_SESSION_SHARDS_DIRNAME = 'sessions';
 let cachePolicy = { ...CACHE_RETENTION_DAYS_DEFAULT, updatedAt: 0 };
 let cachePolicyCleanupTimer = null;
 const psImageCacheMap = new Map();
 const migratedCachePaths = new Set();
+const deletedChatSessionIdGuardSet = new Set();
+const GLOBAL_UPLOAD_SHORTCUT_ACTION_SET = new Set(['select', 'full']);
+const SHORTCUT_MODIFIER_ACCELERATOR_MAP = Object.freeze({
+  ctrl: 'CommandOrControl',
+  control: 'CommandOrControl',
+  alt: 'Alt',
+  option: 'Alt',
+  shift: 'Shift',
+  meta: 'Super',
+  cmd: 'Super',
+  command: 'Super',
+  win: 'Super',
+  windows: 'Super'
+});
+const SHORTCUT_PRIMARY_ACCELERATOR_MAP = Object.freeze({
+  esc: 'Esc',
+  escape: 'Esc',
+  enter: 'Enter',
+  return: 'Enter',
+  tab: 'Tab',
+  space: 'Space',
+  spacebar: 'Space',
+  backspace: 'Backspace',
+  delete: 'Delete',
+  del: 'Delete',
+  insert: 'Insert',
+  ins: 'Insert',
+  home: 'Home',
+  end: 'End',
+  pageup: 'PageUp',
+  pgup: 'PageUp',
+  pagedown: 'PageDown',
+  pgdn: 'PageDown',
+  up: 'Up',
+  arrowup: 'Up',
+  down: 'Down',
+  arrowdown: 'Down',
+  left: 'Left',
+  arrowleft: 'Left',
+  right: 'Right',
+  arrowright: 'Right',
+  minus: '-',
+  equal: '=',
+  bracketleft: '[',
+  bracketright: ']',
+  backslash: '\\',
+  semicolon: ';',
+  quote: "'",
+  comma: ',',
+  period: '.',
+  slash: '/',
+  backquote: '`'
+});
+let globalUploadShortcutBindings = {
+  select: { shortcut: '', accelerator: '', registered: false, reason: '' },
+  full: { shortcut: '', accelerator: '', registered: false, reason: '' }
+};
 
 function sanitizeRetentionDays(value, fallback) {
   const n = Number(value);
@@ -130,6 +218,183 @@ function getCachePolicySnapshot() {
     other: cachePolicy.other,
     updatedAt: Number(cachePolicy.updatedAt) || Date.now()
   };
+}
+
+function normalizeGlobalUploadShortcutAction(actionInput) {
+  const action = String(actionInput || '').trim().toLowerCase();
+  return GLOBAL_UPLOAD_SHORTCUT_ACTION_SET.has(action) ? action : '';
+}
+
+function normalizeGlobalShortcutAccelerator(shortcutInput) {
+  const shortcutText = String(shortcutInput || '').trim();
+  if (!shortcutText) return '';
+  const tokens = shortcutText
+    .split('+')
+    .map((token) => String(token || '').trim())
+    .filter(Boolean);
+  if (!tokens.length) return '';
+  const modifiers = [];
+  const modifierSet = new Set();
+  let primaryToken = '';
+  for (const token of tokens) {
+    const lowerToken = token.toLowerCase();
+    const modifierToken = SHORTCUT_MODIFIER_ACCELERATOR_MAP[lowerToken];
+    if (modifierToken) {
+      if (!modifierSet.has(modifierToken)) {
+        modifierSet.add(modifierToken);
+        modifiers.push(modifierToken);
+      }
+      continue;
+    }
+    if (primaryToken) return '';
+    if (/^f\d{1,2}$/i.test(token)) {
+      primaryToken = token.toUpperCase();
+      continue;
+    }
+    if (/^[a-z0-9]$/i.test(token)) {
+      primaryToken = token.toUpperCase();
+      continue;
+    }
+    primaryToken = SHORTCUT_PRIMARY_ACCELERATOR_MAP[lowerToken] || '';
+    if (!primaryToken) return '';
+  }
+  if (!primaryToken) return '';
+  return [...modifiers, primaryToken].join('+');
+}
+
+function getGlobalUploadShortcutBindingsSnapshot() {
+  return {
+    select: { ...globalUploadShortcutBindings.select },
+    full: { ...globalUploadShortcutBindings.full }
+  };
+}
+
+function clearRegisteredGlobalUploadShortcuts() {
+  for (const action of ['select', 'full']) {
+    const binding = globalUploadShortcutBindings[action];
+    const accelerator = String(binding?.accelerator || '').trim();
+    if (accelerator) {
+      try {
+        globalShortcut.unregister(accelerator);
+      } catch (err) {
+        log('global shortcut unregister failed', {
+          action,
+          accelerator,
+          message: err.message
+        }, 'warn');
+      }
+    }
+  }
+  globalUploadShortcutBindings = {
+    select: { shortcut: '', accelerator: '', registered: false, reason: '' },
+    full: { shortcut: '', accelerator: '', registered: false, reason: '' }
+  };
+}
+
+function sendGlobalUploadShortcutAction(action, accelerator) {
+  if (!win || win.isDestroyed() || !win.webContents || win.webContents.isDestroyed()) {
+    return false;
+  }
+  try {
+    win.webContents.send(SHELL_EVENT_CHANNELS.globalUploadShortcutAction, {
+      action: normalizeGlobalUploadShortcutAction(action),
+      accelerator: String(accelerator || '').trim(),
+      at: Date.now()
+    });
+    return true;
+  } catch (err) {
+    log('global shortcut emit failed', {
+      action,
+      accelerator,
+      message: err.message
+    }, 'warn');
+    return false;
+  }
+}
+
+function applyGlobalUploadShortcuts(payload = {}) {
+  const requestedShortcutByAction = {
+    select: String(payload?.uploadSelectionShortcut || '').trim(),
+    full: String(payload?.uploadFullImageShortcut || '').trim()
+  };
+  const requestedAcceleratorByAction = {
+    select: normalizeGlobalShortcutAccelerator(requestedShortcutByAction.select),
+    full: normalizeGlobalShortcutAccelerator(requestedShortcutByAction.full)
+  };
+  clearRegisteredGlobalUploadShortcuts();
+  const response = {
+    ok: true,
+    shortcuts: {
+      select: {
+        shortcut: requestedShortcutByAction.select,
+        accelerator: requestedAcceleratorByAction.select,
+        registered: false,
+        reason: ''
+      },
+      full: {
+        shortcut: requestedShortcutByAction.full,
+        accelerator: requestedAcceleratorByAction.full,
+        registered: false,
+        reason: ''
+      }
+    }
+  };
+  const selectAccelerator = requestedAcceleratorByAction.select;
+  const fullAccelerator = requestedAcceleratorByAction.full;
+  const hasConflict =
+    !!selectAccelerator &&
+    !!fullAccelerator &&
+    selectAccelerator.toLowerCase() === fullAccelerator.toLowerCase();
+  for (const action of ['select', 'full']) {
+    const requestedShortcut = requestedShortcutByAction[action];
+    const accelerator = requestedAcceleratorByAction[action];
+    if (!requestedShortcut) {
+      response.shortcuts[action].reason = 'empty';
+      continue;
+    }
+    if (!accelerator) {
+      response.shortcuts[action].reason = 'invalid_shortcut';
+      continue;
+    }
+    if (hasConflict && action === 'full') {
+      response.shortcuts[action].reason = 'accelerator_conflict';
+      continue;
+    }
+    let registered = false;
+    try {
+      registered = globalShortcut.register(accelerator, () => {
+        const dispatched = sendGlobalUploadShortcutAction(action, accelerator);
+        if (!dispatched) {
+          log('global shortcut trigger ignored: renderer unavailable', {
+            action,
+            accelerator
+          }, 'warn');
+        }
+      });
+    } catch (err) {
+      response.shortcuts[action].reason = String(err?.message || 'register_failed');
+      log('global shortcut register failed', {
+        action,
+        accelerator,
+        message: String(err?.message || 'register_failed')
+      }, 'warn');
+      continue;
+    }
+    if (!registered) {
+      response.shortcuts[action].reason = 'register_rejected';
+      log('global shortcut register rejected', { action, accelerator }, 'warn');
+      continue;
+    }
+    response.shortcuts[action].registered = true;
+    response.shortcuts[action].reason = 'ok';
+    globalUploadShortcutBindings[action] = {
+      shortcut: requestedShortcut,
+      accelerator,
+      registered: true,
+      reason: 'ok'
+    };
+  }
+  return response;
 }
 
 function getUnifiedCacheRootDir() {
@@ -170,12 +435,21 @@ function getLogsCacheDir() {
   return path.join(getUnifiedCacheRootDir(), 'logs');
 }
 
+function getBridgeServerDataDir() {
+  const candidates = [
+    path.join(__dirname, 'server', 'data'),
+    path.join(__dirname, '..', 'server', 'data')
+  ];
+  const existing = candidates.find((dir) => fs.existsSync(path.join(path.dirname(dir), 'index.js')));
+  return existing || candidates[0];
+}
+
 function getBridgeCaptureCacheDir() {
-  return path.join(__dirname, '..', 'server', 'data', 'ps-capture-cache');
+  return path.join(getBridgeServerDataDir(), 'ps-capture-cache');
 }
 
 function getBridgeCaptureCommDir() {
-  return path.join(__dirname, '..', 'server', 'data', 'ps-capture-comm');
+  return path.join(getBridgeServerDataDir(), 'ps-capture-comm');
 }
 
 function getPsImageCacheDir() {
@@ -198,6 +472,65 @@ function ensureChatImageCacheDir() {
   return dir;
 }
 
+function getChatImageCacheSearchDirs() {
+  const primaryDir = getChatImageCacheDir();
+  const legacyDir = getLegacyChatImageCacheDir();
+  const searchDirs = [primaryDir];
+  if (
+    legacyDir &&
+    path.resolve(legacyDir).toLowerCase() !== path.resolve(primaryDir).toLowerCase()
+  ) {
+    searchDirs.push(legacyDir);
+  }
+  return Array.from(new Set(searchDirs.map((dirPath) => String(dirPath || '').trim()).filter(Boolean)));
+}
+
+function isPsCacheId(cacheIdInput = '') {
+  return /^pscache_/i.test(String(cacheIdInput || '').trim());
+}
+
+function deriveCacheIdFromFileName(fileNameInput = '') {
+  const rawText = String(fileNameInput || '').trim();
+  if (!rawText) return '';
+  const normalizedPathText = rawText.split(/[?#]/)[0];
+  const baseName = String(path.basename(normalizedPathText) || '').trim();
+  if (!baseName) return '';
+  const stem = String(path.basename(baseName, path.extname(baseName)) || '').trim();
+  if (!stem) return '';
+  if (isPsCacheId(stem)) return stem;
+  return /^[a-f0-9]{16,128}$/i.test(stem) ? stem.toLowerCase() : '';
+}
+
+function resolveChatImageIdsFromRecord(imageRecord = {}) {
+  const rawCacheId = String(imageRecord?.cacheId || '').trim();
+  const rawPsCacheId = String(imageRecord?.psCacheId || '').trim();
+  const fileDerivedId = deriveCacheIdFromFileName(
+    imageRecord?.cacheFileName
+      || imageRecord?.fileName
+      || imageRecord?.cacheFilePath
+      || imageRecord?.filePath
+      || '',
+  );
+
+  let normalizedChatCacheId = '';
+  if (rawCacheId && !isPsCacheId(rawCacheId)) {
+    normalizedChatCacheId = rawCacheId;
+  } else if (fileDerivedId && !isPsCacheId(fileDerivedId)) {
+    normalizedChatCacheId = fileDerivedId;
+  } else if (rawPsCacheId && !isPsCacheId(rawPsCacheId)) {
+    normalizedChatCacheId = rawPsCacheId;
+  } else if (rawCacheId && !fileDerivedId) {
+    normalizedChatCacheId = rawCacheId;
+  }
+
+  const normalizedPsCacheId = rawPsCacheId || (isPsCacheId(rawCacheId) ? rawCacheId : '');
+  return {
+    chatCacheId: String(normalizedChatCacheId || '').trim(),
+    psCacheId: String(normalizedPsCacheId || '').trim(),
+    fileDerivedId: String(fileDerivedId || '').trim(),
+  };
+}
+
 function getChatCacheDir() {
   return path.join(getUnifiedCacheRootDir(), 'chat');
 }
@@ -210,6 +543,49 @@ function ensureChatCacheDir() {
 
 function getChatStateBackupFile(filePath) {
   return `${filePath}.bak`;
+}
+
+function getChatIndexFile() {
+  ensureUnifiedCacheLayout();
+  return path.join(getChatCacheDir(), CHAT_INDEX_FILE_BASENAME);
+}
+
+function getChatSessionShardsDir() {
+  return path.join(getChatCacheDir(), CHAT_SESSION_SHARDS_DIRNAME);
+}
+
+function ensureChatSessionShardsDir() {
+  const dir = getChatSessionShardsDir();
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function normalizeChatSessionShardToken(tokenInput = '') {
+  const normalized = String(tokenInput || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80);
+  return normalized || 'session';
+}
+
+function buildChatSessionShardFileName(sessionId = '') {
+  const normalizedSessionId = String(sessionId || '').trim();
+  const safeToken = normalizeChatSessionShardToken(normalizedSessionId);
+  const stableHash = crypto
+    .createHash('sha1')
+    .update(normalizedSessionId || `${Date.now()}-${Math.random()}`)
+    .digest('hex')
+    .slice(0, 12);
+  return `${safeToken}--${stableHash}.json`;
+}
+
+function getChatSessionShardFileById(sessionId = '') {
+  return path.join(
+    getChatSessionShardsDir(),
+    buildChatSessionShardFileName(sessionId),
+  );
 }
 
 function getGeneratedTargetMetaDir() {
@@ -242,9 +618,16 @@ function migratePathIfNeeded(legacyPath, nextPath, type = 'dir') {
     const hasLegacy = fs.existsSync(legacyPath);
     if (!hasLegacy) return;
     const hasNext = fs.existsSync(nextPath);
-    if (hasNext) return;
+    if (hasNext && type !== 'dir') return;
     if (type === 'dir') {
       fs.mkdirSync(path.dirname(nextPath), { recursive: true });
+      if (hasNext) {
+        copyDirRecursive(legacyPath, nextPath);
+        try {
+          fs.rmSync(legacyPath, { recursive: true, force: true });
+        } catch {}
+        return;
+      }
       try {
         fs.renameSync(legacyPath, nextPath);
       } catch {
@@ -274,8 +657,6 @@ function ensureUnifiedCacheLayout() {
   migratePathIfNeeded(getLegacyChatImageCacheDir(), chatImagesDir, 'dir');
   migratePathIfNeeded(getLegacyPsImageCacheDir(), psImagesDir, 'dir');
   migratePathIfNeeded(path.join(getLegacyGeneratedCacheDir(), 'import-target-cache'), generatedMetaDir, 'dir');
-  migratePathIfNeeded(getLegacyChatStateFile(), path.join(chatDir, CHAT_CACHE_FILE_BASENAME), 'file');
-  migratePathIfNeeded(`${getLegacyChatStateFile()}.bak`, getChatStateBackupFile(path.join(chatDir, CHAT_CACHE_FILE_BASENAME)), 'file');
   migratePathIfNeeded(path.join(generatedDir, 'import-target-cache'), generatedMetaDir, 'dir');
   migratePathIfNeeded(getLegacyLogsDir(), getLogsCacheDir(), 'dir');
 
@@ -330,7 +711,7 @@ function computeBufferSha1(buffer) {
   return crypto.createHash('sha1').update(buffer).digest('hex');
 }
 
-function writeChatImageCacheFromDataUrl(dataUrl) {
+function writeChatImageCacheFromDataUrl(dataUrl, context = {}) {
   const parsed = parseImageDataUrl(dataUrl);
   if (!parsed?.buffer?.length) return null;
   const cacheId = computeBufferSha1(parsed.buffer);
@@ -339,7 +720,23 @@ function writeChatImageCacheFromDataUrl(dataUrl) {
   const dir = ensureChatImageCacheDir();
   const filePath = path.join(dir, fileName);
   if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, parsed.buffer);
+    try {
+      fs.writeFileSync(filePath, parsed.buffer);
+    } catch (err) {
+      const wrapped = new Error(
+        `聊天图片落盘失败：写入缓存文件失败（${String(err?.code || 'UNKNOWN')}）`
+      );
+      wrapped.code = 'CHAT_IMAGE_CACHE_WRITE_FAILED';
+      wrapped.context = {
+        ...(context && typeof context === 'object' ? context : {}),
+        filePath,
+        cacheId,
+        mimeType: parsed.mime,
+        byteLength: Number(parsed.buffer?.length) || 0
+      };
+      wrapped.cause = err;
+      throw wrapped;
+    }
   }
   return {
     cacheId,
@@ -548,8 +945,10 @@ function pruneChatSessionsByRetentionDays(retentionDays, now = Date.now()) {
     activeId: nextActiveId,
     sessions: remainingSessions
   };
-  backupChatStateFile(snapshot.file, snapshot.data);
-  fs.writeFileSync(snapshot.file, JSON.stringify(nextData, null, 2), 'utf-8');
+  writeChatStateData(nextData, {
+    previousData: snapshot.data,
+    reason: 'retention-prune'
+  });
   return {
     removedCount,
     remainingCount: remainingSessions.length
@@ -558,9 +957,16 @@ function pruneChatSessionsByRetentionDays(retentionDays, now = Date.now()) {
 
 function getManagedCacheStats() {
   ensureUnifiedCacheLayout();
-  const chatStateFile = getChatStateFile();
-  const chatBackupFile = getChatStateBackupFile(chatStateFile);
-  const chatBytes = getFileSizeBytes(chatStateFile) + getFileSizeBytes(chatBackupFile);
+  const chatIndexFile = getChatIndexFile();
+  const chatIndexBackupFile = getChatStateBackupFile(chatIndexFile);
+  const legacyChatStateFile = getChatStateFile();
+  const legacyChatBackupFile = getChatStateBackupFile(legacyChatStateFile);
+  const chatBytes =
+    getFileSizeBytes(chatIndexFile)
+    + getFileSizeBytes(chatIndexBackupFile)
+    + getDirectorySizeBytes(getChatSessionShardsDir())
+    + getFileSizeBytes(legacyChatStateFile)
+    + getFileSizeBytes(legacyChatBackupFile);
   const imageBytes =
     getDirectorySizeBytes(getChatImageCacheDir())
     + getDirectorySizeBytes(getPsImageCacheDir())
@@ -651,68 +1057,385 @@ function scheduleCachePolicyCleanup() {
   }, CACHE_POLICY_CLEANUP_INTERVAL_MS);
 }
 
-function persistChatImageForSession(image, usedCacheIds) {
+function persistChatImageForSession(
+  image,
+  usedCacheIds,
+  context = {},
+  changeTracker = null,
+) {
   if (!image || typeof image !== 'object') return image;
-  const next = { ...image };
+  let next = image;
+  const markChanged = () => {
+    changeTracker && (changeTracker.changed = true);
+  };
+  const ensureMutable = () => {
+    if (next === image) next = { ...image };
+  };
+  const setFieldIfChanged = (key, value) => {
+    const currentValue = String(next?.[key] || '');
+    const nextValue = String(value || '');
+    if (currentValue === nextValue) return;
+    ensureMutable();
+    if (nextValue) {
+      next[key] = nextValue;
+    } else {
+      delete next[key];
+    }
+    markChanged();
+  };
+
   const dataUrl = String(image.dataUrl || '').trim();
   if (dataUrl.startsWith('data:image/')) {
-    const cached = writeChatImageCacheFromDataUrl(dataUrl);
+    const cached = writeChatImageCacheFromDataUrl(dataUrl, context);
     if (cached?.cacheId) {
-      next.cacheId = cached.cacheId;
-      next.cacheFileName = cached.fileName;
-      next.cacheMimeType = cached.mimeType;
-      next.dataUrl = '';
       usedCacheIds.add(cached.cacheId);
+      setFieldIfChanged('cacheId', cached.cacheId);
+      setFieldIfChanged('cacheFileName', cached.fileName);
+      setFieldIfChanged('cacheMimeType', cached.mimeType);
+      if (String(next.dataUrl || '').trim()) {
+        ensureMutable();
+        next.dataUrl = '';
+        markChanged();
+      }
+      if (String(next.psCacheId || '').trim()) {
+        ensureMutable();
+        delete next.psCacheId;
+        delete next.psCacheExpiresAt;
+        markChanged();
+      }
       return next;
     }
   }
-  const existingCacheId = String(image.cacheId || '').trim();
-  if (existingCacheId) {
-    usedCacheIds.add(existingCacheId);
-    next.dataUrl = '';
+
+  const { chatCacheId, psCacheId, fileDerivedId } = resolveChatImageIdsFromRecord(image);
+  if (chatCacheId) {
+    usedCacheIds.add(chatCacheId);
+    setFieldIfChanged('cacheId', chatCacheId);
+    if (String(next.dataUrl || '').trim()) {
+      ensureMutable();
+      next.dataUrl = '';
+      markChanged();
+    }
+    if (!String(next.cacheFileName || '').trim() && fileDerivedId && !isPsCacheId(fileDerivedId)) {
+      const currentMimeType = String(next.cacheMimeType || next.type || '').trim();
+      const nextExt = getExtByMimeType(currentMimeType || 'image/png');
+      setFieldIfChanged('cacheFileName', `${fileDerivedId}.${nextExt}`);
+    }
+    if (String(next.psCacheId || '').trim() && !isPsCacheId(chatCacheId)) {
+      ensureMutable();
+      delete next.psCacheId;
+      delete next.psCacheExpiresAt;
+      markChanged();
+    } else if (psCacheId && !String(next.psCacheId || '').trim()) {
+      setFieldIfChanged('psCacheId', psCacheId);
+    }
+    return next;
+  }
+
+  if (psCacheId) {
+    const psCacheData = readPsImageCacheDataUrl(psCacheId, { ignoreExpiry: true });
+    const psCacheDataUrl = String(psCacheData?.dataUrl || '').trim();
+    if (psCacheDataUrl.startsWith('data:image/')) {
+      const migrated = writeChatImageCacheFromDataUrl(psCacheDataUrl, {
+        ...(context && typeof context === 'object' ? context : {}),
+        migratedFromPsCacheId: psCacheId,
+      });
+      if (migrated?.cacheId) {
+        usedCacheIds.add(migrated.cacheId);
+        setFieldIfChanged('cacheId', migrated.cacheId);
+        setFieldIfChanged('cacheFileName', migrated.fileName);
+        setFieldIfChanged('cacheMimeType', migrated.mimeType);
+        if (String(next.dataUrl || '').trim()) {
+          ensureMutable();
+          next.dataUrl = '';
+          markChanged();
+        }
+        if (String(next.psCacheId || '').trim()) {
+          ensureMutable();
+          delete next.psCacheId;
+          delete next.psCacheExpiresAt;
+          markChanged();
+        }
+        return next;
+      }
+    }
+    if (!String(next.psCacheId || '').trim()) {
+      setFieldIfChanged('psCacheId', psCacheId);
+    }
   }
   return next;
 }
 
+function persistMessageListImagesForSession(
+  messageListInput,
+  usedCacheIds,
+  {
+    sessionId = '',
+    sessionIndex = -1,
+    branchRootId = '',
+    branchEntryIndex = -1,
+    variantIndex = -1,
+  } = {},
+  changeTracker = null,
+) {
+  const sourceMessageList = Array.isArray(messageListInput) ? messageListInput : [];
+  let hasMessageListChanged = false;
+  const nextMessageList = sourceMessageList.map((message, messageIndex) => {
+    const messageId = String(message?.id || '').trim();
+    if (!Array.isArray(message?.images) || !message.images.length) return message;
+    let hasMessageImageChanged = false;
+    const images = message.images.map((image, imageIndex) => {
+      const nextImage = persistChatImageForSession(
+        image,
+        usedCacheIds,
+        {
+          sessionId,
+          sessionIndex,
+          messageId,
+          messageIndex,
+          imageIndex,
+          branchRootId,
+          branchEntryIndex,
+          variantIndex,
+        },
+        changeTracker,
+      );
+      if (nextImage !== image) {
+        hasMessageImageChanged = true;
+      }
+      return nextImage;
+    });
+    if (!hasMessageImageChanged) return message;
+    hasMessageListChanged = true;
+    return { ...message, images };
+  });
+  return {
+    messages: nextMessageList,
+    changed: hasMessageListChanged,
+  };
+}
+
+function persistBranchStateImagesForSession(
+  branchStateInput,
+  usedCacheIds,
+  {
+    sessionId = '',
+    sessionIndex = -1,
+  } = {},
+  changeTracker = null,
+) {
+  const sourceEntries = Array.isArray(branchStateInput?.entries)
+    ? branchStateInput.entries
+    : [];
+  if (!sourceEntries.length) {
+    return {
+      branchState: branchStateInput,
+      changed: false,
+    };
+  }
+  let hasBranchStateChanged = false;
+  const nextEntries = sourceEntries.map((entryItem, branchEntryIndex) => {
+    const sourceVariants = Array.isArray(entryItem?.variants) ? entryItem.variants : [];
+    if (!sourceVariants.length) return entryItem;
+    const branchRootId = String(entryItem?.branchRootId || '').trim();
+    let hasEntryChanged = false;
+    const nextVariants = sourceVariants.map((variantItem, variantIndex) => {
+      const { messages, changed } = persistMessageListImagesForSession(
+        variantItem?.messages,
+        usedCacheIds,
+        {
+          sessionId,
+          sessionIndex,
+          branchRootId,
+          branchEntryIndex,
+          variantIndex,
+        },
+        changeTracker,
+      );
+      if (!changed) return variantItem;
+      hasEntryChanged = true;
+      return {
+        ...variantItem,
+        messages,
+        updatedAt: Date.now(),
+      };
+    });
+    if (!hasEntryChanged) return entryItem;
+    hasBranchStateChanged = true;
+    return {
+      ...entryItem,
+      variants: nextVariants,
+    };
+  });
+  if (!hasBranchStateChanged) {
+    return {
+      branchState: branchStateInput,
+      changed: false,
+    };
+  }
+  return {
+    branchState: {
+      ...(branchStateInput && typeof branchStateInput === 'object' ? branchStateInput : {}),
+      entries: nextEntries,
+    },
+    changed: true,
+  };
+}
+
 function persistChatSessionsWithoutInlineImages(sessions = []) {
   const usedCacheIds = new Set();
+  const changeTracker = { changed: false };
   const nextSessions = Array.isArray(sessions)
-    ? sessions.map((session) => {
-        const messages = Array.isArray(session?.messages)
-          ? session.messages.map((message) => {
-              if (!Array.isArray(message?.images) || !message.images.length) return message;
-              const images = message.images.map((image) => persistChatImageForSession(image, usedCacheIds));
-              return { ...message, images };
-            })
-          : [];
-        return { ...session, messages };
+    ? sessions.map((session, sessionIndex) => {
+        const sessionId = String(session?.id || '').trim();
+        const {
+          messages,
+          changed: hasSessionMessageChanged,
+        } = persistMessageListImagesForSession(
+          session?.messages,
+          usedCacheIds,
+          {
+            sessionId,
+            sessionIndex,
+          },
+          changeTracker,
+        );
+        const {
+          branchState: nextBranchState,
+          changed: hasBranchStateChanged,
+        } = persistBranchStateImagesForSession(
+          session?.messageBranchState,
+          usedCacheIds,
+          {
+            sessionId,
+            sessionIndex,
+          },
+          changeTracker,
+        );
+        if (!hasSessionMessageChanged && !hasBranchStateChanged) return session;
+        changeTracker.changed = true;
+        const nextSession = {
+          ...session,
+          messages,
+        };
+        if (hasBranchStateChanged) {
+          nextSession.messageBranchState = nextBranchState;
+        }
+        return nextSession;
       })
     : [];
-  return { sessions: nextSessions, usedCacheIds };
+  return { sessions: nextSessions, usedCacheIds, changed: !!changeTracker.changed };
+}
+
+function hasInlineImageDataInMessageList(messageListInput) {
+  const sourceMessageList = Array.isArray(messageListInput) ? messageListInput : [];
+  return sourceMessageList.some((message) => (
+    Array.isArray(message?.images)
+    && message.images.some((image) => String(image?.dataUrl || '').trim().startsWith('data:image/'))
+  ));
 }
 
 function hasInlineImageDataInSessions(sessions = []) {
   if (!Array.isArray(sessions) || !sessions.length) return false;
-  return sessions.some((session) => (
-    Array.isArray(session?.messages)
-    && session.messages.some((message) => (
-      Array.isArray(message?.images)
-      && message.images.some((image) => String(image?.dataUrl || '').trim().startsWith('data:image/'))
-    ))
-  ));
+  return sessions.some((session) => {
+    const hasInlineDataInMainMessages = hasInlineImageDataInMessageList(session?.messages);
+    if (hasInlineDataInMainMessages) return true;
+    const branchEntries = Array.isArray(session?.messageBranchState?.entries)
+      ? session.messageBranchState.entries
+      : [];
+    return branchEntries.some((entryItem) => {
+      const variants = Array.isArray(entryItem?.variants) ? entryItem.variants : [];
+      return variants.some((variantItem) =>
+        hasInlineImageDataInMessageList(variantItem?.messages));
+    });
+  });
 }
 
-function readChatImageCacheDataUrl(cacheId) {
-  const id = String(cacheId || '').trim();
-  if (!id) return null;
-  const dir = getChatImageCacheDir();
-  if (!fs.existsSync(dir)) return null;
-  const candidates = fs.readdirSync(dir).filter((name) => String(name).startsWith(`${id}.`));
-  const fileName = candidates[0] || '';
-  if (!fileName) return null;
-  const filePath = path.join(dir, fileName);
+function readChatImageCacheDataUrl(cacheIdOrPayload, options = {}) {
+  const payload =
+    cacheIdOrPayload && typeof cacheIdOrPayload === 'object'
+      ? cacheIdOrPayload
+      : {
+          cacheId: cacheIdOrPayload,
+          cacheFileName: options?.cacheFileName || options?.fileName || '',
+        };
+  const explicitCacheId = String(payload?.cacheId || '').trim();
+  const hintedFileName = String(
+    payload?.cacheFileName || payload?.fileName || payload?.name || '',
+  ).trim();
+  const hintedFileCacheId = deriveCacheIdFromFileName(hintedFileName);
+  const cacheIdCandidates = Array.from(
+    new Set(
+      [explicitCacheId, hintedFileCacheId]
+        .map((item) => String(item || '').trim())
+        .filter(Boolean),
+    ),
+  );
+  const searchDirs = getChatImageCacheSearchDirs().filter((dirPath) => fs.existsSync(dirPath));
+  if (!searchDirs.length) return null;
+
+  const findFileNameByCacheId = (dirPath, cacheIdCandidate) => {
+    if (!cacheIdCandidate) return '';
+    try {
+      return fs
+        .readdirSync(dirPath)
+        .find((entryName) => {
+          const baseName = String(path.basename(entryName, path.extname(entryName)) || '').trim();
+          return baseName === cacheIdCandidate;
+        }) || '';
+    } catch {
+      return '';
+    }
+  };
+
+  let matchedDir = '';
+  let matchedFileName = '';
+  let matchedCacheId = '';
+
+  for (const dirPath of searchDirs) {
+    for (const cacheIdCandidate of cacheIdCandidates) {
+      const fileNameByCacheId = findFileNameByCacheId(dirPath, cacheIdCandidate);
+      if (!fileNameByCacheId) continue;
+      matchedDir = dirPath;
+      matchedFileName = fileNameByCacheId;
+      matchedCacheId = cacheIdCandidate;
+      break;
+    }
+    if (matchedFileName) break;
+
+    if (hintedFileName) {
+      const hintedBaseName = String(path.basename(hintedFileName) || '').trim();
+      const hintedPath = path.join(dirPath, hintedBaseName);
+      if (hintedBaseName && fs.existsSync(hintedPath)) {
+        matchedDir = dirPath;
+        matchedFileName = hintedBaseName;
+        matchedCacheId = String(path.basename(hintedBaseName, path.extname(hintedBaseName)) || '').trim();
+        break;
+      }
+    }
+  }
+
+  if (!matchedFileName) return null;
+  let filePath = path.join(matchedDir, matchedFileName);
   if (!fs.existsSync(filePath)) return null;
-  const ext = String(path.extname(fileName) || '').replace(/^\./, '').toLowerCase();
+
+  const primaryDir = getChatImageCacheDir();
+  if (
+    primaryDir &&
+    matchedDir &&
+    path.resolve(primaryDir).toLowerCase() !== path.resolve(matchedDir).toLowerCase()
+  ) {
+    try {
+      fs.mkdirSync(primaryDir, { recursive: true });
+      const primaryFilePath = path.join(primaryDir, matchedFileName);
+      if (!fs.existsSync(primaryFilePath)) {
+        fs.copyFileSync(filePath, primaryFilePath);
+      }
+      filePath = primaryFilePath;
+    } catch {}
+  }
+
+  const ext = String(path.extname(filePath) || '').replace(/^\./, '').toLowerCase();
   const mimeByExt = {
     png: 'image/png',
     jpg: 'image/jpeg',
@@ -724,11 +1447,14 @@ function readChatImageCacheDataUrl(cacheId) {
   };
   const mimeType = mimeByExt[ext] || 'application/octet-stream';
   const buffer = fs.readFileSync(filePath);
-  if (!buffer.length) return null;
+  if (!buffer?.length) return null;
+
+  const normalizedCacheId =
+    String(matchedCacheId || path.basename(matchedFileName, path.extname(matchedFileName)) || '').trim();
   return {
     ok: true,
-    cacheId: id,
-    fileName,
+    cacheId: normalizedCacheId,
+    fileName: matchedFileName,
     filePath,
     mimeType,
     dataUrl: `data:${mimeType};base64,${buffer.toString('base64')}`
@@ -828,6 +1554,48 @@ function normalizeTargetRectNorm(input) {
   };
 }
 
+function normalizeCaptureMeta(input) {
+  if (!input || typeof input !== 'object') return null;
+  const sourceBounds = normalizeTargetRect(input?.sourceBounds);
+  const targetSize = normalizeTargetCanvas(input?.targetSize);
+  const schemaVersionRaw = Number(input?.schemaVersion);
+  const componentSizeRaw = Number(input?.componentSize);
+  const rawByteLengthRaw = Number(input?.rawByteLength);
+  const imageDataWidthRaw = Number(input?.imageDataWidth);
+  const imageDataHeightRaw = Number(input?.imageDataHeight);
+  const bitsPerChannelRaw = Number(input?.bitsPerChannel);
+  const normalized = {
+    schemaVersion: Number.isFinite(schemaVersionRaw) ? Math.max(1, Math.round(schemaVersionRaw)) : undefined,
+    colorSpace: input?.colorSpace ? String(input.colorSpace) : undefined,
+    componentSize: Number.isFinite(componentSizeRaw) ? Math.max(1, Math.round(componentSizeRaw)) : undefined,
+    colorProfile: input?.colorProfile ? String(input.colorProfile) : undefined,
+    usedPreferredColorProfile:
+      typeof input?.usedPreferredColorProfile === 'boolean'
+        ? input.usedPreferredColorProfile
+        : undefined,
+    preferredColorProfileError:
+      input?.preferredColorProfileError ? String(input.preferredColorProfileError) : undefined,
+    sourceBounds: sourceBounds || undefined,
+    targetSize: targetSize || undefined,
+    rawByteLength: Number.isFinite(rawByteLengthRaw)
+      ? Math.max(0, Math.round(rawByteLengthRaw))
+      : undefined,
+    imageDataWidth: Number.isFinite(imageDataWidthRaw)
+      ? Math.max(1, Math.round(imageDataWidthRaw))
+      : undefined,
+    imageDataHeight: Number.isFinite(imageDataHeightRaw)
+      ? Math.max(1, Math.round(imageDataHeightRaw))
+      : undefined,
+    documentMode: input?.documentMode ? String(input.documentMode) : undefined,
+    bitsPerChannel: Number.isFinite(bitsPerChannelRaw)
+      ? Math.max(1, Math.round(bitsPerChannelRaw))
+      : undefined
+  };
+  return Object.keys(normalized).some((key) => normalized[key] !== undefined)
+    ? normalized
+    : null;
+}
+
 function normalizeTargetDocumentId(input) {
   const value = Number(input);
   if (!Number.isFinite(value)) return null;
@@ -851,12 +1619,47 @@ function detectCaptureErrorCode(rawMessage, action = '') {
     return 'no_selection';
   }
   if (
-    /no[\s_-]*active[\s_-]*document|document[_\s-]*not[_\s-]*found/.test(lower)
+    /no[\s_-]*active[\s_-]*document|no_document/.test(lower)
+    || /未找到活动文档|无活动文档/.test(text)
   ) {
     return 'no_document';
   }
   if (/capture[_\s-]*file[_\s-]*path[_\s-]*required|capture_file_path_required/.test(lower)) {
     return normalizedAction === 'select' ? 'capture_selection_unavailable' : 'capture_canvas_unavailable';
+  }
+  if (/capture[_\s-]*payload[_\s-]*too[_\s-]*large|capture_payload_too_large/.test(lower)) {
+    return 'capture_payload_too_large';
+  }
+  if (
+    /cannot[\s_-]*input[\s_-]*clipboard|cannot_input_clipboard/.test(lower)
+    || /不能输入剪贴板/.test(text)
+  ) {
+    return normalizedAction === 'select'
+      ? 'capture_selection_clipboard_unavailable'
+      : 'capture_canvas_clipboard_unavailable';
+  }
+  if (
+    /cannot[\s_-]*update[\s_-]*smart[\s_-]*object[\s_-]*file|unable[\s_-]*to[\s_-]*update[\s_-]*smart[\s_-]*object[\s_-]*file|smart[_\s-]*object[_\s-]*update[_\s-]*failed|capture_runtime_conflict/.test(lower)
+    || /无法更新智能对象文件/.test(text)
+  ) {
+    return normalizedAction === 'select'
+      ? 'capture_selection_runtime_conflict'
+      : 'capture_canvas_runtime_conflict';
+  }
+  if (
+    /capture_get_pixels_failed|capture_image_data_missing|capture_get_data_failed/.test(lower)
+  ) {
+    return normalizedAction === 'select'
+      ? 'capture_selection_runtime_conflict'
+      : 'capture_canvas_runtime_conflict';
+  }
+  if (
+    /queue_result_action_mismatch|action_type_mismatch|bridge_action_type_mismatch|capture_action_domain_mismatch/.test(lower)
+  ) {
+    return 'bridge_action_type_mismatch';
+  }
+  if (/bridge_runtime_contract_mismatch/.test(lower)) {
+    return 'bridge_runtime_contract_mismatch';
   }
   return '';
 }
@@ -876,6 +1679,57 @@ function normalizeCaptureBridgeError(rawMessage, action = '') {
       code,
       message: 'no_document',
       rawMessage: message || 'No active document'
+    };
+  }
+  if (code === 'bridge_action_type_mismatch') {
+    return {
+      code,
+      message: 'capture_action_domain_mismatch',
+      rawMessage: message || 'queue_result_action_mismatch'
+    };
+  }
+  if (code === 'bridge_runtime_contract_mismatch') {
+    return {
+      code,
+      message: 'bridge_runtime_contract_mismatch',
+      rawMessage: message || 'bridge_runtime_contract_mismatch'
+    };
+  }
+  if (
+    code === 'capture_selection_clipboard_unavailable'
+    || code === 'capture_canvas_clipboard_unavailable'
+  ) {
+    return {
+      code,
+      message: code,
+      rawMessage: message || 'cannot_input_clipboard'
+    };
+  }
+  if (
+    code === 'capture_selection_runtime_conflict'
+    || code === 'capture_canvas_runtime_conflict'
+  ) {
+    return {
+      code,
+      message: code,
+      rawMessage: message || 'capture_runtime_conflict'
+    };
+  }
+  if (code === 'capture_payload_too_large') {
+    return {
+      code,
+      message: code,
+      rawMessage: message || 'capture_payload_too_large'
+    };
+  }
+  if (
+    code === 'capture_selection_unavailable'
+    || code === 'capture_canvas_unavailable'
+  ) {
+    return {
+      code,
+      message: code,
+      rawMessage: message || 'capture_file_path_required'
     };
   }
   return {
@@ -931,6 +1785,139 @@ function clearPsImageCache() {
 
 function makePsCacheId() {
   return `pscache_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function cacheBufferToPsImageCache({
+  buffer,
+  mimeType = 'image/png',
+  ttlMs = PS_CACHE_TTL_DEFAULT_MS,
+  name = '',
+  originName = '',
+  source = 'ps',
+  role = '',
+  slotIndex = undefined,
+  clientRef = '',
+  meta = undefined
+} = {}) {
+  const binary = Buffer.isBuffer(buffer)
+    ? buffer
+    : (buffer ? Buffer.from(buffer) : Buffer.alloc(0));
+  if (!binary.length) {
+    throw new Error('ps_cache_buffer_empty');
+  }
+  prunePsImageCache();
+  const normalizedTtlMs = sanitizePsCacheTtlMs(ttlMs);
+  const cacheId = makePsCacheId();
+  const ext = getExtByMimeType(mimeType);
+  const fileName = `${cacheId}.${ext}`;
+  const filePath = path.join(ensurePsImageCacheDir(), fileName);
+  fs.writeFileSync(filePath, binary);
+  const now = Date.now();
+  const entry = {
+    cacheId,
+    filePath,
+    fileName,
+    name: String(name || fileName),
+    originName: String(originName || name || fileName),
+    type: String(mimeType || 'application/octet-stream'),
+    source: String(source || 'ps'),
+    role: String(role || ''),
+    slotIndex: Number.isFinite(slotIndex) ? Number(slotIndex) : undefined,
+    clientRef: String(clientRef || ''),
+    meta: meta && typeof meta === 'object' ? meta : undefined,
+    cachedAt: now,
+    expiresAt: now + normalizedTtlMs,
+    byteLength: binary.length
+  };
+  psImageCacheMap.set(cacheId, entry);
+  prunePsImageCache();
+  return { entry, ttlMs: normalizedTtlMs };
+}
+
+function rebuildPsCacheEntryFromDisk(cacheId) {
+  const id = String(cacheId || '').trim();
+  if (!id) return null;
+  try {
+    const dir = ensurePsImageCacheDir();
+    const matchedName = fs.readdirSync(dir).find((name) => {
+      try {
+        const filePath = path.join(dir, name);
+        const stat = fs.statSync(filePath);
+        if (!stat.isFile()) return false;
+        const fileId = String(path.basename(name, path.extname(name)) || '').trim();
+        return fileId === id;
+      } catch {
+        return false;
+      }
+    });
+    if (!matchedName) return null;
+    const filePath = path.join(dir, matchedName);
+    const stat = fs.statSync(filePath);
+    if (!stat.isFile()) return null;
+    const now = Date.now();
+    const cachedAt = Number(stat.mtimeMs || stat.ctimeMs || now);
+    const entry = {
+      cacheId: id,
+      filePath,
+      fileName: matchedName,
+      name: matchedName,
+      originName: matchedName,
+      type: getMimeTypeByExt(filePath),
+      source: 'ps-disk-fallback',
+      role: '',
+      slotIndex: undefined,
+      clientRef: '',
+      meta: undefined,
+      cachedAt,
+      expiresAt: Math.max(now + PS_CACHE_TTL_MIN_MS, cachedAt + PS_CACHE_TTL_DEFAULT_MS),
+      byteLength: Number(stat.size || 0)
+    };
+    psImageCacheMap.set(id, entry);
+    return entry;
+  } catch (err) {
+    log('ps-cache rebuild from disk failed', { cacheId: id, message: err.message });
+    return null;
+  }
+}
+
+function readPsImageCacheDataUrl(cacheId, options = {}) {
+  const id = String(cacheId || '').trim();
+  if (!id) return null;
+  const ignoreExpiry = !!options?.ignoreExpiry;
+  let entry = psImageCacheMap.get(id);
+  if (!entry) {
+    entry = rebuildPsCacheEntryFromDisk(id);
+  }
+  if (!entry) return null;
+
+  if (
+    !ignoreExpiry &&
+    (!Number.isFinite(entry.expiresAt) || entry.expiresAt <= Date.now())
+  ) {
+    removePsCacheEntryFile(entry);
+    psImageCacheMap.delete(id);
+    return null;
+  }
+
+  if (!entry.filePath || !fs.existsSync(entry.filePath)) {
+    psImageCacheMap.delete(id);
+    entry = rebuildPsCacheEntryFromDisk(id);
+    if (!entry || !entry.filePath || !fs.existsSync(entry.filePath)) {
+      return null;
+    }
+  }
+
+  const buffer = fs.readFileSync(entry.filePath);
+  if (!buffer?.length) return null;
+  return {
+    ok: true,
+    cacheId: entry.cacheId,
+    fileName: entry.fileName,
+    filePath: entry.filePath,
+    mimeType: entry.type,
+    dataUrl: `data:${entry.type};base64,${buffer.toString('base64')}`,
+    entry,
+  };
 }
 
 function cleanupPsCacheDirectory() {
@@ -1087,8 +2074,15 @@ function resolveLatestFileInDir(dir, pattern, fallbackName = '') {
 }
 
 function readDevLogSections() {
-  const devLogsDir = path.resolve(__dirname, '..', '.tmp-logs');
-  if (!fs.existsSync(devLogsDir)) return [];
+  const repoRoot = path.resolve(__dirname, '..');
+  const workspaceRoot = path.resolve(repoRoot, '..');
+  const candidateDirs = [
+    path.join(workspaceRoot, '\u65e5\u5fd7\u6587\u4ef6', '01-\u5f00\u53d1\u65e5\u5fd7', 'dev-logs'),
+    path.join(workspaceRoot, '\u4e34\u65f6\u7f13\u5b58', '02-\u5f00\u53d1\u4e34\u65f6', 'dev-logs'),
+    path.resolve(repoRoot, '.tmp-logs')
+  ];
+  const devLogsDir = candidateDirs.find((dir) => fs.existsSync(dir));
+  if (!devLogsDir) return [];
   const sections = [];
   const webuiOut = resolveLatestFileInDir(devLogsDir, /^webui-dev\.out(?:-\d{8}-\d{6})?\.log$/i, 'webui-dev.out.log');
   const webuiErr = resolveLatestFileInDir(devLogsDir, /^webui-dev\.err(?:-\d{8}-\d{6})?\.log$/i, 'webui-dev.err.log');
@@ -1151,6 +2145,103 @@ function openExternalInDefaultBrowser(raw) {
   }
 }
 
+function resolveExistingImageFilePath(rawPath) {
+  const normalizedPath = String(rawPath || '').trim();
+  if (!normalizedPath) return '';
+  try {
+    const resolvedPath = path.resolve(normalizedPath);
+    if (!fs.existsSync(resolvedPath)) return '';
+    return fs.statSync(resolvedPath).isFile() ? resolvedPath : '';
+  } catch {
+    return '';
+  }
+}
+
+function ensureOpenImageTempDir() {
+  const dir = path.join(getUnifiedCacheRootDir(), 'open-image-temp');
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function writeOpenImageTempFileFromDataUrl(payload = {}, dataUrl = '') {
+  const parsed = parseImageDataUrl(dataUrl);
+  if (!parsed?.buffer?.length) return '';
+  const ext = getExtByMimeType(String(payload?.type || parsed.mime || 'image/png'));
+  const stem = sanitizeGeneratedCacheFileStem(
+    payload?.originName || payload?.name || `open-image-${Date.now()}`
+  );
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${stem}.${ext}`;
+  const filePath = path.join(ensureOpenImageTempDir(), fileName);
+  fs.writeFileSync(filePath, parsed.buffer);
+  return filePath;
+}
+
+function resolveImageFilePathForSystemOpen(payload = {}) {
+  const directPathCandidates = [
+    payload?.filePath,
+    payload?.cacheFilePath
+  ];
+  for (const directPathCandidate of directPathCandidates) {
+    const resolvedDirectPath = resolveExistingImageFilePath(directPathCandidate);
+    if (resolvedDirectPath) return resolvedDirectPath;
+  }
+
+  const generatedCachePath = resolveGeneratedCacheFilePath({
+    filePath: payload?.cacheFilePath || payload?.filePath,
+    fileName: payload?.cacheFileName || payload?.fileName
+  });
+  if (generatedCachePath) return generatedCachePath;
+
+  const psCacheId = String(payload?.psCacheId || '').trim();
+  if (psCacheId) {
+    prunePsImageCache();
+    const psCacheEntry = psImageCacheMap.get(psCacheId);
+    if (psCacheEntry && Number.isFinite(psCacheEntry.expiresAt) && psCacheEntry.expiresAt > Date.now()) {
+      const psCacheFilePath = resolveExistingImageFilePath(psCacheEntry.filePath);
+      if (psCacheFilePath) return psCacheFilePath;
+    }
+  }
+
+  const chatCacheId = String(payload?.cacheId || '').trim();
+  const chatCacheFileName = String(payload?.cacheFileName || payload?.fileName || '').trim();
+  if (chatCacheId || chatCacheFileName) {
+    const chatCacheData = readChatImageCacheDataUrl({
+      cacheId: chatCacheId,
+      cacheFileName: chatCacheFileName,
+    });
+    const chatCacheFilePath = resolveExistingImageFilePath(chatCacheData?.filePath);
+    if (chatCacheFilePath) return chatCacheFilePath;
+  }
+
+  const dataUrl = String(payload?.dataUrl || '').trim();
+  if (/^data:[^;,]+;base64,/i.test(dataUrl)) {
+    return writeOpenImageTempFileFromDataUrl(payload, dataUrl);
+  }
+
+  return '';
+}
+
+async function openImageInSystemDefaultViewer(payload = {}) {
+  try {
+    const filePath = resolveImageFilePathForSystemOpen(payload);
+    if (!filePath) {
+      return { ok: false, message: 'not_found' };
+    }
+    const openResult = await shell.openPath(filePath);
+    if (String(openResult || '').trim()) {
+      return {
+        ok: false,
+        filePath,
+        message: String(openResult || '').trim()
+      };
+    }
+    return { ok: true, filePath };
+  } catch (err) {
+    log('openImageInSystemDefaultViewer failed', { message: err.message });
+    return { ok: false, message: err.message };
+  }
+}
+
 function sanitizeBridgePort(value) {
   const parsed = parseBridgePort(value);
   return parsed || BRIDGE_PORT_DEFAULT;
@@ -1206,27 +2297,85 @@ function startServer(options = {}) {
   if (serverProc) return getServerStatus();
   bridgePort = sanitizeBridgePort(options?.port ?? bridgePort);
   saveBridgeConfig();
-  const serverDir = path.join(__dirname, '..', 'server');
-  const entry = path.join(serverDir, 'index.js');
-  if (!fs.existsSync(entry)) {
-    log('server entry missing', { entry });
+  const serverDirCandidates = [
+    path.join(__dirname, 'server'),
+    path.join(__dirname, '..', 'server')
+  ];
+  const serverDir = serverDirCandidates.find((dir) => fs.existsSync(path.join(dir, 'index.js')));
+  const entry = serverDir
+    ? path.join(serverDir, 'index.js')
+    : path.join(serverDirCandidates[0], 'index.js');
+  if (!serverDir) {
+    log('server entry missing', {
+      entry,
+      entryCandidates: serverDirCandidates.map((dir) => path.join(dir, 'index.js'))
+    });
     return getServerStatus();
   }
+  log('server spawn start', {
+    pid: process.pid,
+    ppid: process.ppid,
+    entry,
+    cwd: serverDir,
+    port: bridgePort,
+    runAsNode: true
+  });
   serverProc = spawn(process.execPath, [entry], {
     cwd: serverDir,
-    env: { ...process.env, PORT: String(bridgePort) },
+    env: {
+      ...process.env,
+      PORT: String(bridgePort),
+      ELECTRON_RUN_AS_NODE: '1'
+    },
     stdio: 'ignore',
     windowsHide: true
   });
-  serverProc.on('exit', () => {
-    serverProc = null;
+  const procRef = serverProc;
+  const childPid = Number(procRef?.pid || 0) || null;
+  serverProcStartedAt = Date.now();
+  log('server spawn ok', {
+    pid: process.pid,
+    childPid,
+    port: bridgePort,
+    runAsNode: true
+  });
+  serverProc.on('error', (err) => {
+    log('server process error', {
+      pid: process.pid,
+      childPid,
+      port: bridgePort,
+      code: String(err?.code || ''),
+      message: String(err?.message || err || '')
+    }, 'error');
+  });
+  serverProc.on('exit', (code, signal) => {
+    const uptimeMs = serverProcStartedAt ? Math.max(0, Date.now() - serverProcStartedAt) : null;
+    log('server process exit', {
+      pid: process.pid,
+      childPid,
+      port: bridgePort,
+      code: typeof code === 'number' ? code : null,
+      signal: signal || null,
+      uptimeMs
+    }, code === 0 ? 'info' : 'warn');
+    if (serverProc === procRef) {
+      serverProc = null;
+      serverProcStartedAt = 0;
+    }
   });
   return getServerStatus();
 }
 
 function stopServer() {
   if (!serverProc) return getServerStatus();
-  try { serverProc.kill(); } catch {}
+  try {
+    serverProc.kill();
+  } catch (err) {
+    log('stop server kill failed', {
+      message: String(err?.message || err || ''),
+      pid: serverProc ? (serverProc.pid || null) : null
+    }, 'warn');
+  }
   return getServerStatus();
 }
 
@@ -1261,6 +2410,18 @@ async function fetchBridgeJson(route, options = {}) {
     }
     return data;
   } catch (err) {
+    log('bridge request failed', {
+      route,
+      url,
+      method,
+      timeoutMs,
+      serverRunning: !!serverProc,
+      serverPid: serverProc ? (serverProc.pid || null) : null,
+      errorName: String(err?.name || ''),
+      errorCode: String(err?.code || ''),
+      causeCode: String(err?.cause?.code || ''),
+      message: String(err?.message || err || '')
+    }, 'warn');
     if (err?.name === 'AbortError') {
       throw new Error(`bridge 请求超时（${timeoutMs}ms）`);
     }
@@ -1270,22 +2431,144 @@ async function fetchBridgeJson(route, options = {}) {
   }
 }
 
+function isBridgeRuntimeContractReady(statusPayload = {}) {
+  if (!statusPayload || typeof statusPayload !== 'object') return false;
+  const protocolVersion = normalizeBridgeProtocolVersion(statusPayload.bridgeProtocolVersion);
+  const hasLegacyRelayFlag = typeof statusPayload.forceLegacyCaptureRelay === 'boolean';
+  if (protocolVersion >= BRIDGE_PROTOCOL_VERSION && hasLegacyRelayFlag) return true;
+  const hasContractFields =
+    Object.prototype.hasOwnProperty.call(statusPayload, 'bridgeProtocolVersion')
+    || Object.prototype.hasOwnProperty.call(statusPayload, 'forceLegacyCaptureRelay');
+  // Backward compatibility: legacy /status payloads without contract fields are still usable.
+  if (!hasContractFields && statusPayload.ok === true) return true;
+  return false;
+}
+
+async function ensureBridgeRuntimeContract(routeLabel = 'bridge') {
+  const status = await fetchBridgeJson('/status', {
+    method: 'GET',
+    timeoutMs: BRIDGE_REQUEST_TIMEOUT_MS
+  });
+  if (isBridgeRuntimeContractReady(status)) {
+    return { ...status, runtimeContractReady: true };
+  }
+  const protocolVersion = normalizeBridgeProtocolVersion(status?.bridgeProtocolVersion);
+  const legacyFlag = typeof status?.forceLegacyCaptureRelay === 'boolean'
+    ? String(status.forceLegacyCaptureRelay)
+    : 'missing';
+  log('bridge runtime contract mismatch detected', {
+    routeLabel,
+    protocolVersion,
+    legacyFlag,
+    serverRunning: !!serverProc
+  });
+  const nonBlockingWarning =
+    `${routeLabel}:bridge_runtime_contract_mismatch`
+    + `:protocol=${protocolVersion || 0}:legacyRelay=${legacyFlag}`
+    + ':建议更新插件（当前继续尝试执行）';
+  log('bridge runtime contract mismatch (non-blocking)', {
+    routeLabel,
+    protocolVersion,
+    legacyFlag,
+    suggestion: '建议更新插件'
+  }, 'warn');
+  return {
+    ...status,
+    runtimeContractReady: false,
+    runtimeContractWarning: nonBlockingWarning
+  };
+}
+
+async function getBridgeRuntimeContractSnapshotForStatus() {
+  try {
+    const status = await fetchBridgeJson('/status', {
+      method: 'GET',
+      timeoutMs: 1200
+    });
+    const protocolVersion = normalizeBridgeProtocolVersion(status?.bridgeProtocolVersion);
+    const hasLegacyRelayFlag = typeof status?.forceLegacyCaptureRelay === 'boolean';
+    const hasContractFields =
+      Object.prototype.hasOwnProperty.call(status || {}, 'bridgeProtocolVersion')
+      || Object.prototype.hasOwnProperty.call(status || {}, 'forceLegacyCaptureRelay');
+    const isLegacyStatusCompatible = !hasContractFields && status?.ok === true;
+    const ready = isBridgeRuntimeContractReady(status) || isLegacyStatusCompatible;
+    return {
+      available: true,
+      ready,
+      errorCode: ready ? '' : 'bridge_runtime_contract_mismatch',
+      message: ready
+        ? ''
+        : `bridge_runtime_contract_mismatch:protocol=${protocolVersion || 0}:legacyRelay=${hasLegacyRelayFlag ? String(status.forceLegacyCaptureRelay) : 'missing'}:建议更新插件（当前可继续尝试）`,
+      bridgeProtocolVersion: protocolVersion,
+      forceLegacyCaptureRelay: hasLegacyRelayFlag ? status.forceLegacyCaptureRelay : null
+    };
+  } catch (error) {
+    return {
+      available: false,
+      ready: false,
+      errorCode: 'bridge_status_unreachable',
+      message: String(error?.message || error || ''),
+      bridgeProtocolVersion: 0,
+      forceLegacyCaptureRelay: null
+    };
+  }
+}
+
+function normalizeBridgeActionType(inputType = '') {
+  const raw = String(inputType || '').trim().toLowerCase();
+  if (raw === 'ps.capture.selection') return 'capture-selection';
+  if (raw === 'ps.capture.canvas') return 'capture-canvas';
+  if (raw === 'ps.import' || raw === 'ps.import.image') return 'import-image';
+  return raw;
+}
+
+function normalizeBridgeProtocolVersion(inputVersion = 0) {
+  const parsedVersion = Number(inputVersion);
+  if (!Number.isFinite(parsedVersion)) return 0;
+  const normalizedVersion = Math.floor(parsedVersion);
+  return normalizedVersion > 0 ? normalizedVersion : 0;
+}
+
+function extractBridgeProtocolVersion(payload = {}) {
+  if (!payload || typeof payload !== 'object') return 0;
+  return normalizeBridgeProtocolVersion(
+    payload?.bridgeProtocolVersion
+    || payload?.payload?.bridgeProtocolVersion
+    || payload?.image?.bridgeProtocolVersion
+    || payload?.captureMeta?.bridgeProtocolVersion
+  );
+}
+
 async function enqueueBridgeCommand(type, payload = {}) {
+  const actionType = normalizeBridgeActionType(type);
+  if (!actionType) {
+    throw new Error('bridge_action_type_required');
+  }
+  const payloadBody = payload && typeof payload === 'object' ? { ...payload } : {};
+  payloadBody.actionType = actionType;
   const queued = await fetchBridgeJson('/queue', {
     method: 'POST',
-    body: { type, payload },
+    body: { type: actionType, payload: payloadBody },
     timeoutMs: BRIDGE_REQUEST_TIMEOUT_MS
   });
   const queueId = String(queued?.item?.id || '').trim();
   if (!queueId) {
     throw new Error('bridge 队列返回了空命令 ID');
   }
-  return queueId;
+  return {
+    queueId,
+    actionType
+  };
 }
 
-async function waitBridgeQueueResult(queueId, timeoutMs = BRIDGE_ACTION_TIMEOUT_MS) {
+async function waitBridgeQueueResult(
+  queueId,
+  timeoutMs = BRIDGE_ACTION_TIMEOUT_MS,
+  expectedActionType = ''
+) {
   const safeQueueId = String(queueId || '').trim();
   if (!safeQueueId) throw new Error('queue_id_required');
+  const normalizedExpectedActionType = normalizeBridgeActionType(expectedActionType);
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     const elapsed = Date.now() - startedAt;
@@ -1300,6 +2583,22 @@ async function waitBridgeQueueResult(queueId, timeoutMs = BRIDGE_ACTION_TIMEOUT_
       }
     );
     if (next?.status === 'done' || next?.status === 'error') {
+      if (normalizedExpectedActionType) {
+        const normalizedResultActionType = normalizeBridgeActionType(
+          next?.actionType
+          || next?.result?.actionType
+          || next?.result?.payload?.actionType
+          || ''
+        );
+        if (!normalizedResultActionType) {
+          throw new Error(`queue_result_missing_action_type:${safeQueueId}`);
+        }
+        if (normalizedResultActionType !== normalizedExpectedActionType) {
+          throw new Error(
+            `queue_result_action_mismatch:${safeQueueId}:${normalizedExpectedActionType}->${normalizedResultActionType}`
+          );
+        }
+      }
       return next;
     }
   }
@@ -1479,18 +2778,78 @@ function resolveGeneratedCacheFilePath(payload = {}) {
   return '';
 }
 
+function readGeneratedTargetMetaByCacheFilePath(cacheFilePath = '') {
+  const normalizedCacheFilePath = String(cacheFilePath || '').trim();
+  if (!normalizedCacheFilePath) {
+    return {
+      targetMeta: null,
+      targetMetaFileName: '',
+      targetMetaFilePath: ''
+    };
+  }
+  const stem = String(path.parse(normalizedCacheFilePath).name || '').trim();
+  if (!stem) {
+    return {
+      targetMeta: null,
+      targetMetaFileName: '',
+      targetMetaFilePath: ''
+    };
+  }
+  const targetMetaDir = getGeneratedTargetMetaDir();
+  const targetMetaFileName = `${stem}.json`;
+  const targetMetaFilePath = path.join(targetMetaDir, targetMetaFileName);
+  if (!fs.existsSync(targetMetaFilePath)) {
+    return {
+      targetMeta: null,
+      targetMetaFileName: '',
+      targetMetaFilePath: ''
+    };
+  }
+  try {
+    const raw = fs.readFileSync(targetMetaFilePath, 'utf-8');
+    const parsed = raw ? JSON.parse(raw) : {};
+    const targetMeta = sanitizeGeneratedTargetMeta(parsed?.target || parsed);
+    if (!targetMeta) {
+      return {
+        targetMeta: null,
+        targetMetaFileName: '',
+        targetMetaFilePath: ''
+      };
+    }
+    return {
+      targetMeta,
+      targetMetaFileName,
+      targetMetaFilePath
+    };
+  } catch (err) {
+    log('generated-target-meta read failed', {
+      message: err.message,
+      targetMetaFilePath
+    });
+    return {
+      targetMeta: null,
+      targetMetaFileName: '',
+      targetMetaFilePath: ''
+    };
+  }
+}
+
 function readGeneratedCacheDataUrl(payload = {}) {
   const filePath = resolveGeneratedCacheFilePath(payload);
   if (!filePath) return { ok: false, message: 'not_found' };
   const buffer = fs.readFileSync(filePath);
   if (!buffer.length) return { ok: false, message: 'empty_file' };
   const mimeType = getMimeTypeByExt(filePath);
+  const generatedTargetMeta = readGeneratedTargetMetaByCacheFilePath(filePath);
   return {
     ok: true,
     filePath,
     fileName: path.basename(filePath),
     mimeType,
-    dataUrl: `data:${mimeType};base64,${buffer.toString('base64')}`
+    dataUrl: `data:${mimeType};base64,${buffer.toString('base64')}`,
+    targetMeta: generatedTargetMeta.targetMeta || null,
+    targetMetaFileName: generatedTargetMeta.targetMetaFileName || '',
+    targetMetaFilePath: generatedTargetMeta.targetMetaFilePath || ''
   };
 }
 
@@ -1505,8 +2864,16 @@ function readCaptureFromCommFile(commPath) {
   if (!imgPath || !fs.existsSync(imgPath)) throw new Error('capture_image_missing');
   const mimeType = String(image?.mimeType || 'image/png').trim();
   const buffer = fs.readFileSync(imgPath);
+  if (!buffer?.length) throw new Error('capture_image_empty');
+  const captureMeta = normalizeCaptureMeta({
+    ...(image?.captureMeta && typeof image.captureMeta === 'object' ? image.captureMeta : {}),
+    documentMode: image?.documentMode,
+    bitsPerChannel: image?.bitsPerChannel
+  });
   return {
-    dataUrl: `data:${mimeType};base64,${buffer.toString('base64')}`,
+    buffer,
+    byteLength: buffer.length,
+    imagePath: imgPath,
     mimeType,
     width: Number(image?.width) || undefined,
     height: Number(image?.height) || undefined,
@@ -1515,34 +2882,145 @@ function readCaptureFromCommFile(commPath) {
     targetCanvas: normalizeTargetCanvas(image?.targetCanvas) || null,
     documentId: Number(image?.documentId) || undefined,
     documentName: image?.documentName ? String(image.documentName) : undefined,
+    documentMode:
+      image?.documentMode
+        ? String(image.documentMode)
+        : (captureMeta?.documentMode || undefined),
+    bitsPerChannel: Number.isFinite(Number(image?.bitsPerChannel))
+      ? Number(image.bitsPerChannel)
+      : (Number.isFinite(Number(captureMeta?.bitsPerChannel)) ? Number(captureMeta.bitsPerChannel) : undefined),
+    captureMeta: captureMeta || undefined,
     queueId: parsed?.queueId ? String(parsed.queueId) : '',
     role: parsed?.bridge?.role ? String(parsed.bridge.role) : '',
     slotIndex: Number.isFinite(parsed?.bridge?.slotIndex) ? Number(parsed.bridge.slotIndex) : -1,
     capturedAt: Number(parsed?.bridge?.at) || Number(parsed?.createdAt) || Date.now(),
-    commPath: filePath
+    commPath: filePath,
+    bridgeProtocolVersion: 0
+  };
+}
+
+function readCaptureFromResultPayload(payloadBody = {}) {
+  const body = payloadBody && typeof payloadBody === 'object' ? payloadBody : {};
+  const image = body?.image && typeof body.image === 'object' ? body.image : {};
+  const imgPath = String(image?.filePath || body?.filePath || '').trim();
+  if (!imgPath) {
+    return { capture: null, error: '' };
+  }
+  if (!fs.existsSync(imgPath)) {
+    return { capture: null, error: 'capture_image_missing' };
+  }
+  const buffer = fs.readFileSync(imgPath);
+  if (!buffer?.length) {
+    return { capture: null, error: 'capture_image_empty' };
+  }
+  const mimeType = String(image?.mimeType || body?.mimeType || 'image/png').trim();
+  const captureMeta = normalizeCaptureMeta({
+    ...(image?.captureMeta && typeof image.captureMeta === 'object' ? image.captureMeta : {}),
+    documentMode: image?.documentMode || body?.documentMode,
+    bitsPerChannel: image?.bitsPerChannel ?? body?.bitsPerChannel
+  });
+  return {
+    capture: {
+      buffer,
+      byteLength: buffer.length,
+      imagePath: imgPath,
+      mimeType,
+      width: Number(image?.width ?? body?.width) || undefined,
+      height: Number(image?.height ?? body?.height) || undefined,
+      targetRect: normalizeTargetRect(image?.targetRect || body?.targetRect) || null,
+      targetRectNorm: normalizeTargetRectNorm(image?.targetRectNorm || body?.targetRectNorm) || null,
+      targetCanvas: normalizeTargetCanvas(image?.targetCanvas || body?.targetCanvas) || null,
+      documentId: Number(image?.documentId ?? body?.documentId) || undefined,
+      documentName:
+        image?.documentName
+          ? String(image.documentName)
+          : (body?.documentName ? String(body.documentName) : undefined),
+      documentMode:
+        image?.documentMode
+          ? String(image.documentMode)
+          : (captureMeta?.documentMode || (body?.documentMode ? String(body.documentMode) : undefined)),
+      bitsPerChannel: Number.isFinite(Number(image?.bitsPerChannel))
+        ? Number(image.bitsPerChannel)
+        : (
+            Number.isFinite(Number(captureMeta?.bitsPerChannel))
+              ? Number(captureMeta.bitsPerChannel)
+              : (Number.isFinite(Number(body?.bitsPerChannel)) ? Number(body.bitsPerChannel) : undefined)
+          ),
+      captureMeta: captureMeta || undefined,
+      queueId: body?.queueId ? String(body.queueId) : '',
+      role: body?.role ? String(body.role) : '',
+      slotIndex: Number.isFinite(body?.slotIndex) ? Number(body.slotIndex) : -1,
+      capturedAt: Number(body?.capturedAt) || Date.now(),
+      commPath: '',
+      bridgeProtocolVersion: extractBridgeProtocolVersion(body)
+    },
+    error: ''
   };
 }
 
 function resolveCaptureFromBridgeResult(payloadBody = {}, action = 'select') {
+  const expectedActionType = action === 'select' ? 'capture-selection' : 'capture-canvas';
+  const resultActionType = normalizeBridgeActionType(
+    payloadBody?.actionType
+    || payloadBody?.payload?.actionType
+    || ''
+  );
+  const captureKind = String(payloadBody?.captureKind || '').trim().toLowerCase();
+  if (resultActionType && resultActionType !== expectedActionType) {
+    throw new Error(`queue_result_action_mismatch:${expectedActionType}->${resultActionType}`);
+  }
+  if (captureKind) {
+    const expectedCaptureKind = action === 'select' ? 'selection' : 'canvas';
+    if (captureKind !== expectedCaptureKind) {
+      throw new Error(`queue_result_action_mismatch:${expectedCaptureKind}->${captureKind}`);
+    }
+  }
+  const directPayloadCaptureResult = readCaptureFromResultPayload(payloadBody);
+  let capture = directPayloadCaptureResult.capture || null;
+  const directReadError = String(directPayloadCaptureResult.error || '').trim();
   const preferredCommPath = String(payloadBody?.captureCommPath || '').trim();
-  let capture = null;
+  const bridgeProtocolVersion = extractBridgeProtocolVersion(payloadBody);
+  const shouldAllowLegacyCommFallback =
+    FORCE_LEGACY_CAPTURE_RELAY ||
+    !bridgeProtocolVersion ||
+    bridgeProtocolVersion <= BRIDGE_CAPTURE_LEGACY_FALLBACK_MAX_VERSION;
   let commReadError = '';
-  if (preferredCommPath) {
+  if (
+    (!capture || !capture.buffer || !capture.buffer.length) &&
+    preferredCommPath &&
+    shouldAllowLegacyCommFallback
+  ) {
     try {
       capture = readCaptureFromCommFile(preferredCommPath);
     } catch (err) {
       commReadError = String(err?.message || err || 'capture_comm_read_failed');
       log('capture comm read failed', { path: preferredCommPath, message: commReadError });
     }
+  } else if (
+    (!capture || !capture.buffer || !capture.buffer.length) &&
+    preferredCommPath &&
+    !shouldAllowLegacyCommFallback
+  ) {
+    commReadError = 'legacy_comm_fallback_disabled';
   }
 
-  if (!capture || typeof capture.dataUrl !== 'string' || !capture.dataUrl.trim()) {
+  if (!capture || !capture.buffer || !capture.buffer.length) {
     const persistError = String(payloadBody?.captureCommError || '').trim();
-    const parts = [persistError, commReadError].filter(Boolean);
+    const parts = [persistError, directReadError, commReadError].filter(Boolean);
+    if (!shouldAllowLegacyCommFallback && bridgeProtocolVersion) {
+      parts.push(`bridge_protocol_v${bridgeProtocolVersion}`);
+    }
     if (parts.length) {
       throw new Error(`capture_data_unavailable: ${parts.join(' | ')}`);
     }
     throw new Error('capture_data_unavailable');
+  }
+  if (
+    (!Number.isFinite(Number(capture?.bridgeProtocolVersion)) ||
+      Number(capture?.bridgeProtocolVersion) <= 0) &&
+    bridgeProtocolVersion
+  ) {
+    capture.bridgeProtocolVersion = bridgeProtocolVersion;
   }
 
   const ext = getExtByMimeType(capture?.mimeType || 'image/png');
@@ -1560,45 +3038,351 @@ function getChatStateFile() {
   return path.join(getChatCacheDir(), CHAT_CACHE_FILE_BASENAME);
 }
 
-function readChatStateData() {
-  const file = getChatStateFile();
-  if (!fs.existsSync(file)) {
-    return {
-      file,
-      data: { updatedAt: Date.now(), activeId: '', sessions: [] }
-    };
-  }
-  let parsed = null;
+function readJsonFileWithBackup(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
   try {
-    const raw = fs.readFileSync(file, 'utf-8');
-    parsed = JSON.parse(raw);
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(raw);
   } catch (error) {
-    const backupFile = `${file}.bak`;
-    if (!fs.existsSync(backupFile)) {
-      throw error;
-    }
+    const backupFile = `${filePath}.bak`;
+    if (!fs.existsSync(backupFile)) throw error;
     const backupRaw = fs.readFileSync(backupFile, 'utf-8');
-    parsed = JSON.parse(backupRaw);
+    return JSON.parse(backupRaw);
   }
+}
+
+function writeJsonFileAtomic(filePath, data) {
+  const serialized = JSON.stringify(data || {}, null, 2);
+  // Guard against unexpected non-serializable payloads.
+  JSON.parse(serialized);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const tempFilePath =
+    `${filePath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  fs.writeFileSync(tempFilePath, serialized, 'utf-8');
+  fs.renameSync(tempFilePath, filePath);
+}
+
+function readChatStateFromLegacySnapshot() {
+  const legacyFile = getChatStateFile();
+  const parsed = readJsonFileWithBackup(legacyFile);
+  if (!parsed) return null;
   const sessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
   return {
-    file,
+    file: legacyFile,
     data: {
-      ...parsed,
+      updatedAt: Number(parsed?.updatedAt) || Date.now(),
+      activeId: typeof parsed?.activeId === 'string' ? parsed.activeId : '',
       sessions
     }
   };
 }
 
+function readChatStateFromShardedIndex() {
+  const indexFile = getChatIndexFile();
+  const parsedIndex = readJsonFileWithBackup(indexFile);
+  if (!parsedIndex) return null;
+  const indexSessions = Array.isArray(parsedIndex?.sessions)
+    ? parsedIndex.sessions
+    : [];
+  const sessions = indexSessions
+    .map((indexSession, idx) => {
+    const sessionId = String(indexSession?.id || '').trim();
+    if (!sessionId) return null;
+    const shardFile = getChatSessionShardFileById(sessionId);
+    const shardData = readJsonFileWithBackup(shardFile);
+    if (shardData && typeof shardData === 'object') {
+      return sanitizeChatSessionForPersist(shardData, idx);
+    }
+    return null;
+  })
+    .filter(Boolean);
+  return {
+    file: indexFile,
+    data: {
+      updatedAt: Number(parsedIndex?.updatedAt) || Date.now(),
+      activeId: typeof parsedIndex?.activeId === 'string' ? parsedIndex.activeId : '',
+      sessions
+    }
+  };
+}
+
+function writeChatStateData(dataInput = {}, options = {}) {
+  const nextData = dataInput && typeof dataInput === 'object'
+    ? dataInput
+    : { updatedAt: Date.now(), activeId: '', sessions: [] };
+  const previousData = options?.previousData && typeof options.previousData === 'object'
+    ? options.previousData
+    : null;
+  const shardDir = ensureChatSessionShardsDir();
+  const indexFile = getChatIndexFile();
+  const sourceSessions = Array.isArray(nextData?.sessions) ? nextData.sessions : [];
+  const persistedSessions = sourceSessions.map((session, idx) =>
+    sanitizeChatSessionForPersist(session, idx)
+  );
+
+  const expectedShardFiles = new Set();
+  persistedSessions.forEach((sessionItem, idx) => {
+    const sessionId = String(sessionItem?.id || `chat-${Date.now()}-${idx}`).trim();
+    const shardFile = getChatSessionShardFileById(sessionId);
+    expectedShardFiles.add(path.resolve(shardFile).toLowerCase());
+    writeJsonFileAtomic(shardFile, sessionItem);
+  });
+
+  try {
+    const shardEntries = fs.readdirSync(shardDir, { withFileTypes: true });
+    shardEntries.forEach((entry) => {
+      if (!entry.isFile()) return;
+      const fullPath = path.resolve(path.join(shardDir, entry.name));
+      const lowerFullPath = fullPath.toLowerCase();
+      if (
+        lowerFullPath.endsWith('.json') &&
+        !expectedShardFiles.has(lowerFullPath)
+      ) {
+        try { fs.unlinkSync(fullPath); } catch {}
+        const backupPath = `${fullPath}.bak`;
+        if (fs.existsSync(backupPath)) {
+          try { fs.unlinkSync(backupPath); } catch {}
+        }
+      }
+    });
+  } catch {}
+
+  const indexData = {
+    updatedAt: Number(nextData?.updatedAt) || Date.now(),
+    activeId: typeof nextData?.activeId === 'string' ? nextData.activeId : '',
+    sessions: persistedSessions.map((sessionItem, idx) => toChatSessionSummary(sessionItem, idx))
+  };
+  if (previousData) {
+    const previousIndexData = {
+      updatedAt: Number(previousData?.updatedAt) || Date.now(),
+      activeId: typeof previousData?.activeId === 'string' ? previousData.activeId : '',
+      sessions: (Array.isArray(previousData?.sessions) ? previousData.sessions : [])
+        .map((sessionItem, idx) => toChatSessionSummary(sessionItem, idx))
+    };
+    backupChatStateFile(indexFile, previousIndexData);
+  } else {
+    const existingIndex = readJsonFileWithBackup(indexFile);
+    existingIndex && backupChatStateFile(indexFile, existingIndex);
+  }
+  writeJsonFileAtomic(indexFile, indexData);
+  return {
+    file: indexFile,
+    data: {
+      ...indexData,
+      sessions: persistedSessions
+    }
+  };
+}
+
+function readChatStateData() {
+  const shardedSnapshot = readChatStateFromShardedIndex();
+  if (shardedSnapshot) return shardedSnapshot;
+
+  return {
+    file: getChatIndexFile(),
+    data: { updatedAt: Date.now(), activeId: '', sessions: [] }
+  };
+}
+
+function sanitizeMessageBranchStateForPersist(messageBranchStateInput) {
+  const sourceEntries = Array.isArray(messageBranchStateInput)
+    ? messageBranchStateInput
+    : Array.isArray(messageBranchStateInput?.entries)
+      ? messageBranchStateInput.entries
+      : [];
+  const sanitizedEntries = sourceEntries
+    .map((entryItem) => {
+      const branchRootId = String(entryItem?.branchRootId || '').trim();
+      if (!branchRootId) return null;
+      const sourceVariants = Array.isArray(entryItem?.variants) ? entryItem.variants : [];
+      const sanitizedVariants = sourceVariants
+        .map((variantItem, variantIndex) => {
+          const messages = Array.isArray(variantItem?.messages) ? variantItem.messages : [];
+          if (!messages.length) return null;
+          const signature = String(variantItem?.signature || '').trim();
+          if (!signature) return null;
+          return {
+            id: String(variantItem?.id || `branch-${Date.now()}-${variantIndex}`),
+            signature,
+            messages,
+            createdAt: Number(variantItem?.createdAt) || Date.now(),
+            updatedAt: Number(variantItem?.updatedAt) || Date.now()
+          };
+        })
+        .filter(Boolean);
+      if (!sanitizedVariants.length) return null;
+      const activeIndex = Number.isFinite(Number(entryItem?.activeIndex))
+        ? Math.max(0, Math.floor(Number(entryItem.activeIndex)))
+        : 0;
+      return {
+        branchRootId,
+        activeIndex: Math.min(sanitizedVariants.length - 1, activeIndex),
+        variants: sanitizedVariants
+      };
+    })
+    .filter(Boolean);
+  return sanitizedEntries.length
+    ? {
+      version: 1,
+      entries: sanitizedEntries
+    }
+    : null;
+}
+
 function sanitizeChatSessionForPersist(session, idx = 0) {
   const source = session && typeof session === 'object' ? session : {};
-  return {
+  const safeSession = {
     id: String(source.id || `chat-${Date.now()}-${idx}`),
     name: String(source.name || '新对话'),
     pinned: !!source.pinned,
     updatedAt: Number(source.updatedAt) || Date.now(),
     messages: Array.isArray(source.messages) ? source.messages : []
   };
+  const messageBranchState = sanitizeMessageBranchStateForPersist(source.messageBranchState);
+  if (messageBranchState) {
+    safeSession.messageBranchState = messageBranchState;
+  }
+  return safeSession;
+}
+
+function finalizeInterruptedPendingMessage(messageItem) {
+  if (!messageItem || typeof messageItem !== 'object') {
+    return {
+      message: messageItem,
+      changed: false,
+    };
+  }
+  const messageStatus = String(messageItem.status || '').trim().toLowerCase();
+  if (messageStatus !== 'pending') {
+    return {
+      message: messageItem,
+      changed: false,
+    };
+  }
+  const messageRole = String(messageItem.role || '').trim().toLowerCase();
+  if (messageRole === 'assistant') {
+    return {
+      message: {
+        ...messageItem,
+        status: 'error',
+        error: String(messageItem.error || 'interrupted_on_exit'),
+        text: '已停止生成',
+      },
+      changed: true,
+    };
+  }
+  const nextMessage = {
+    ...messageItem,
+    status: 'done',
+  };
+  if (Object.prototype.hasOwnProperty.call(nextMessage, 'error')) {
+    delete nextMessage.error;
+  }
+  return {
+    message: nextMessage,
+    changed: true,
+  };
+}
+
+function finalizeInterruptedPendingMessageList(messageListInput) {
+  const sourceMessageList = Array.isArray(messageListInput) ? messageListInput : [];
+  if (!sourceMessageList.length) {
+    return {
+      messages: sourceMessageList,
+      changed: false,
+    };
+  }
+  let hasMessageListChanged = false;
+  const nextMessageList = sourceMessageList.map((messageItem) => {
+    const { message, changed } = finalizeInterruptedPendingMessage(messageItem);
+    if (!changed) return messageItem;
+    hasMessageListChanged = true;
+    return message;
+  });
+  return {
+    messages: nextMessageList,
+    changed: hasMessageListChanged,
+  };
+}
+
+function finalizeInterruptedPendingBranchState(branchStateInput) {
+  const sourceEntries = Array.isArray(branchStateInput?.entries)
+    ? branchStateInput.entries
+    : [];
+  if (!sourceEntries.length) {
+    return {
+      branchState: branchStateInput,
+      changed: false,
+    };
+  }
+  let hasBranchStateChanged = false;
+  const nextEntries = sourceEntries.map((entryItem) => {
+    const sourceVariants = Array.isArray(entryItem?.variants) ? entryItem.variants : [];
+    if (!sourceVariants.length) return entryItem;
+    let hasEntryChanged = false;
+    const nextVariants = sourceVariants.map((variantItem) => {
+      const { messages, changed } = finalizeInterruptedPendingMessageList(
+        variantItem?.messages,
+      );
+      if (!changed) return variantItem;
+      hasEntryChanged = true;
+      return {
+        ...variantItem,
+        messages,
+        updatedAt: Date.now(),
+      };
+    });
+    if (!hasEntryChanged) return entryItem;
+    hasBranchStateChanged = true;
+    return {
+      ...entryItem,
+      variants: nextVariants,
+    };
+  });
+  if (!hasBranchStateChanged) {
+    return {
+      branchState: branchStateInput,
+      changed: false,
+    };
+  }
+  return {
+    branchState: {
+      ...(branchStateInput && typeof branchStateInput === 'object' ? branchStateInput : {}),
+      entries: nextEntries,
+    },
+    changed: true,
+  };
+}
+
+function finalizeInterruptedPendingMessages(sessionsInput = []) {
+  const sourceSessions = Array.isArray(sessionsInput) ? sessionsInput : [];
+  if (!sourceSessions.length) return { sessions: sourceSessions, changed: false };
+  let hasSessionChanged = false;
+  const nextSessions = sourceSessions.map((sessionItem) => {
+    if (!sessionItem || typeof sessionItem !== 'object') return sessionItem;
+    const {
+      messages: nextMessages,
+      changed: hasMessageChanged,
+    } = finalizeInterruptedPendingMessageList(sessionItem?.messages);
+    const {
+      branchState: nextBranchState,
+      changed: hasBranchStateChanged,
+    } = finalizeInterruptedPendingBranchState(sessionItem?.messageBranchState);
+    if (!hasMessageChanged && !hasBranchStateChanged) return sessionItem;
+    hasSessionChanged = true;
+    const nextSession = {
+      ...sessionItem,
+      messages: nextMessages,
+      updatedAt: Number(sessionItem.updatedAt) || Date.now()
+    };
+    if (hasBranchStateChanged) {
+      nextSession.messageBranchState = nextBranchState;
+    }
+    return nextSession;
+  });
+  return hasSessionChanged
+    ? { sessions: nextSessions, changed: true }
+    : { sessions: sourceSessions, changed: false };
 }
 
 function toChatSessionSummary(session, idx = 0) {
@@ -1616,25 +3400,49 @@ function toChatSessionSummary(session, idx = 0) {
 }
 
 function mergeIncomingChatSessions(incomingSessions = [], existingSessions = []) {
+  const existingList = Array.isArray(existingSessions) ? existingSessions : [];
+  const incomingList = Array.isArray(incomingSessions) ? incomingSessions : [];
+  const filteredIncomingList = incomingList.filter((session) => {
+    const sessionId = String(session?.id || '').trim();
+    return !sessionId || !deletedChatSessionIdGuardSet.has(sessionId);
+  });
   const existingMap = new Map(
-    (Array.isArray(existingSessions) ? existingSessions : [])
+    existingList
       .map((session) => [String(session?.id || '').trim(), session])
       .filter(([id]) => !!id)
   );
-  const source = Array.isArray(incomingSessions) ? incomingSessions : [];
-  return source.map((session, idx) => {
+  const mergedByIncoming = filteredIncomingList.map((session, idx) => {
     const safe = sanitizeChatSessionForPersist(session, idx);
-    const existing = existingMap.get(String(safe.id || '').trim());
+    const sessionId = String(safe.id || '').trim();
+    const existing = existingMap.get(sessionId);
     const incomingMessages = Array.isArray(session?.messages) ? session.messages : [];
     const incomingLoaded = !(session && typeof session === 'object' && session.messagesLoaded === false);
-    if (!incomingLoaded && Array.isArray(existing?.messages)) {
-      safe.messages = existing.messages;
+    if (!incomingLoaded && existing && typeof existing === 'object') {
+      safe.messages = Array.isArray(existing?.messages) ? existing.messages : [];
+      const existingBranchState = sanitizeMessageBranchStateForPersist(existing?.messageBranchState);
+      if (existingBranchState) {
+        safe.messageBranchState = existingBranchState;
+      } else if (Object.prototype.hasOwnProperty.call(safe, 'messageBranchState')) {
+        delete safe.messageBranchState;
+      }
       safe.updatedAt = Number(session?.updatedAt) || Number(existing?.updatedAt) || Date.now();
       return safe;
     }
     safe.messages = incomingMessages;
     return safe;
   });
+  const incomingIds = new Set(
+    mergedByIncoming
+      .map((session) => String(session?.id || '').trim())
+      .filter(Boolean)
+  );
+  const missingExisting = existingList
+    .map((session, idx) => sanitizeChatSessionForPersist(session, idx))
+    .filter((session) => {
+      const sessionId = String(session?.id || '').trim();
+      return !incomingIds.has(sessionId) && !deletedChatSessionIdGuardSet.has(sessionId);
+    });
+  return mergedByIncoming.concat(missingExisting);
 }
 
 function countSessionMessages(sessions = []) {
@@ -1643,31 +3451,6 @@ function countSessionMessages(sessions = []) {
     const messages = Array.isArray(session?.messages) ? session.messages : [];
     return sum + messages.length;
   }, 0);
-}
-
-function shouldRejectSuspiciousChatSave(incomingSessions = [], existingSessions = [], mergedSessions = [], payload = {}) {
-  if (payload?.allowDestructive === true) return false;
-  const existingList = Array.isArray(existingSessions) ? existingSessions : [];
-  const mergedList = Array.isArray(mergedSessions) ? mergedSessions : [];
-  if (!existingList.length) return false;
-
-  const existingMessages = countSessionMessages(existingList);
-  const mergedMessages = countSessionMessages(mergedList);
-  if (existingMessages <= 0) return false;
-
-  if (mergedList.length === 1 && mergedMessages === 0 && existingList.length >= 2) {
-    return true;
-  }
-
-  const incomingList = Array.isArray(incomingSessions) ? incomingSessions : [];
-  if (incomingList.length === 1 && existingList.length >= 2) {
-    const only = incomingList[0];
-    const incomingMessages = Array.isArray(only?.messages) ? only.messages.length : 0;
-    const incomingLoaded = !(only && typeof only === 'object' && only.messagesLoaded === false);
-    if (incomingLoaded && incomingMessages === 0) return true;
-  }
-
-  return false;
 }
 
 function backupChatStateFile(file, data) {
@@ -1695,12 +3478,267 @@ function readWindowState() {
     const raw = fs.readFileSync(stateFile, 'utf-8');
     const data = JSON.parse(raw);
     if (!data || typeof data !== 'object') return null;
-    if (!data.width || !data.height) return null;
-    if (data.width < 320 || data.height < 600) return null;
-    return data;
+    const persistedWidth = Math.round(Number(data.width) || 0);
+    const persistedHeight = Math.round(Number(data.height) || 0);
+    if (!persistedWidth || !persistedHeight) return null;
+    if (persistedWidth < MAIN_WINDOW_DEFAULT_WIDTH || persistedHeight < 600) return null;
+    const persistedScaleFactor = normalizeDisplayScaleFactor(
+      data.displayScaleFactor,
+      0
+    );
+    const currentScaleFactor = getDisplayScaleFactorForBounds({
+      x: Number.isFinite(Number(data.x)) ? Math.round(Number(data.x)) : 0,
+      y: Number.isFinite(Number(data.y)) ? Math.round(Number(data.y)) : 0,
+      width: persistedWidth,
+      height: persistedHeight
+    });
+    const stateBeforeNormalize = persistedScaleFactor > 0
+      ? adaptBoundsByDisplayScale(
+        {
+          ...data,
+          width: persistedWidth,
+          height: persistedHeight
+        },
+        persistedScaleFactor,
+        currentScaleFactor
+      )
+      : {
+        ...data,
+        width: persistedWidth,
+        height: persistedHeight
+      };
+    return normalizeMainWindowBounds(stateBeforeNormalize, {
+      centerIfMissing: false,
+      positionPolicy: 'strict-visible'
+    });
   } catch {
     return null;
   }
+}
+
+function getPrimaryWorkArea() {
+  const area = screen.getPrimaryDisplay()?.workArea;
+  if (area && Number.isFinite(area.width) && Number.isFinite(area.height)) {
+    return area;
+  }
+  return { x: 0, y: 0, width: 1920, height: 1080 };
+}
+
+function normalizeDisplayScaleFactor(value, fallback = 1) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0
+    ? numericValue
+    : fallback;
+}
+
+function getDisplayScaleFactorForBounds(boundsInput) {
+  const fallbackBounds = (
+    boundsInput && typeof boundsInput === 'object'
+      ? boundsInput
+      : (win && !win.isDestroyed())
+        ? win.getBounds()
+        : normalBounds
+  ) || { x: 0, y: 0, width: MAIN_WINDOW_DEFAULT_WIDTH, height: MAIN_WINDOW_DEFAULT_HEIGHT };
+  let matchedDisplay = null;
+  try {
+    matchedDisplay = screen.getDisplayMatching(fallbackBounds);
+  } catch {}
+  return normalizeDisplayScaleFactor(matchedDisplay?.scaleFactor, 1);
+}
+
+function syncMainDisplayScaleFactor(boundsInput = null) {
+  const nextScaleFactor = getDisplayScaleFactorForBounds(boundsInput);
+  lastMainDisplayScaleFactor = nextScaleFactor;
+  return nextScaleFactor;
+}
+
+function adaptBoundsByDisplayScale(boundsInput, fromScaleFactor, toScaleFactor) {
+  const sourceBounds = boundsInput && typeof boundsInput === 'object'
+    ? boundsInput
+    : { x: 0, y: 0, width: MAIN_WINDOW_DEFAULT_WIDTH, height: MAIN_WINDOW_DEFAULT_HEIGHT };
+  const normalizedFromScale = normalizeDisplayScaleFactor(fromScaleFactor, 1);
+  const normalizedToScale = normalizeDisplayScaleFactor(toScaleFactor, 1);
+  const currentWidth = Math.max(1, Math.round(Number(sourceBounds.width) || MAIN_WINDOW_DEFAULT_WIDTH));
+  const currentHeight = Math.max(1, Math.round(Number(sourceBounds.height) || MAIN_WINDOW_DEFAULT_HEIGHT));
+  if (Math.abs(normalizedFromScale - normalizedToScale) <= 1e-6) {
+    return {
+      ...sourceBounds,
+      width: currentWidth,
+      height: currentHeight
+    };
+  }
+  const scaleRatio = normalizedFromScale / normalizedToScale;
+  return {
+    ...sourceBounds,
+    width: Math.max(1, Math.round(currentWidth * scaleRatio)),
+    height: Math.max(1, Math.round(currentHeight * scaleRatio))
+  };
+}
+
+function getAllDisplayWorkAreas() {
+  const displayList = screen.getAllDisplays();
+  const areaList = Array.isArray(displayList)
+    ? displayList
+      .map((display) => display?.workArea)
+      .filter((area) => (
+        area
+        && Number.isFinite(area.x)
+        && Number.isFinite(area.y)
+        && Number.isFinite(area.width)
+        && Number.isFinite(area.height)
+        && area.width > 0
+        && area.height > 0
+      ))
+    : [];
+  return areaList.length ? areaList : [getPrimaryWorkArea()];
+}
+
+function getRectIntersectionArea(leftRect, rightRect) {
+  const left = Math.max(Number(leftRect?.x) || 0, Number(rightRect?.x) || 0);
+  const top = Math.max(Number(leftRect?.y) || 0, Number(rightRect?.y) || 0);
+  const right = Math.min(
+    (Number(leftRect?.x) || 0) + Math.max(0, Number(leftRect?.width) || 0),
+    (Number(rightRect?.x) || 0) + Math.max(0, Number(rightRect?.width) || 0)
+  );
+  const bottom = Math.min(
+    (Number(leftRect?.y) || 0) + Math.max(0, Number(leftRect?.height) || 0),
+    (Number(rightRect?.y) || 0) + Math.max(0, Number(rightRect?.height) || 0)
+  );
+  const intersectionWidth = right - left;
+  const intersectionHeight = bottom - top;
+  if (intersectionWidth <= 0 || intersectionHeight <= 0) return 0;
+  return intersectionWidth * intersectionHeight;
+}
+
+function isRectFullyInsideArea(rect, area) {
+  const rectX = Number(rect?.x) || 0;
+  const rectY = Number(rect?.y) || 0;
+  const rectWidth = Math.max(0, Number(rect?.width) || 0);
+  const rectHeight = Math.max(0, Number(rect?.height) || 0);
+  const areaX = Number(area?.x) || 0;
+  const areaY = Number(area?.y) || 0;
+  const areaWidth = Math.max(0, Number(area?.width) || 0);
+  const areaHeight = Math.max(0, Number(area?.height) || 0);
+  return (
+    rectX >= areaX
+    && rectY >= areaY
+    && (rectX + rectWidth) <= (areaX + areaWidth)
+    && (rectY + rectHeight) <= (areaY + areaHeight)
+  );
+}
+
+function classifyWindowBoundsVisibility(bounds, workAreas) {
+  const areas = Array.isArray(workAreas) && workAreas.length
+    ? workAreas
+    : [getPrimaryWorkArea()];
+  const hasVisibleIntersection = areas.some(
+    (area) => getRectIntersectionArea(bounds, area) > 0
+  );
+  if (!hasVisibleIntersection) return 'offscreen';
+  const fullyInsideAnyDisplay = areas.some((area) => isRectFullyInsideArea(bounds, area));
+  return fullyInsideAnyDisplay ? 'inside' : 'partial';
+}
+
+function normalizeMainWindowBounds(rawBounds, options = {}) {
+  const source = rawBounds && typeof rawBounds === 'object' ? rawBounds : {};
+  const centerIfMissing = !!options.centerIfMissing;
+  const positionPolicy = options.positionPolicy === 'offscreen-only'
+    ? 'offscreen-only'
+    : 'strict-visible';
+  const workAreas = getAllDisplayWorkAreas();
+  const primaryArea = getPrimaryWorkArea();
+  const minWidth = Math.max(1, Math.round(Number(minBounds?.width) || 1));
+  const minHeight = Math.max(1, Math.round(Number(minBounds?.height) || 1));
+  const maxWidth = Math.max(minWidth, ...workAreas.map((area) => Math.round(area.width)));
+  const maxHeight = Math.max(minHeight, ...workAreas.map((area) => Math.round(area.height)));
+
+  let width = Math.round(Number(source.width));
+  let height = Math.round(Number(source.height));
+  if (!Number.isFinite(width)) width = Math.round(Number(normalBounds?.width) || MAIN_WINDOW_DEFAULT_WIDTH);
+  if (!Number.isFinite(height)) height = Math.round(Number(normalBounds?.height) || MAIN_WINDOW_DEFAULT_HEIGHT);
+  width = Math.max(minWidth, Math.min(maxWidth, width));
+  height = Math.max(minHeight, Math.min(maxHeight, height));
+
+  const hasX = Number.isFinite(Number(source.x));
+  const hasY = Number.isFinite(Number(source.y));
+  const probe = {
+    x: hasX ? Math.round(Number(source.x)) : primaryArea.x,
+    y: hasY ? Math.round(Number(source.y)) : primaryArea.y,
+    width,
+    height
+  };
+  const targetArea = screen.getDisplayMatching(probe)?.workArea || primaryArea;
+
+  let x = hasX ? probe.x : Math.round(targetArea.x + ((targetArea.width - width) / 2));
+  let y = hasY ? probe.y : Math.round(targetArea.y + ((targetArea.height - height) / 2));
+  if (centerIfMissing && (!hasX || !hasY)) {
+    x = Math.round(targetArea.x + ((targetArea.width - width) / 2));
+    y = Math.round(targetArea.y + ((targetArea.height - height) / 2));
+  }
+
+  if (positionPolicy === 'strict-visible') {
+    const minX = targetArea.x;
+    const maxX = targetArea.x + Math.max(0, targetArea.width - width);
+    const minY = targetArea.y;
+    const maxY = targetArea.y + Math.max(0, targetArea.height - height);
+    x = Math.max(minX, Math.min(maxX, x));
+    y = Math.max(minY, Math.min(maxY, y));
+  } else {
+    const currentVisibility = classifyWindowBoundsVisibility({ x, y, width, height }, workAreas);
+    if (currentVisibility === 'offscreen') {
+      x = Math.round(targetArea.x + ((targetArea.width - width) / 2));
+      y = Math.round(targetArea.y + ((targetArea.height - height) / 2));
+    }
+  }
+
+  return { x, y, width, height };
+}
+
+function updateNormalBoundsForCurrentDisplays(reason = '') {
+  const next = normalizeMainWindowBounds(normalBounds, {
+    centerIfMissing: true,
+    positionPolicy: 'offscreen-only'
+  });
+  const changed = (
+    !normalBounds
+    || next.x !== normalBounds.x
+    || next.y !== normalBounds.y
+    || next.width !== normalBounds.width
+    || next.height !== normalBounds.height
+  );
+  normalBounds = { ...normalBounds, ...next };
+  if (changed && reason) {
+    log('main-window-bounds-normalized', { reason, ...next });
+  }
+  return changed;
+}
+
+function ensureMainWindowOnVisibleDisplay(reason = '', options = {}) {
+  if (!win || win.isDestroyed()) return false;
+  const positionPolicy = options.positionPolicy === 'strict-visible'
+    ? 'strict-visible'
+    : 'offscreen-only';
+  const current = win.getBounds();
+  const next = normalizeMainWindowBounds(current, {
+    centerIfMissing: true,
+    positionPolicy
+  });
+  const changed = (
+    next.x !== current.x
+    || next.y !== current.y
+    || next.width !== current.width
+    || next.height !== current.height
+  );
+  if (changed) {
+    holdMainMoveSyncSuppress(140);
+    win.setBounds(next, false);
+    scheduleSaveWindowState();
+    if (reason) {
+      log('main-window-position-corrected', { reason, ...next });
+    }
+  }
+  normalBounds = { ...normalBounds, ...win.getBounds() };
+  return changed;
 }
 
 function scheduleSaveWindowState() {
@@ -1713,7 +3751,8 @@ function scheduleSaveWindowState() {
         x: bounds.x,
         y: bounds.y,
         width: bounds.width,
-        height: bounds.height
+        height: bounds.height,
+        displayScaleFactor: getDisplayScaleFactorForBounds(bounds)
       };
       fs.writeFileSync(stateFile, JSON.stringify(payload, null, 2));
     } catch {}
@@ -1737,20 +3776,30 @@ function sanitizeFloatingToggleOpacity(raw) {
   return Math.min(FLOAT_WIN_OPACITY_MAX, Math.max(FLOAT_WIN_OPACITY_MIN, value));
 }
 
+function hasEnabledFloatingQuickButtons() {
+  return FLOATING_QUICK_ACTION_SET.size > 0;
+}
+
 function getFloatingToggleConfig() {
+  const quickButtonCount = hasEnabledFloatingQuickButtons()
+    ? FLOAT_WIN_QUICK_BUTTON_COUNT
+    : 0;
   return {
+    outerGap: FLOAT_WIN_OUTER_GAP,
     dragStripHeight: FLOAT_WIN_DRAG_STRIP_HEIGHT,
     toggleHeight: FLOAT_WIN_TOGGLE_HEIGHT,
     quickButtonSize: FLOAT_WIN_QUICK_BUTTON_SIZE,
     quickButtonGap: FLOAT_WIN_QUICK_BUTTON_GAP,
     quickGroupTopGap: FLOAT_WIN_QUICK_GROUP_TOP_GAP,
-    quickButtonCount: FLOAT_WIN_QUICK_BUTTON_COUNT,
+    quickButtonCount,
+    quickMainButtonCount: FLOAT_WIN_QUICK_MAIN_BUTTON_COUNT,
     quickPaddingY: FLOAT_WIN_QUICK_PADDING_Y,
     dividerHeight: FLOAT_WIN_DIVIDER_HEIGHT,
     dividerMarginY: FLOAT_WIN_DIVIDER_MARGIN_Y,
     opacityMin: FLOAT_WIN_OPACITY_MIN,
     opacityMax: FLOAT_WIN_OPACITY_MAX,
-    opacityDefault: FLOAT_WIN_OPACITY_DEFAULT
+    opacityDefault: FLOAT_WIN_OPACITY_DEFAULT,
+    enabledQuickActions: Array.from(FLOATING_QUICK_ACTION_SET)
   };
 }
 
@@ -1767,13 +3816,7 @@ function sendFloatingQuickActionToMain(payload) {
   const normalized = normalizeFloatingQuickActionPayload(payload);
   if (!normalized) return { ok: false, error: 'invalid-action' };
   if (normalized.action === 'global-restart' && normalized.trigger === 'click') {
-    try {
-      app.relaunch();
-      setTimeout(() => app.exit(0), 32);
-      return { ok: true, restarting: true };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error || 'restart-failed') };
-    }
+    return handleGlobalRestartRequest('floating-quick-action');
   }
   if (!win || win.isDestroyed()) return { ok: false, error: 'main-window-unavailable' };
   try {
@@ -1781,6 +3824,38 @@ function sendFloatingQuickActionToMain(payload) {
     return { ok: true, ...normalized };
   } catch (error) {
     return { ok: false, error: String(error?.message || error || 'send-failed') };
+  }
+}
+
+function handleGlobalRestartRequest(source = 'unknown') {
+  try {
+    // In dev mode, relaunch may terminate without reopening.
+    // Use soft restart to keep window recoverable.
+    if (!app.isPackaged) {
+      if (!win || win.isDestroyed()) {
+        createWindow();
+      } else {
+        updateNormalBoundsForCurrentDisplays(`global-restart-dev:${source}`);
+        if (win.isMinimized()) win.restore();
+        if (!win.isVisible()) win.show();
+        ensureMainWindowOnVisibleDisplay(`global-restart-dev:${source}`);
+        win.focus();
+        try {
+          win.webContents.reloadIgnoringCache();
+        } catch {
+          win.reload();
+        }
+      }
+      applyMainAlwaysOnTop();
+      positionFloatingToggleWindow();
+      sendFloatingToggleState();
+      return { ok: true, restarting: false, mode: 'soft-reload' };
+    }
+    app.relaunch();
+    setTimeout(() => app.exit(0), 32);
+    return { ok: true, restarting: true, mode: 'relaunch' };
+  } catch (error) {
+    return { ok: false, message: String(error?.message || error || 'restart-failed') };
   }
 }
 
@@ -1825,7 +3900,11 @@ function scheduleAutoMinimizeIfUnfocused(delayMs = 140) {
     blurMinimizeTimer = null;
     if (!win || win.isDestroyed()) return;
     if (!isMainWindowShown()) return;
-    if (BrowserWindow.getFocusedWindow() === win) return;
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow === win) return;
+    // Floating toggle window is part of this app's main interaction surface.
+    // Do not auto-minimize main window when focus is on floating toggle.
+    if (floatWin && !floatWin.isDestroyed() && focusedWindow === floatWin) return;
     win.minimize();
     sendFloatingToggleState();
   }, Math.max(40, Math.round(Number(delayMs) || 0)));
@@ -1862,15 +3941,9 @@ function scheduleAlwaysOnTopReapply(delayMs = 160) {
 }
 
 function getFloatingToggleTargetHeight(mainVisible = isMainWindowShown()) {
-  return mainVisible ? FLOAT_WIN_EXPANDED_HEIGHT : FLOAT_WIN_COLLAPSED_HEIGHT;
-}
-
-function getFloatingToggleCollapsedWidth() {
-  return FLOAT_WIN_TOGGLE_HEIGHT + (FLOAT_WIN_OUTER_GAP * 2);
-}
-
-function getFloatingToggleExpandedWidth() {
-  return Math.max(getFloatingToggleCollapsedWidth(), FLOAT_WIN_QUICK_BUTTON_SIZE + (FLOAT_WIN_OUTER_GAP * 2));
+  return mainVisible && hasEnabledFloatingQuickButtons()
+    ? FLOAT_WIN_EXPANDED_HEIGHT
+    : FLOAT_WIN_COLLAPSED_HEIGHT;
 }
 
 function getFloatingToggleTargetWidth(mainVisible = isMainWindowShown()) {
@@ -1878,7 +3951,7 @@ function getFloatingToggleTargetWidth(mainVisible = isMainWindowShown()) {
 }
 
 function getFloatingToggleBounds(mainVisible = isMainWindowShown()) {
-  const fallbackBounds = normalBounds || { x: 0, y: 0, width: 360, height: 880 };
+  const fallbackBounds = normalBounds || { x: 0, y: 0, width: MAIN_WINDOW_DEFAULT_WIDTH, height: MAIN_WINDOW_DEFAULT_HEIGHT };
   const base = (mainVisible && win && !win.isDestroyed()) ? win.getBounds() : fallbackBounds;
   const targetWidth = getFloatingToggleTargetWidth(mainVisible);
   const targetHeight = getFloatingToggleTargetHeight(mainVisible);
@@ -1993,6 +4066,7 @@ function syncFloatingToggleWindowSize(mainVisible = isMainWindowShown()) {
 function sendFloatingToggleState() {
   if (!floatWin || floatWin.isDestroyed()) return;
   const mainVisible = isMainWindowShown();
+  const quickButtonsVisible = mainVisible && hasEnabledFloatingQuickButtons();
   syncFloatingToggleWindowSize(mainVisible);
   try {
     floatWin.webContents.send('shell:floating-toggle-state', {
@@ -2000,7 +4074,7 @@ function sendFloatingToggleState() {
       enabled: !!floatingToggleEnabled,
       status: normalizeFloatingToggleStatus(floatingToggleStatus),
       opacity: floatingToggleOpacity,
-      quickButtonsVisible: mainVisible
+      quickButtonsVisible
     });
   } catch {}
 }
@@ -2060,7 +4134,7 @@ function ensureFloatingToggleWindow() {
     lastFloatingBounds = null;
   });
   applyFloatingToggleOpacity(floatingToggleOpacity);
-  floatWin.loadFile(path.join(__dirname, 'floating-toggle', 'index.html')).catch(() => {});
+  floatWin.loadFile(path.join(__dirname, 'renderer', 'floating-toggle', 'index.html')).catch(() => {});
   floatWin.webContents.on('did-finish-load', () => {
     positionFloatingToggleWindow();
     sendFloatingToggleState();
@@ -2082,9 +4156,35 @@ function ensureFloatingToggleWindow() {
     if (!dx && !dy) return;
     if (isMainWindowShown()) {
       const winBounds = win.getBounds();
+      const sizeAnchorBounds = normalBounds && typeof normalBounds === 'object'
+        ? normalBounds
+        : winBounds;
+      const anchoredMainWidth = Math.max(
+        1,
+        Math.round(
+          Number(sizeAnchorBounds?.width)
+          || Number(winBounds?.width)
+          || MAIN_WINDOW_DEFAULT_WIDTH
+        )
+      );
+      const anchoredMainHeight = Math.max(
+        1,
+        Math.round(
+          Number(sizeAnchorBounds?.height)
+          || Number(winBounds?.height)
+          || 880
+        )
+      );
+      const nextMainBounds = {
+        x: Math.round(winBounds.x + dx),
+        y: Math.round(winBounds.y + dy),
+        width: anchoredMainWidth,
+        height: anchoredMainHeight
+      };
       holdMainMoveSyncSuppress(92);
-      win.setPosition(winBounds.x + dx, winBounds.y + dy, false);
-      normalBounds = win.getBounds();
+      // Move by bounds instead of setPosition to keep width/height stable on Windows.
+      win.setBounds(nextMainBounds, false);
+      normalBounds = nextMainBounds;
       scheduleSaveWindowState();
     } else {
       normalBounds = {
@@ -2097,6 +4197,33 @@ function ensureFloatingToggleWindow() {
   return floatWin;
 }
 
+function ensureFloatingToggleOnTop(options = {}) {
+  if (!floatingToggleEnabled) {
+    return { ok: false, visible: false, reason: 'floating-toggle-disabled' };
+  }
+  const ensured = ensureFloatingToggleWindow();
+  if (!ensured || ensured.isDestroyed()) {
+    return { ok: false, visible: false, reason: 'floating-toggle-unavailable' };
+  }
+  try {
+    ensured.setAlwaysOnTop(true, 'screen-saver');
+  } catch {
+    try {
+      ensured.setAlwaysOnTop(true);
+    } catch {}
+  }
+  if ((options && options.forceShow) || isMainWindowShown()) {
+    if (!ensured.isVisible()) {
+      ensured.showInactive();
+    }
+  }
+  try {
+    ensured.moveTop();
+  } catch {}
+  sendFloatingToggleState();
+  return { ok: true, visible: ensured.isVisible() };
+}
+
 function setFloatingToggleEnabledState(nextEnabled) {
   floatingToggleEnabled = !!nextEnabled;
   if (!floatingToggleEnabled) {
@@ -2104,8 +4231,10 @@ function setFloatingToggleEnabledState(nextEnabled) {
       floatWin.hide();
     }
     if (win && !win.isDestroyed() && !isMainWindowShown()) {
+      updateNormalBoundsForCurrentDisplays('floating-toggle-disabled');
       if (win.isMinimized()) win.restore();
       if (!win.isVisible()) win.show();
+      ensureMainWindowOnVisibleDisplay('floating-toggle-disabled');
       win.focus();
       applyMainAlwaysOnTop();
     }
@@ -2115,7 +4244,7 @@ function setFloatingToggleEnabledState(nextEnabled) {
       visible: isMainWindowShown(),
       status: normalizeFloatingToggleStatus(floatingToggleStatus),
       opacity: floatingToggleOpacity,
-      quickButtonsVisible: isMainWindowShown()
+      quickButtonsVisible: isMainWindowShown() && hasEnabledFloatingQuickButtons()
     };
   }
   const ensured = ensureFloatingToggleWindow();
@@ -2130,7 +4259,7 @@ function setFloatingToggleEnabledState(nextEnabled) {
     visible: isMainWindowShown(),
     status: normalizeFloatingToggleStatus(floatingToggleStatus),
     opacity: floatingToggleOpacity,
-    quickButtonsVisible: isMainWindowShown()
+    quickButtonsVisible: isMainWindowShown() && hasEnabledFloatingQuickButtons()
   };
 }
 
@@ -2139,15 +4268,28 @@ function toggleMainWindowVisibility() {
   if (isMainWindowShown()) {
     win.minimize();
   } else {
+    updateNormalBoundsForCurrentDisplays('toggle-main-window-visibility');
     const current = win.getBounds();
-    const targetX = Number.isFinite(Number(normalBounds?.x)) ? Math.round(Number(normalBounds.x)) : current.x;
-    const targetY = Number.isFinite(Number(normalBounds?.y)) ? Math.round(Number(normalBounds.y)) : current.y;
+    const targetBounds = normalizeMainWindowBounds({
+      x: Number.isFinite(Number(normalBounds?.x)) ? Number(normalBounds.x) : current.x,
+      y: Number.isFinite(Number(normalBounds?.y)) ? Number(normalBounds.y) : current.y,
+      width: Number.isFinite(Number(normalBounds?.width)) ? Number(normalBounds.width) : current.width,
+      height: Number.isFinite(Number(normalBounds?.height)) ? Number(normalBounds.height) : current.height
+    }, {
+      centerIfMissing: true,
+      positionPolicy: 'offscreen-only'
+    });
     if (win.isMinimized()) win.restore();
     if (!win.isVisible()) win.show();
     const latest = win.getBounds();
-    if (targetX !== latest.x || targetY !== latest.y) {
+    if (
+      targetBounds.x !== latest.x
+      || targetBounds.y !== latest.y
+      || targetBounds.width !== latest.width
+      || targetBounds.height !== latest.height
+    ) {
       holdMainMoveSyncSuppress(120);
-      win.setPosition(targetX, targetY, false);
+      win.setBounds(targetBounds, false);
     }
     win.focus();
     applyMainAlwaysOnTop();
@@ -2191,8 +4333,8 @@ function createWindow() {
     }, delayMs);
   };
   win = new BrowserWindow({
-    width: normalBounds.width || 360,
-    height: normalBounds.height || 880,
+    width: normalBounds.width || MAIN_WINDOW_DEFAULT_WIDTH,
+    height: normalBounds.height || MAIN_WINDOW_DEFAULT_HEIGHT,
     x: typeof normalBounds.x === 'number' ? normalBounds.x : undefined,
     y: typeof normalBounds.y === 'number' ? normalBounds.y : undefined,
     center: typeof normalBounds.x !== 'number' || typeof normalBounds.y !== 'number',
@@ -2202,7 +4344,7 @@ function createWindow() {
     resizable: true,
     maximizable: false,
     fullscreenable: false,
-    alwaysOnTop: false,
+    alwaysOnTop: true,
     frame: false,
     titleBarStyle: 'hidden',
     backgroundColor: '#323232',
@@ -2212,6 +4354,7 @@ function createWindow() {
       nodeIntegration: false
     }
   });
+  ensureMainWindowOnVisibleDisplay('create-window', { positionPolicy: 'strict-visible' });
 
   // Ensure all web links open in system default browser instead of Electron child windows.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -2229,6 +4372,7 @@ function createWindow() {
   });
 
   normalBounds = win.getBounds();
+  syncMainDisplayScaleFactor(normalBounds);
 
   // Disable maximize/fullscreen (including double-click on drag region)
   win.setMaximizable(false);
@@ -2239,7 +4383,9 @@ function createWindow() {
   if (DEV_SERVER_URL) {
     win.loadURL(DEV_SERVER_URL);
   } else {
-    const distIndex = path.join(__dirname, 'webui', 'dist', 'index.html');
+    const repoDistIndex = path.resolve(__dirname, '..', 'webui', 'dist', 'index.html');
+    const bundledDistIndex = path.join(__dirname, 'webui', 'dist', 'index.html');
+    const distIndex = fs.existsSync(repoDistIndex) ? repoDistIndex : bundledDistIndex;
     if (!fs.existsSync(distIndex)) {
       log('dist index missing', { distIndex });
       win.loadURL(`data:text/plain;charset=utf-8,Missing%20webui%20build`);
@@ -2254,6 +4400,7 @@ function createWindow() {
     win.focus();
     applyMainAlwaysOnTop();
     normalBounds = win.getBounds();
+    syncMainDisplayScaleFactor(normalBounds);
     setFloatingToggleEnabledState(floatingToggleEnabled);
   });
 
@@ -2305,7 +4452,10 @@ function createWindow() {
   });
 
   win.on('resize', () => {
-    normalBounds = win.getBounds();
+    const nextBounds = win.getBounds();
+    consumeInternalMainResizeExpectation(nextBounds) || clearPendingScaledBoundsRequest();
+    normalBounds = nextBounds;
+    syncMainDisplayScaleFactor(nextBounds);
     positionFloatingToggleWindow();
     scheduleSaveWindowState();
   });
@@ -2323,7 +4473,45 @@ function createWindow() {
     const dx = (Number(nextBounds.x) || 0) - (Number(prevBounds.x) || 0);
     const dy = (Number(nextBounds.y) || 0) - (Number(prevBounds.y) || 0);
     normalBounds = nextBounds;
-    if (suppressMainMoveSync) return;
+    syncMainDisplayScaleFactor(nextBounds);
+    if (suppressMainMoveSync) {
+      // During floating-drag synchronized moves, keep size anchored to pre-move values.
+      const anchoredWidth = Math.max(
+        1,
+        Math.round(
+          Number(prevBounds?.width)
+          || Number(nextBounds?.width)
+          || MAIN_WINDOW_DEFAULT_WIDTH
+        )
+      );
+      const anchoredHeight = Math.max(
+        1,
+        Math.round(
+          Number(prevBounds?.height)
+          || Number(nextBounds?.height)
+          || 880
+        )
+      );
+      if (
+        nextBounds.width !== anchoredWidth
+        || nextBounds.height !== anchoredHeight
+      ) {
+        holdMainMoveSyncSuppress(96);
+        setInternalMainResizeExpectation(anchoredWidth, anchoredHeight, 3);
+        win.setBounds({
+          x: nextBounds.x,
+          y: nextBounds.y,
+          width: anchoredWidth,
+          height: anchoredHeight
+        }, false);
+      }
+      normalBounds = {
+        ...nextBounds,
+        width: anchoredWidth,
+        height: anchoredHeight
+      };
+      return;
+    }
     if (floatWin && !floatWin.isDestroyed()) {
       if (dx || dy) {
         const floatBounds = floatWin.getBounds();
@@ -2354,6 +4542,7 @@ function createWindow() {
     if (!win) return;
     clearBlurMinimizeTimer();
     normalBounds = win.getBounds();
+    syncMainDisplayScaleFactor(normalBounds);
     applyMainAlwaysOnTop();
     positionFloatingToggleWindow();
     sendFloatingToggleState();
@@ -2391,11 +4580,158 @@ function createWindow() {
 function clampScale(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return 1;
-  return Math.min(2, Math.max(0.5, n));
+  // `shell:set-window-scale` now receives a relative ratio between
+  // previous/next UI scales, so allow wider one-shot jumps (e.g. 50% -> 150% = 3x).
+  return Math.min(4, Math.max(0.25, n));
+}
+
+function setInternalMainResizeExpectation(width, height, maxEvents = 2) {
+  internalMainResizeExpectation = {
+    width: Math.max(1, Math.round(Number(width) || 0)),
+    height: Math.max(1, Math.round(Number(height) || 0)),
+    remainingEvents: Math.max(1, Math.round(Number(maxEvents) || 1))
+  };
+}
+
+function consumeInternalMainResizeExpectation(bounds) {
+  if (!internalMainResizeExpectation || !bounds || typeof bounds !== 'object') {
+    return false;
+  }
+  const currentWidth = Math.max(1, Math.round(Number(bounds.width) || 0));
+  const currentHeight = Math.max(1, Math.round(Number(bounds.height) || 0));
+  if (
+    currentWidth !== internalMainResizeExpectation.width ||
+    currentHeight !== internalMainResizeExpectation.height
+  ) {
+    internalMainResizeExpectation = null;
+    return false;
+  }
+  internalMainResizeExpectation.remainingEvents -= 1;
+  if (internalMainResizeExpectation.remainingEvents <= 0) {
+    internalMainResizeExpectation = null;
+  }
+  return true;
+}
+
+function applyMainWindowSizeKeepingPosition(nextWidthInput, nextHeightInput, options = {}) {
+  if (!win || win.isDestroyed()) return null;
+  const currentBounds = win.getBounds();
+  const nextWidth = Math.max(1, Math.round(Number(nextWidthInput) || currentBounds.width || MAIN_WINDOW_DEFAULT_WIDTH));
+  const nextHeight = Math.max(1, Math.round(Number(nextHeightInput) || currentBounds.height || MAIN_WINDOW_DEFAULT_HEIGHT));
+  if (currentBounds.width === nextWidth && currentBounds.height === nextHeight) {
+    return currentBounds;
+  }
+  setInternalMainResizeExpectation(nextWidth, nextHeight);
+  win.setBounds({
+    x: currentBounds.x,
+    y: currentBounds.y,
+    width: nextWidth,
+    height: nextHeight
+  });
+  normalBounds = win.getBounds();
+  positionFloatingToggleWindow();
+  sendFloatingToggleState();
+  if (options && options.saveWindowState) {
+    scheduleSaveWindowState();
+  }
+  return normalBounds;
+}
+
+function clearPendingScaledBoundsRequest() {
+  pendingScaledBoundsRequest = null;
+}
+
+function setPendingScaledBoundsRequest(request = null) {
+  if (!request || typeof request !== 'object') {
+    pendingScaledBoundsRequest = null;
+    return;
+  }
+  const requestedWidth = Math.max(1, Math.round(Number(request.requestedWidth) || 0));
+  const requestedHeight = Math.max(1, Math.round(Number(request.requestedHeight) || 0));
+  if (!requestedWidth || !requestedHeight) {
+    pendingScaledBoundsRequest = null;
+    return;
+  }
+  pendingScaledBoundsRequest = {
+    requestedWidth,
+    requestedHeight,
+    requestedAt: Date.now()
+  };
+}
+
+function reconcileMainWindowGeometry(options = {}) {
+  if (!win || win.isDestroyed()) {
+    return {
+      ok: false,
+      resized: false,
+      bounds: null,
+      pendingScaleDeferred: !!pendingScaledBoundsRequest
+    };
+  }
+  const saveWindowState = !!options.saveWindowState;
+  const currentBounds = win.getBounds();
+  const minW = Math.max(1, Math.round(Number(minBounds?.width) || 1));
+  const minH = Math.max(1, Math.round(Number(minBounds?.height) || 1));
+  let nextWidth = Math.max(1, Math.round(Number(currentBounds.width) || MAIN_WINDOW_DEFAULT_WIDTH));
+  let nextHeight = Math.max(1, Math.round(Number(currentBounds.height) || MAIN_WINDOW_DEFAULT_HEIGHT));
+  let hasScaleRequest = false;
+  let requestedScaleWidth = null;
+  let requestedScaleHeight = null;
+  let pendingScaleDeferred = false;
+
+  if (pendingScaledBoundsRequest && typeof pendingScaledBoundsRequest === 'object') {
+    requestedScaleWidth = Math.max(
+      1,
+      Math.round(Number(pendingScaledBoundsRequest.requestedWidth) || 0)
+    );
+    requestedScaleHeight = Math.max(
+      1,
+      Math.round(Number(pendingScaledBoundsRequest.requestedHeight) || 0)
+    );
+    if (requestedScaleWidth > 0 && requestedScaleHeight > 0) {
+      hasScaleRequest = true;
+      pendingScaleDeferred = requestedScaleWidth < minW || requestedScaleHeight < minH;
+      nextWidth = Math.max(requestedScaleWidth, minW);
+      nextHeight = Math.max(requestedScaleHeight, minH);
+    } else {
+      clearPendingScaledBoundsRequest();
+    }
+  }
+
+  if (!hasScaleRequest) {
+    nextWidth = Math.max(nextWidth, minW);
+    nextHeight = Math.max(nextHeight, minH);
+  }
+
+  const resized =
+    currentBounds.width !== nextWidth || currentBounds.height !== nextHeight;
+  const bounds = resized
+    ? applyMainWindowSizeKeepingPosition(nextWidth, nextHeight, { saveWindowState })
+    : currentBounds;
+
+  if (hasScaleRequest && !pendingScaleDeferred) {
+    clearPendingScaledBoundsRequest();
+  }
+
+  return {
+    ok: true,
+    resized: !!resized,
+    bounds: bounds || win.getBounds(),
+    pendingScaleDeferred: !!pendingScaleDeferred,
+    requestedScaleWidth: hasScaleRequest ? requestedScaleWidth : null,
+    requestedScaleHeight: hasScaleRequest ? requestedScaleHeight : null
+  };
 }
 
 app.whenReady().then(() => {
   initLogger();
+  log('process bootstrap', {
+    pid: process.pid,
+    ppid: process.ppid,
+    version: app.getVersion(),
+    exe: process.execPath,
+    gotLock: !!gotLock
+  });
   loadBridgeConfig();
   ensureUnifiedCacheLayout();
   cleanupPsCacheDirectory();
@@ -2405,9 +4741,57 @@ app.whenReady().then(() => {
     log('cache cleanup startup failed', { message: err.message });
   }
   scheduleCachePolicyCleanup();
-  log('app ready');
+  log('app ready', {
+    pid: process.pid,
+    ppid: process.ppid,
+    port: bridgePort
+  });
   startServer();
   createWindow();
+  displayTopologyChangeHandler = () => {
+    let adaptedByDisplayScale = false;
+    if (win && !win.isDestroyed()) {
+      const currentBounds = win.getBounds();
+      const previousScaleFactor = normalizeDisplayScaleFactor(
+        lastMainDisplayScaleFactor,
+        getDisplayScaleFactorForBounds(currentBounds)
+      );
+      const currentScaleFactor = getDisplayScaleFactorForBounds(currentBounds);
+      if (Math.abs(previousScaleFactor - currentScaleFactor) > 1e-3) {
+        const adaptedBounds = adaptBoundsByDisplayScale(
+          currentBounds,
+          previousScaleFactor,
+          currentScaleFactor
+        );
+        const normalizedAdaptedBounds = normalizeMainWindowBounds(adaptedBounds, {
+          centerIfMissing: true,
+          positionPolicy: 'offscreen-only'
+        });
+        holdMainMoveSyncSuppress(180);
+        win.setBounds(normalizedAdaptedBounds, false);
+        normalBounds = { ...normalBounds, ...normalizedAdaptedBounds };
+        scheduleSaveWindowState();
+        adaptedByDisplayScale = true;
+        log('main-window-display-scale-adapted', {
+          fromScaleFactor: previousScaleFactor,
+          toScaleFactor: currentScaleFactor,
+          ...normalizedAdaptedBounds
+        });
+      }
+      syncMainDisplayScaleFactor(win.getBounds());
+    } else {
+      syncMainDisplayScaleFactor(normalBounds);
+    }
+    const updated = updateNormalBoundsForCurrentDisplays('display-topology-change');
+    const corrected = ensureMainWindowOnVisibleDisplay('display-topology-change');
+    if (corrected || updated || adaptedByDisplayScale) {
+      positionFloatingToggleWindow();
+      sendFloatingToggleState();
+    }
+  };
+  screen.on('display-added', displayTopologyChangeHandler);
+  screen.on('display-removed', displayTopologyChangeHandler);
+  screen.on('display-metrics-changed', displayTopologyChangeHandler);
 
   // Temporary compatibility: allow known provider hosts with broken TLS chain.
   // Scope is limited to allowlist domains instead of globally disabling cert checks.
@@ -2434,7 +4818,7 @@ app.whenReady().then(() => {
       visible: isMainWindowShown(),
       status: normalizeFloatingToggleStatus(floatingToggleStatus),
       opacity: floatingToggleOpacity,
-      quickButtonsVisible: isMainWindowShown()
+      quickButtonsVisible: isMainWindowShown() && hasEnabledFloatingQuickButtons()
     };
   });
 
@@ -2465,8 +4849,16 @@ app.whenReady().then(() => {
     if (!win) return { ok: false };
     mainAlwaysOnTop = !!value;
     applyMainAlwaysOnTop();
-    scheduleAlwaysOnTopReapply(120);
+    if (mainAlwaysOnTop) {
+      scheduleAlwaysOnTopReapply(120);
+    } else {
+      clearAlwaysOnTopReapplyTimer();
+    }
     return { ok: true, alwaysOnTop: mainAlwaysOnTop };
+  });
+
+  ipcMain.handle('shell:ensure-floating-toggle-on-top', () => {
+    return ensureFloatingToggleOnTop({ forceShow: false });
   });
 
   ipcMain.handle('shell:set-auto-minimize-on-blur', (_evt, value) => {
@@ -2495,17 +4887,29 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('shell:global-restart', () => {
-    try {
-      app.relaunch();
-      setTimeout(() => app.exit(0), 32);
-      return { ok: true, restarting: true };
-    } catch (error) {
-      return { ok: false, message: String(error?.message || error || 'restart-failed') };
-    }
+    return handleGlobalRestartRequest('shell-global-restart');
   });
 
-  ipcMain.handle('shell:server-status', () => {
-    return getServerStatus();
+  ipcMain.handle(SHELL_CHANNELS.serverStatus, async () => {
+    const serverStatusSnapshot = getServerStatus();
+    const runtimeContractSnapshot = await getBridgeRuntimeContractSnapshotForStatus();
+    const responsePayload = {
+      ...serverStatusSnapshot,
+      runtimeContractReady: !!runtimeContractSnapshot.ready,
+      runtimeContractAvailable: !!runtimeContractSnapshot.available,
+      runtimeContractErrorCode: String(runtimeContractSnapshot.errorCode || ''),
+      runtimeContractMessage: String(runtimeContractSnapshot.message || ''),
+      bridgeProtocolVersion: Number(runtimeContractSnapshot.bridgeProtocolVersion) || 0,
+      forceLegacyCaptureRelay:
+        typeof runtimeContractSnapshot.forceLegacyCaptureRelay === 'boolean'
+          ? runtimeContractSnapshot.forceLegacyCaptureRelay
+          : null
+    };
+    return buildShellOkResponse(
+      responsePayload,
+      responsePayload,
+      'server_status_ok'
+    );
   });
 
   ipcMain.handle('shell:memory-sample', () => {
@@ -2514,13 +4918,31 @@ app.whenReady().then(() => {
       main: snapshotMainMemoryUsage()
     };
   });
-  ipcMain.handle('shell:chat-image-cache-get', (_evt, cacheId) => {
+  ipcMain.handle('shell:chat-image-cache-get', (_evt, cacheIdOrPayload) => {
     try {
-      const result = readChatImageCacheDataUrl(cacheId);
-      return result || { ok: false, message: 'not_found', cacheId: String(cacheId || '').trim() };
+      const cacheLookupPayload =
+        cacheIdOrPayload && typeof cacheIdOrPayload === 'object'
+          ? cacheIdOrPayload
+          : { cacheId: cacheIdOrPayload };
+      const result = readChatImageCacheDataUrl(cacheLookupPayload);
+      return (
+        result || {
+          ok: false,
+          message: 'not_found',
+          cacheId: String(cacheLookupPayload?.cacheId || cacheIdOrPayload || '').trim(),
+        }
+      );
     } catch (err) {
       log('chat-image-cache-get failed', { message: err.message });
-      return { ok: false, message: err.message, cacheId: String(cacheId || '').trim() };
+      return {
+        ok: false,
+        message: err.message,
+        cacheId: String(
+          (cacheIdOrPayload && typeof cacheIdOrPayload === 'object'
+            ? cacheIdOrPayload.cacheId
+            : cacheIdOrPayload) || '',
+        ).trim(),
+      };
     }
   });
   ipcMain.handle('shell:chat-image-cache-get-many', (_evt, payload) => {
@@ -2558,30 +4980,48 @@ app.whenReady().then(() => {
     return { ok: true, port: bridgePort };
   });
 
-  ipcMain.handle('shell:cache-policy-get', () => {
+  ipcMain.handle(SHELL_CHANNELS.cachePolicyGet, () => {
     try {
       const policy = getCachePolicySnapshot();
       const stats = getManagedCacheStats();
-      return { ok: true, policy, stats };
+      return buildShellOkResponse(
+        { policy, stats },
+        { policy, stats },
+        'cache_policy_get_ok'
+      );
     } catch (err) {
       log('cache-policy-get failed', { message: err.message });
-      return { ok: false, message: err.message, policy: getCachePolicySnapshot(), stats: null };
+      const fallbackPolicy = getCachePolicySnapshot();
+      return buildShellErrorResponse(
+        'cache_policy_get_failed',
+        err.message,
+        { policy: fallbackPolicy, stats: null },
+        { policy: fallbackPolicy, stats: null }
+      );
     }
   });
 
-  ipcMain.handle('shell:cache-policy-set', (_evt, payload) => {
+  ipcMain.handle(SHELL_CHANNELS.cachePolicySet, (_evt, payload) => {
     try {
       cachePolicy = sanitizeCachePolicy(payload || {});
       saveBridgeConfig();
       const cleanup = cleanupByCachePolicy(cachePolicy, 'policy-set');
-      return {
-        ok: true,
-        policy: getCachePolicySnapshot(),
-        stats: cleanup?.stats || getManagedCacheStats()
-      };
+      const policy = getCachePolicySnapshot();
+      const stats = cleanup?.stats || getManagedCacheStats();
+      return buildShellOkResponse(
+        { policy, stats },
+        { policy, stats },
+        'cache_policy_set_ok'
+      );
     } catch (err) {
       log('cache-policy-set failed', { message: err.message });
-      return { ok: false, message: err.message, policy: getCachePolicySnapshot(), stats: null };
+      const fallbackPolicy = getCachePolicySnapshot();
+      return buildShellErrorResponse(
+        'cache_policy_set_failed',
+        err.message,
+        { policy: fallbackPolicy, stats: null },
+        { policy: fallbackPolicy, stats: null }
+      );
     }
   });
 
@@ -2674,28 +5114,65 @@ app.whenReady().then(() => {
     const ok = openExternalInDefaultBrowser(url);
     return { ok };
   });
-  ipcMain.handle('shell:pick-local-images-data', async () => {
+  ipcMain.handle('shell:open-image-default', async (_evt, payload) => {
+    return openImageInSystemDefaultViewer(payload || {});
+  });
+  ipcMain.handle('shell:pick-local-images-data', async (_evt, payload) => {
     try {
+      const normalizedPayload = payload && typeof payload === 'object' ? payload : {};
+      const normalizedTitle = String(normalizedPayload?.title || '').trim() || '选择本地图片';
+      const normalizedDefaultDirectoryKey = String(
+        normalizedPayload?.defaultDirectory || '',
+      ).trim().toLowerCase();
+      const shouldIncludeGeneratedTargetMeta =
+        normalizedPayload?.includeGeneratedTargetMeta === true;
+      let defaultPath = '';
+      if (normalizedDefaultDirectoryKey === 'generated-cache') {
+        defaultPath = getCacheDir();
+        fs.mkdirSync(defaultPath, { recursive: true });
+      }
       const pickResult = await dialog.showOpenDialog(win || undefined, {
-        title: '选择本地图片',
+        title: normalizedTitle,
+        defaultPath: defaultPath || undefined,
         properties: ['openFile', 'multiSelections'],
         filters: [
           { name: '图片文件', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg'] },
-          { name: '所有文件', extensions: ['*'] }
+          { name: 'all-files', extensions: ['*'] }
         ]
       });
       if (pickResult.canceled || !Array.isArray(pickResult.filePaths) || !pickResult.filePaths.length) {
         return { ok: true, canceled: true, files: [] };
       }
+      const generatedCacheDir = shouldIncludeGeneratedTargetMeta
+        ? path.resolve(getCacheDir())
+        : '';
+      const generatedCacheDirPrefix = generatedCacheDir ? `${generatedCacheDir}${path.sep}` : '';
       const files = pickResult.filePaths
         .filter((filePath) => typeof filePath === 'string' && filePath)
         .map((filePath) => {
+          const normalizedFilePath = path.resolve(String(filePath || '').trim());
           const buf = fs.readFileSync(filePath);
           const mime = getMimeTypeByExt(filePath);
+          const hasGeneratedCacheMeta =
+            shouldIncludeGeneratedTargetMeta
+            && generatedCacheDir
+            && (normalizedFilePath === generatedCacheDir
+              || normalizedFilePath.startsWith(generatedCacheDirPrefix));
+          const generatedTargetMetaResult = hasGeneratedCacheMeta
+            ? readGeneratedTargetMetaByCacheFilePath(normalizedFilePath)
+            : {
+                targetMeta: null,
+                targetMetaFileName: '',
+                targetMetaFilePath: ''
+              };
           return {
             name: path.basename(filePath),
             type: mime,
-            dataUrl: `data:${mime};base64,${buf.toString('base64')}`
+            filePath: normalizedFilePath,
+            dataUrl: `data:${mime};base64,${buf.toString('base64')}`,
+            targetMeta: generatedTargetMetaResult.targetMeta || null,
+            targetMetaFileName: generatedTargetMetaResult.targetMetaFileName || '',
+            targetMetaFilePath: generatedTargetMetaResult.targetMetaFilePath || ''
           };
         });
       return { ok: true, canceled: false, files };
@@ -2766,19 +5243,11 @@ app.whenReady().then(() => {
       prunePsImageCache();
       const id = String(cacheId || '').trim();
       if (!id) return { ok: false, reason: 'invalid_id' };
-      const entry = psImageCacheMap.get(id);
-      if (!entry) return { ok: false, reason: 'not_found' };
-      if (!Number.isFinite(entry.expiresAt) || entry.expiresAt <= Date.now()) {
-        removePsCacheEntryFile(entry);
-        psImageCacheMap.delete(id);
-        return { ok: false, reason: 'expired' };
+      const psCacheData = readPsImageCacheDataUrl(id, { ignoreExpiry: false });
+      if (!psCacheData?.ok || !psCacheData?.entry) {
+        return { ok: false, reason: 'not_found' };
       }
-      if (!entry.filePath || !fs.existsSync(entry.filePath)) {
-        psImageCacheMap.delete(id);
-        return { ok: false, reason: 'missing_file' };
-      }
-      const buffer = fs.readFileSync(entry.filePath);
-      const dataUrl = `data:${entry.type};base64,${buffer.toString('base64')}`;
+      const entry = psCacheData.entry;
       return {
         ok: true,
         item: {
@@ -2793,7 +5262,7 @@ app.whenReady().then(() => {
           cachedAt: entry.cachedAt,
           expiresAt: entry.expiresAt,
           byteLength: entry.byteLength,
-          dataUrl
+          dataUrl: String(psCacheData.dataUrl || '')
         }
       };
     } catch (err) {
@@ -2847,7 +5316,7 @@ app.whenReady().then(() => {
         defaultPath: defaultFile,
         filters: [
           { name: '日志文件', extensions: ['log', 'txt'] },
-          { name: '所有文件', extensions: ['*'] }
+          { name: 'all-files', extensions: ['*'] }
         ]
       });
       if (saveResult.canceled || !saveResult.filePath) {
@@ -2878,21 +5347,58 @@ app.whenReady().then(() => {
           return `[${ts}] [${type}] [${level}] ${message}`;
         })
         .join('\n');
+      let pluginLogs = [];
+      let pluginLogsFetchError = '';
+      const pluginLogUploadEndpoint = `${getBridgeBaseUrl()}/ps/log`;
+      const pluginLogReadEndpoint = `${getBridgeBaseUrl()}/ps/logs?since=0`;
+      try {
+        const pluginLogResponse = await fetchBridgeJson('/ps/logs?since=0', {
+          method: 'GET',
+          timeoutMs: 3000
+        });
+        pluginLogs = Array.isArray(pluginLogResponse?.logs) ? pluginLogResponse.logs : [];
+      } catch (pluginLogErr) {
+        pluginLogsFetchError = String(pluginLogErr?.message || pluginLogErr || '');
+      }
+      const pluginLogText = pluginLogs
+        .map((entry) => {
+          const atValue = Number(entry?.at);
+          const atText = Number.isFinite(atValue)
+            ? new Date(atValue).toLocaleString('zh-CN', { hour12: false })
+            : '--';
+          const level = String(entry?.level || 'info');
+          const scene = String(entry?.scene || '').trim();
+          const message = String(entry?.message || '').trim();
+          const detail = String(entry?.detail || '').trim();
+          return `[${atText}] [${level}]${scene ? ` [${scene}]` : ''} ${message}${detail ? ` | ${detail}` : ''}`;
+        })
+        .join('\n');
+      const pluginLogRawJson = pluginLogs.length ? JSON.stringify(pluginLogs, null, 2) : '';
       const output = [
         '=== 小迪助词器日志 ===',
         `导出时间: ${new Date().toLocaleString('zh-CN', { hour12: false })}`,
         `应用版本: ${app.getVersion()}`,
         `渲染日志条数: ${rendererLogs.length}`,
         `开发日志节数: ${devLogSections.length}`,
+        `插件日志条数: ${pluginLogs.length}`,
+        `插件日志上传端点: ${pluginLogUploadEndpoint}`,
+        `插件日志读取端点: ${pluginLogReadEndpoint}`,
+        `插件日志读取状态: ${pluginLogsFetchError ? `failed (${pluginLogsFetchError})` : 'ok'}`,
         '',
         '--- 渲染层日志 ---',
-        rendererText || '(无)',
+        rendererText || '(空)',
         '',
         '--- 主进程日志(Electron) ---',
-        runtimeLog || '(无)',
+        runtimeLog || '(空)',
         '',
         '--- 开发进程日志(节选) ---',
-        devLogsText || '(无)',
+        devLogsText || '(空)',
+        '',
+        '--- 插件日志（格式化） ---',
+        pluginLogText || '(none)',
+        '',
+        '--- 插件日志（raw json） ---',
+        pluginLogRawJson || '(none)',
         ''
       ].join('\n');
       fs.writeFileSync(outFile, output, 'utf-8');
@@ -2907,20 +5413,27 @@ app.whenReady().then(() => {
     try {
       const summaryOnly = !!payload?.summaryOnly;
       const snapshot = readChatStateData();
-      const file = snapshot.file;
       const data = snapshot.data;
       const originalSessions = Array.isArray(data?.sessions) ? data.sessions : [];
-      let sessions = originalSessions;
-      if (hasInlineImageDataInSessions(originalSessions)) {
-        const persisted = persistChatSessionsWithoutInlineImages(originalSessions);
-        sessions = persisted.sessions;
-        pruneChatImageCacheByUsedIds(persisted.usedCacheIds);
+      const interruptedCleanup = finalizeInterruptedPendingMessages(originalSessions);
+      const sourceSessions = interruptedCleanup.sessions;
+      const persisted = persistChatSessionsWithoutInlineImages(sourceSessions);
+      let sessions = persisted.sessions;
+      pruneChatImageCacheByUsedIds(persisted.usedCacheIds);
+      if (
+        interruptedCleanup.changed ||
+        persisted.changed ||
+        hasInlineImageDataInSessions(sourceSessions)
+      ) {
         const migrated = {
           ...data,
           updatedAt: Date.now(),
           sessions
         };
-        fs.writeFileSync(file, JSON.stringify(migrated, null, 2), 'utf-8');
+        writeChatStateData(migrated, {
+          previousData: data,
+          reason: 'chat-load-normalize-pending-and-inline-image'
+        });
       }
       const responseSessions = summaryOnly
         ? sessions.map((session, idx) => toChatSessionSummary(session, idx))
@@ -2943,17 +5456,25 @@ app.whenReady().then(() => {
       const snapshot = readChatStateData();
       const data = snapshot.data;
       const originalSessions = Array.isArray(data?.sessions) ? data.sessions : [];
-      let sessions = originalSessions;
-      if (hasInlineImageDataInSessions(originalSessions)) {
-        const persisted = persistChatSessionsWithoutInlineImages(originalSessions);
-        sessions = persisted.sessions;
-        pruneChatImageCacheByUsedIds(persisted.usedCacheIds);
+      const interruptedCleanup = finalizeInterruptedPendingMessages(originalSessions);
+      const sourceSessions = interruptedCleanup.sessions;
+      const persisted = persistChatSessionsWithoutInlineImages(sourceSessions);
+      let sessions = persisted.sessions;
+      pruneChatImageCacheByUsedIds(persisted.usedCacheIds);
+      if (
+        interruptedCleanup.changed ||
+        persisted.changed ||
+        hasInlineImageDataInSessions(sourceSessions)
+      ) {
         const migrated = {
           ...data,
           updatedAt: Date.now(),
           sessions
         };
-        fs.writeFileSync(snapshot.file, JSON.stringify(migrated, null, 2), 'utf-8');
+        writeChatStateData(migrated, {
+          previousData: data,
+          reason: 'chat-load-session-normalize-pending-and-inline-image'
+        });
       }
       const target = sessions.find((session) => String(session?.id || '').trim() === sessionId);
       if (!target) return { ok: false, message: 'session_not_found', session: null };
@@ -2966,48 +5487,150 @@ app.whenReady().then(() => {
 
   ipcMain.handle('shell:chat-save', (_evt, payload) => {
     try {
+      const normalizedPayload = payload && typeof payload === 'object' ? payload : {};
       const snapshot = readChatStateData();
-      const file = snapshot.file;
       const existingSessions = Array.isArray(snapshot?.data?.sessions) ? snapshot.data.sessions : [];
-      const incomingSessions = Array.isArray(payload?.sessions) ? payload.sessions : [];
+      const incomingSessions = Array.isArray(normalizedPayload?.sessions) ? normalizedPayload.sessions : [];
+      const skippedByDeleteGuardCount = incomingSessions.reduce((sum, session) => {
+        const sessionId = String(session?.id || '').trim();
+        return sum + (sessionId && deletedChatSessionIdGuardSet.has(sessionId) ? 1 : 0);
+      }, 0);
       const mergedSessions = mergeIncomingChatSessions(incomingSessions, existingSessions);
-      if (shouldRejectSuspiciousChatSave(incomingSessions, existingSessions, mergedSessions, payload)) {
-        log('chat-save rejected suspicious truncation', {
-          existingSessionCount: existingSessions.length,
-          incomingSessionCount: incomingSessions.length
-        });
-        return { ok: false, message: 'chat_save_rejected_suspicious_truncation' };
-      }
       const persisted = persistChatSessionsWithoutInlineImages(
         mergedSessions
       );
       const next = {
         updatedAt: Date.now(),
-        activeId: typeof payload?.activeId === 'string' ? payload.activeId : "",
+        activeId: typeof normalizedPayload?.activeId === 'string' ? normalizedPayload.activeId : "",
         sessions: persisted.sessions
       };
-      backupChatStateFile(file, snapshot?.data || {});
-      fs.writeFileSync(file, JSON.stringify(next, null, 2), 'utf-8');
+      writeChatStateData(next, {
+        previousData: snapshot?.data || {},
+        reason: 'chat-save'
+      });
       pruneChatImageCacheByUsedIds(persisted.usedCacheIds);
+      log('chat-save ok', {
+        incomingSessionCount: incomingSessions.length,
+        existingSessionCount: existingSessions.length,
+        mergedSessionCount: mergedSessions.length,
+        skippedByDeleteGuardCount: Math.max(0, skippedByDeleteGuardCount),
+        incomingMessageCount: countSessionMessages(incomingSessions),
+        mergedMessageCount: countSessionMessages(mergedSessions),
+        activeId: next.activeId || ''
+      });
       return { ok: true };
     } catch (err) {
-      log('chat-save failed', { message: err.message });
+      log('chat-save failed', {
+        message: String(err?.message || 'unknown'),
+        code: String(err?.code || ''),
+        cause: String(err?.cause?.message || ''),
+        context: err?.context && typeof err.context === 'object' ? err.context : null
+      });
+      return {
+        ok: false,
+        message: String(err?.message || '保存失败'),
+        code: String(err?.code || '')
+      };
+    }
+  });
+
+  ipcMain.handle('shell:chat-delete', (_evt, payload) => {
+    try {
+      const normalizedPayload = payload && typeof payload === 'object' ? payload : {};
+      const deleteIdSet = new Set(
+        (Array.isArray(normalizedPayload?.sessionIds) ? normalizedPayload.sessionIds : [])
+          .map((sessionId) => String(sessionId || '').trim())
+          .filter(Boolean)
+      );
+      if (!deleteIdSet.size) return { ok: false, message: 'session_ids_required' };
+      const snapshot = readChatStateData();
+      const existingSessions = Array.isArray(snapshot?.data?.sessions) ? snapshot.data.sessions : [];
+      const remainingSessions = existingSessions
+        .map((session, idx) => sanitizeChatSessionForPersist(session, idx))
+        .filter((session) => !deleteIdSet.has(String(session?.id || '').trim()));
+      const deletedCount = existingSessions.length - remainingSessions.length;
+      const deletedIds = existingSessions
+        .map((session) => String(session?.id || '').trim())
+        .filter((sessionId) => !!sessionId && deleteIdSet.has(sessionId));
+      if (deletedCount <= 0) {
+        return {
+          ok: true,
+          deletedCount: 0,
+          activeId: typeof snapshot?.data?.activeId === 'string' ? snapshot.data.activeId : ''
+        };
+      }
+      const persisted = persistChatSessionsWithoutInlineImages(remainingSessions);
+      const requestedActiveId = String(normalizedPayload?.activeId || '').trim();
+      const nextActiveId = persisted.sessions.some(
+        (sessionItem) => String(sessionItem?.id || '').trim() === requestedActiveId
+      )
+        ? requestedActiveId
+        : String(persisted.sessions[0]?.id || '');
+      const next = {
+        updatedAt: Date.now(),
+        activeId: nextActiveId,
+        sessions: persisted.sessions
+      };
+      writeChatStateData(next, {
+        previousData: snapshot?.data || {},
+        reason: 'chat-delete'
+      });
+      deletedIds.forEach((sessionId) => deletedChatSessionIdGuardSet.add(sessionId));
+      pruneChatImageCacheByUsedIds(persisted.usedCacheIds);
+      log('chat-delete ok', {
+        requestedDeleteCount: deleteIdSet.size,
+        deletedCount,
+        remainingSessionCount: persisted.sessions.length,
+        activeId: next.activeId || ''
+      });
+      return { ok: true, deletedCount, activeId: nextActiveId };
+    } catch (err) {
+      log('chat-delete failed', { message: err.message });
       return { ok: false, message: err.message };
     }
   });
 
-  ipcMain.handle('shell:reconnect', async () => {
+  ipcMain.handle(SHELL_CHANNELS.reconnect, async () => {
     try {
       if (!serverProc) startServer({ port: bridgePort });
+      await ensureBridgeRuntimeContract('reconnect');
       const result = await fetchBridgeJson('/reconnect', {
         method: 'POST',
         body: {},
         timeoutMs: BRIDGE_REQUEST_TIMEOUT_MS
       });
-      return { ok: true, item: result?.item || null };
+      const reconnectItem = result?.item || null;
+      return buildShellOkResponse(
+        { item: reconnectItem },
+        { item: reconnectItem },
+        'reconnect_ok'
+      );
     } catch (err) {
-      log('reconnect failed', { message: err.message });
-      return { ok: false, message: err.message };
+      log('reconnect failed', {
+        message: err.message,
+        serverRunning: !!serverProc,
+        serverPid: serverProc ? (serverProc.pid || null) : null,
+        port: bridgePort
+      });
+      return buildShellErrorResponse(
+        'reconnect_failed',
+        err.message,
+        { item: null },
+        { item: null }
+      );
+    }
+  });
+
+  ipcMain.handle(SHELL_CHANNELS.setGlobalUploadShortcuts, (_evt, payload) => {
+    try {
+      return applyGlobalUploadShortcuts(payload || {});
+    } catch (err) {
+      log('set-global-upload-shortcuts failed', { message: err.message }, 'warn');
+      return {
+        ok: false,
+        message: String(err?.message || 'set_global_upload_shortcuts_failed'),
+        shortcuts: getGlobalUploadShortcutBindingsSnapshot()
+      };
     }
   });
 
@@ -3023,12 +5646,44 @@ app.whenReady().then(() => {
     }
     try {
       if (!serverProc) startServer({ port: bridgePort });
-      const queueId = await enqueueBridgeCommand(queueType, {
+      try {
+        await ensureBridgeRuntimeContract(`capture:${queueType}`);
+      } catch (runtimeContractError) {
+        const runtimeContractErrorText = String(
+          runtimeContractError?.message || runtimeContractError || ''
+        ).trim();
+        if (/bridge_runtime_contract_mismatch/i.test(runtimeContractErrorText)) {
+          log('capture runtime contract mismatch ignored (non-blocking)', {
+            queueType,
+            message: runtimeContractErrorText
+          }, 'warn');
+        } else {
+          throw runtimeContractError;
+        }
+      }
+      const requestedCaptureFormat = String(payload?.captureOptions?.format || '').trim().toLowerCase();
+      const requestedCaptureMaxSide = Number(payload?.captureOptions?.maxSide);
+      const requestedCaptureQuality = Number(payload?.captureOptions?.quality);
+      const queued = await enqueueBridgeCommand(queueType, {
         slotIndex: Number.isFinite(payload?.slotIndex) ? Number(payload.slotIndex) : -1,
         role: payload?.image?.role ? String(payload.image.role) : undefined,
+        captureOptions: {
+          format: requestedCaptureFormat === 'png' ? 'png' : 'jpg',
+          maxSide: Number.isFinite(requestedCaptureMaxSide) && requestedCaptureMaxSide > 0
+            ? Math.round(requestedCaptureMaxSide)
+            : undefined,
+          quality: Number.isFinite(requestedCaptureQuality) && requestedCaptureQuality > 0
+            ? Math.max(0.01, Math.min(1, requestedCaptureQuality))
+            : undefined
+        },
         source: 'webui'
       });
-      const result = await waitBridgeQueueResult(queueId, BRIDGE_ACTION_TIMEOUT_MS);
+      const queueId = queued.queueId;
+      const result = await waitBridgeQueueResult(
+        queueId,
+        BRIDGE_ACTION_TIMEOUT_MS,
+        queued.actionType
+      );
       const resultStatus = String(result?.status || '').toLowerCase();
       const resultPayload = result?.result?.payload || {};
       if (resultStatus === 'error' || resultPayload?.ok === false) {
@@ -3051,6 +5706,50 @@ app.whenReady().then(() => {
       const payloadBody = result?.result?.payload || {};
       const resolved = resolveCaptureFromBridgeResult(payloadBody, action);
       const capture = resolved.capture;
+      const captureByteLength = Number(capture?.byteLength) || 0;
+      const normalizedBridgeProtocolVersion = normalizeBridgeProtocolVersion(
+        capture?.bridgeProtocolVersion || BRIDGE_PROTOCOL_VERSION
+      );
+      const normalizedLegacyCaptureCommPath = String(capture?.commPath || '').trim();
+      const normalizedLegacyCaptureImagePath = String(capture?.imagePath || '').trim();
+      const hasLegacyCaptureRelayTrace =
+        !!normalizedLegacyCaptureCommPath || !!normalizedLegacyCaptureImagePath;
+      if (captureByteLength > CAPTURE_PAYLOAD_HARD_LIMIT_BYTES) {
+        throw new Error(`capture_payload_too_large:${captureByteLength}`);
+      }
+      const shouldInline = captureByteLength > 0 && captureByteLength <= CAPTURE_INLINE_MAX_BYTES;
+      let outputDataUrl = '';
+      let outputPsCacheId = '';
+      let outputPsCacheExpiresAt = undefined;
+      if (shouldInline) {
+        outputDataUrl = `data:${String(capture?.mimeType || 'image/png')};base64,${capture.buffer.toString('base64')}`;
+      } else {
+        const cachedCapture = cacheBufferToPsImageCache({
+          buffer: capture.buffer,
+          mimeType: String(capture?.mimeType || 'image/png'),
+          ttlMs: PS_CACHE_TTL_DEFAULT_MS,
+          name: resolved.fileName,
+          originName: resolved.fileName,
+          source: resolved.source,
+          role: capture?.role ? String(capture.role) : '',
+          slotIndex: Number.isFinite(capture?.slotIndex) ? Number(capture.slotIndex) : -1,
+          clientRef: String(queueId || ''),
+          meta: {
+            queueId: queueId,
+            actionType: queued.actionType,
+            bridgeProtocolVersion: normalizedBridgeProtocolVersion,
+            byteLength: captureByteLength,
+            ...(hasLegacyCaptureRelayTrace
+              ? {
+                  captureCommPath: normalizedLegacyCaptureCommPath || null,
+                  captureImagePath: normalizedLegacyCaptureImagePath || null
+                }
+              : {})
+          }
+        });
+        outputPsCacheId = String(cachedCapture?.entry?.cacheId || '');
+        outputPsCacheExpiresAt = Number(cachedCapture?.entry?.expiresAt) || undefined;
+      }
       return {
         ok: true,
         canceled: false,
@@ -3059,7 +5758,9 @@ app.whenReady().then(() => {
             name: resolved.fileName,
             originName: resolved.fileName,
             type: String(capture?.mimeType || 'image/png'),
-            dataUrl: String(capture.dataUrl),
+            dataUrl: outputDataUrl,
+            psCacheId: outputPsCacheId,
+            psCacheExpiresAt: outputPsCacheExpiresAt,
             source: resolved.source,
             role: capture?.role ? String(capture.role) : '',
             capturedAt: Number(capture?.capturedAt) || Date.now(),
@@ -3072,11 +5773,37 @@ app.whenReady().then(() => {
             targetDocumentId: Number(capture?.documentId) || undefined,
             documentName: capture?.documentName ? String(capture.documentName) : undefined,
             targetDocumentName: capture?.documentName ? String(capture.documentName) : undefined,
+            documentMode: capture?.documentMode ? String(capture.documentMode) : undefined,
+            bridgeProtocolVersion: normalizedBridgeProtocolVersion,
+            bitsPerChannel: Number.isFinite(Number(capture?.bitsPerChannel))
+              ? Number(capture.bitsPerChannel)
+              : undefined,
+            captureMeta:
+              capture?.captureMeta && typeof capture.captureMeta === 'object'
+                ? { ...capture.captureMeta }
+                : undefined,
             meta: {
               queueId,
+              actionType: queued.actionType,
+              bridgeProtocolVersion: normalizedBridgeProtocolVersion,
               documentId: capture?.documentId,
               documentName: capture?.documentName,
-              captureCommPath: capture?.commPath || null
+              documentMode: capture?.documentMode || null,
+              bitsPerChannel: Number.isFinite(Number(capture?.bitsPerChannel))
+                ? Number(capture.bitsPerChannel)
+                : null,
+              captureMeta:
+                capture?.captureMeta && typeof capture.captureMeta === 'object'
+                  ? { ...capture.captureMeta }
+                  : null,
+              captureByteLength: captureByteLength,
+              payloadMode: shouldInline ? 'inline' : 'ps-cache',
+              ...(hasLegacyCaptureRelayTrace
+                ? {
+                    captureCommPath: normalizedLegacyCaptureCommPath || null,
+                    captureImagePath: normalizedLegacyCaptureImagePath || null
+                  }
+                : {})
             }
           }
         ]
@@ -3106,7 +5833,8 @@ app.whenReady().then(() => {
         return { ok: false, message: 'data_url_required' };
       }
       if (!serverProc) startServer({ port: bridgePort });
-      const queueId = await enqueueBridgeCommand('import-image', {
+      await ensureBridgeRuntimeContract('import-image');
+      const queued = await enqueueBridgeCommand('import-image', {
         dataUrl,
         targetRect: normalizeTargetRect(payload?.targetRect),
         targetRectNorm: normalizeTargetRectNorm(payload?.targetRectNorm),
@@ -3116,7 +5844,12 @@ app.whenReady().then(() => {
         layerType: normalizeImportLayerType(payload?.layerType),
         source: 'webui'
       });
-      const result = await waitBridgeQueueResult(queueId, BRIDGE_ACTION_TIMEOUT_MS);
+      const queueId = queued.queueId;
+      const result = await waitBridgeQueueResult(
+        queueId,
+        BRIDGE_ACTION_TIMEOUT_MS,
+        queued.actionType
+      );
       const payloadBody = result?.result?.payload || {};
       if (String(result?.status || '') === 'error' || payloadBody?.ok === false) {
         return {
@@ -3134,19 +5867,41 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle('shell:set-window-scale', (_evt, scale, baseW, baseH) => {
-    if (!win) return { ok: false };
+  ipcMain.handle('shell:set-window-scale', (_evt, scale) => {
+    if (!win || win.isDestroyed()) return { ok: false };
     const s = clampScale(scale);
-    const bw = Number(baseW) || normalBounds.width || 360;
-    const bh = Number(baseH) || normalBounds.height || 880;
-    const width = Math.round(bw * s);
-    const height = Math.round(bh * s);
-    const bounds = win.getBounds();
-    win.setBounds({ x: bounds.x, y: bounds.y, width, height });
-    normalBounds = win.getBounds();
-    positionFloatingToggleWindow();
-    sendFloatingToggleState();
-    return { ok: true, width, height };
+    const currentBounds = win.getBounds();
+    const currentWidth = Math.max(
+      1,
+      Math.round(Number(currentBounds.width) || Number(normalBounds.width) || MAIN_WINDOW_DEFAULT_WIDTH)
+    );
+    const currentHeight = Math.max(
+      1,
+      Math.round(Number(currentBounds.height) || Number(normalBounds.height) || 880)
+    );
+    const requestedWidth = Math.max(1, Math.round(currentWidth * s));
+    const requestedHeight = Math.max(1, Math.round(currentHeight * s));
+    setPendingScaledBoundsRequest({ requestedWidth, requestedHeight });
+    const geometryResult = reconcileMainWindowGeometry({ saveWindowState: true });
+    const appliedBounds = geometryResult.bounds || win.getBounds();
+    let refreshed = false;
+    try {
+      if (win.webContents && !win.webContents.isDestroyed()) {
+        win.webContents.invalidate();
+        refreshed = true;
+      }
+    } catch (err) {
+      log('window invalidate failed', { message: err.message });
+    }
+    return {
+      ok: true,
+      width: appliedBounds.width,
+      height: appliedBounds.height,
+      requestedWidth,
+      requestedHeight,
+      deferred: !!geometryResult.pendingScaleDeferred,
+      refreshed
+    };
   });
 
   ipcMain.handle('shell:adjust-window-size', (_evt, deltaW, deltaH) => {
@@ -3154,24 +5909,42 @@ app.whenReady().then(() => {
     const dw = Number(deltaW) || 0;
     const dh = Number(deltaH) || 0;
     if (!dw && !dh) return { ok: true };
+    clearPendingScaledBoundsRequest();
     const bounds = win.getBounds();
     const width = Math.max(minBounds.width, Math.round(bounds.width + dw));
     const height = Math.max(minBounds.height, Math.round(bounds.height + dh));
-    win.setBounds({ x: bounds.x, y: bounds.y, width, height });
-    normalBounds = win.getBounds();
-    positionFloatingToggleWindow();
-    sendFloatingToggleState();
-    scheduleSaveWindowState();
-    return { ok: true, width, height };
+    const appliedBounds = applyMainWindowSizeKeepingPosition(width, height, {
+      saveWindowState: true
+    }) || win.getBounds();
+    return { ok: true, width: appliedBounds.width, height: appliedBounds.height };
   });
 
   ipcMain.handle('shell:set-min-size', (_evt, width, height) => {
     if (!win) return { ok: false };
-    const nextW = Math.max(320, Math.round(Number(width) || minBounds.width));
-    const nextH = Math.max(600, Math.round(Number(height) || minBounds.height));
-    minBounds = { width: nextW, height: nextH };
-    win.setMinimumSize(minBounds.width, minBounds.height);
-    return { ok: true, width: minBounds.width, height: minBounds.height };
+    const requestedW = Math.round(Number(width) || minBounds.width);
+    const requestedH = Math.round(Number(height) || minBounds.height);
+    const nextMinW = Math.max(1, requestedW);
+    const nextMinH = Math.max(1, requestedH);
+    const prevMinW = Number(minBounds.width) || 0;
+    const prevMinH = Number(minBounds.height) || 0;
+    const isUnchanged = prevMinW === nextMinW && prevMinH === nextMinH;
+    minBounds = { width: nextMinW, height: nextMinH };
+    if (!isUnchanged) {
+      win.setMinimumSize(minBounds.width, minBounds.height);
+    }
+    const geometryResult = reconcileMainWindowGeometry({ saveWindowState: true });
+    const fixedBounds = geometryResult.resized ? geometryResult.bounds || null : null;
+    return {
+      ok: true,
+      width: minBounds.width,
+      height: minBounds.height,
+      requestedWidth: requestedW,
+      requestedHeight: requestedH,
+      fixed: !!fixedBounds,
+      fixedWidth: fixedBounds ? fixedBounds.width : null,
+      fixedHeight: fixedBounds ? fixedBounds.height : null,
+      pendingScaleDeferred: !!geometryResult.pendingScaleDeferred
+    };
   });
 
   ipcMain.handle('shell:get-window-bounds', () => {
@@ -3179,13 +5952,32 @@ app.whenReady().then(() => {
     return win.getBounds();
   });
 
-  app.on('activate', () => {
+  ipcMain.handle('shell:recenter-main-window', () => {
+    if (!win || win.isDestroyed()) {
+      return { ok: false, message: 'window_not_ready' };
+    }
+    updateNormalBoundsForCurrentDisplays('manual-recenter');
+    if (win.isMinimized()) win.restore();
+    if (!win.isVisible()) win.show();
+    const corrected = ensureMainWindowOnVisibleDisplay('manual-recenter', {
+      positionPolicy: 'strict-visible'
+    });
+    win.focus();
+    applyMainAlwaysOnTop();
+    positionFloatingToggleWindow();
+    sendFloatingToggleState();
+    return { ok: true, corrected, bounds: win.getBounds() };
+  });
+
+app.on('activate', () => {
     if (!win || win.isDestroyed()) {
       createWindow();
       return;
     }
     if (win.isMinimized()) win.restore();
     if (!win.isVisible()) win.show();
+    updateNormalBoundsForCurrentDisplays('activate');
+    ensureMainWindowOnVisibleDisplay('activate');
     win.focus();
     applyMainAlwaysOnTop();
     sendFloatingToggleState();
@@ -3193,9 +5985,16 @@ app.whenReady().then(() => {
 });
 
 app.on('second-instance', () => {
+  log('second-instance', {
+    pid: process.pid,
+    ppid: process.ppid,
+    hasWindow: !!win
+  }, 'warn');
   if (!win) return;
+  updateNormalBoundsForCurrentDisplays('second-instance');
   if (win.isMinimized()) win.restore();
   if (!win.isVisible()) win.show();
+  ensureMainWindowOnVisibleDisplay('second-instance');
   win.focus();
   applyMainAlwaysOnTop();
   normalBounds = win.getBounds();
@@ -3215,6 +6014,18 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  try {
+    clearRegisteredGlobalUploadShortcuts();
+    globalShortcut.unregisterAll();
+  } catch (err) {
+    log('global shortcut cleanup failed', { message: err.message }, 'warn');
+  }
+  if (displayTopologyChangeHandler) {
+    screen.removeListener('display-added', displayTopologyChangeHandler);
+    screen.removeListener('display-removed', displayTopologyChangeHandler);
+    screen.removeListener('display-metrics-changed', displayTopologyChangeHandler);
+    displayTopologyChangeHandler = null;
+  }
   if (cachePolicyCleanupTimer) {
     clearInterval(cachePolicyCleanupTimer);
     cachePolicyCleanupTimer = null;
@@ -3246,6 +6057,7 @@ app.on('will-quit', () => {
     floatWin = null;
   }
 });
+
 
 
 

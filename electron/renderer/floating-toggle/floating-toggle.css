@@ -1,15 +1,28 @@
+/*
+ * @phb-version-tag: recovered-ce8k-r17
+ * @phb-version: 0.0.1-recovered-r17
+ * @phb-version-note: CE8K reverse-recovered baseline; naming refactor batch17 complete.
+ * @phb-updated-at: 2026-02-18
+ */
 :root {
+  --outer-gap: 6px;
   --drag-strip-height: 20px;
-  --toggle-height: 48px;
+  --toggle-height: 40px;
   --quick-button-size: 40px;
   --quick-button-gap: 8px;
-  --quick-group-top-gap: 16px;
-  --quick-padding-y: 12px;
+  --quick-group-top-gap: 10px;
+  --quick-padding-y: 8px;
   --quick-group-max-height: 220px;
   --divider-height: 1px;
-  --divider-margin-y: 12px;
+  --divider-margin-y: 8px;
   --collapse-duration: 0ms;
   --collapse-easing: linear;
+  --color-bg-app: #1f1f1f;
+  --color-bg-card: #292929;
+  --color-bg-field: #353535;
+  --color-bg-field-hover: #3f3f3f;
+  --surface-overlay-28: rgba(255, 255, 255, 0.28);
+  --surface-overlay-20: rgba(255, 255, 255, 0.2);
 }
 
 html,
@@ -36,7 +49,7 @@ body {
   align-items: stretch;
   justify-content: flex-start;
   gap: 0;
-  background: #323232;
+  background: var(--color-bg-app);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: none;
@@ -59,17 +72,17 @@ body {
   width: 14px;
   height: 2px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--surface-overlay-28);
 }
 
 #toggle {
   --toggle-status-color: #f0b75b;
-  width: calc(100% - 8px);
+  width: calc(100% - (var(--outer-gap) * 2));
   height: var(--toggle-height);
   border: 1px solid transparent;
   border-radius: 10px;
-  margin: 4px;
-  background: #262626;
+  margin: var(--outer-gap);
+  background: var(--color-bg-card);
   box-shadow: none;
   color: #ffffff;
   display: inline-flex;
@@ -91,18 +104,18 @@ body {
 
 #toggle:hover {
   filter: none;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-field);
 }
 
 #toggle:active {
-  background: rgba(255, 255, 255, 0.11);
+  background: var(--color-bg-field-hover);
 }
 
 .icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   display: block;
-  flex: 0 0 24px;
+  flex: 0 0 20px;
 }
 
 .icon-image {
@@ -213,13 +226,13 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(var(--drag-strip-height) + var(--toggle-height) + 8px + var(--quick-group-top-gap));
+  top: calc(var(--drag-strip-height) + var(--toggle-height) + (var(--outer-gap) * 2) + var(--quick-group-top-gap));
   width: 100%;
-  padding: 0 4px var(--quick-padding-y);
+  padding: 0 var(--outer-gap) var(--quick-padding-y);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  gap: var(--quick-button-gap);
   box-sizing: border-box;
   overflow: hidden;
   opacity: 1;
@@ -245,21 +258,11 @@ body {
   pointer-events: none;
 }
 
-.quick-main-group,
-.quick-dev-group {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--quick-button-gap);
-  flex: 0 0 auto;
-}
-
 .quick-dev-divider {
   width: calc(var(--quick-button-size) - 6px);
-  height: 1px;
-  margin: 10px 0;
-  background: rgba(255, 255, 255, 0.2);
+  height: var(--divider-height);
+  margin: 0;
+  background: var(--surface-overlay-20);
 }
 
 .quick-btn {
@@ -292,10 +295,10 @@ body {
 }
 
 .quick-icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   display: block;
-  flex: 0 0 24px;
+  flex: 0 0 20px;
 }
 
 .quick-icon-image {
