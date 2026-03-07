@@ -1645,41 +1645,6 @@ async function readActiveLayerBounds() {
   });
 }
 
-function getPrimaryActiveLayerId() {
-  const activeLayerId = Number(app?.activeDocument?.activeLayers?.[0]?.id);
-  if (!Number.isFinite(activeLayerId) || activeLayerId <= 0) {
-    return null;
-  }
-  return Math.round(activeLayerId);
-}
-
-async function selectSingleLayerById(layerId) {
-  const normalizedLayerId = Math.round(Number(layerId));
-  if (!Number.isFinite(normalizedLayerId) || normalizedLayerId <= 0) {
-    return false;
-  }
-  const selectionAttempts = [
-    {
-      _obj: "select",
-      _target: [{ _ref: "layer", _id: normalizedLayerId }],
-      makeVisible: false,
-      layerID: [normalizedLayerId]
-    },
-    {
-      _obj: "select",
-      _target: [{ _ref: "layer", _id: normalizedLayerId }],
-      makeVisible: false
-    }
-  ];
-  for (const selectionCmd of selectionAttempts) {
-    try {
-      await action.batchPlay([selectionCmd], {});
-      return true;
-    } catch (_) {}
-  }
-  return false;
-}
-
 async function moveActiveLayer(deltaX, deltaY) {
   const dx = Math.round(Number(deltaX) || 0);
   const dy = Math.round(Number(deltaY) || 0);
@@ -1910,10 +1875,6 @@ async function importDataUrlToCurrentDocument(inputData, options = {}) {
             makeVisible: false
           }
         ], {});
-        const importedLayerId = getPrimaryActiveLayerId();
-        if (importedLayerId) {
-          await selectSingleLayerById(importedLayerId);
-        }
 
         // placeEvent already creates a placed (smart object) layer.
         // Running newPlacedLayer again can trigger unnecessary smart-object updates.

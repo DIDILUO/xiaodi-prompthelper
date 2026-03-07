@@ -1,0 +1,109 @@
+﻿{
+    "id":  "com.xiaodi.prompthelper.psbridge",
+    "name":  "小迪助手 - PS 桥接插件",
+    "version":  "0.1.1",
+    "main":  "index.html",
+    "manifestVersion":  5,
+    "host":  {
+                 "app":  "PS",
+                 "minVersion":  "24.0.0"
+             },
+    "requiredPermissions":  {
+                                "network":  {
+                                                "domains":  [
+                                                                "http://127.0.0.1:17325",
+                                                                "http://127.0.0.1",
+                                                                "http://localhost:17325",
+                                                                "http://localhost"
+                                                            ]
+                                            },
+                                "localFileSystem":  "fullAccess"
+                            },
+    "entrypoints":  [
+                        {
+                            "type":  "panel",
+                            "id":  "mainPanel",
+                            "label":  "小迪桥接",
+                            "minimumSize":  {
+                                                "width":  280,
+                                                "height":  420
+                                            },
+                            "maximumSize":  {
+                                                "width":  1600,
+                                                "height":  1800
+                                            },
+                            "preferredDockedSize":  {
+                                                        "width":  320,
+                                                        "height":  560
+                                                    },
+                            "preferredFloatingSize":  {
+                                                          "width":  340,
+                                                          "height":  620
+                                                      },
+                            "icons":  [
+                                          {
+                                              "width":  23,
+                                              "height":  23,
+                                              "path":  "icons/xiaodi_D.png",
+                                              "scale":  [
+                                                            1,
+                                                            2
+                                                        ],
+                                              "theme":  [
+                                                            "darkest",
+                                                            "dark",
+                                                            "medium"
+                                                        ]
+                                          },
+                                          {
+                                              "width":  23,
+                                              "height":  23,
+                                              "path":  "icons/xiaodi_L.png",
+                                              "scale":  [
+                                                            1,
+                                                            2
+                                                        ],
+                                              "theme":  [
+                                                            "lightest",
+                                                            "light"
+                                                        ]
+                                          }
+                                      ]
+                        }
+                    ],
+    "icons":  [
+                  {
+                      "width":  23,
+                      "height":  23,
+                      "path":  "icons/xiaodi_D.png",
+                      "scale":  [
+                                    1,
+                                    2
+                                ],
+                      "theme":  [
+                                    "darkest",
+                                    "dark",
+                                    "medium"
+                                ],
+                      "species":  [
+                                      "pluginList"
+                                  ]
+                  },
+                  {
+                      "width":  48,
+                      "height":  48,
+                      "path":  "icons/xiaodi_L.png",
+                      "scale":  [
+                                    1,
+                                    2
+                                ],
+                      "theme":  [
+                                    "lightest",
+                                    "light"
+                                ],
+                      "species":  [
+                                      "pluginList"
+                                  ]
+                  }
+              ]
+}

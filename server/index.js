@@ -1,4 +1,10 @@
-﻿import express from "express";
+/*
+ * @phb-version-tag: recovered-ce8k-r17
+ * @phb-version: 0.0.1-recovered-r17
+ * @phb-version-note: CE8K reverse-recovered baseline; naming refactor batch17 complete.
+ * @phb-updated-at: 2026-02-18
+ */
+import express from "express";
 import cors from "cors";
 import fs from "fs";
 import path from "path";
@@ -12,8 +18,13 @@ app.use(cors());
 app.use(express.json({ limit: "30mb" }));
 
 const queue = [];
+const queueCommands = new Map();
 const queueResults = new Map();
+const BRIDGE_PROTOCOL_VERSION = 2;
+const LEGACY_RELAY_SKIP_PROTOCOL_VERSION = 2;
+const FORCE_LEGACY_CAPTURE_RELAY = String(process.env.PHB_FORCE_LEGACY_CAPTURE_RELAY || "").trim() === "1";
 const QUEUE_RESULT_TTL_MS = 2 * 60 * 1000;
+const QUEUE_COMMAND_TTL_MS = 10 * 60 * 1000;
 const QUEUE_NEXT_WAIT_MAX_MS = 30 * 1000;
 const QUEUE_RESULT_WAIT_MAX_MS = 30 * 1000;
 const PS_HEARTBEAT_TIMEOUT_MS = 4000;
@@ -75,6 +86,11 @@ function pruneQueueResults(now = Date.now()) {
       queueResults.delete(id);
     }
   }
+  for (const [id, commandMeta] of queueCommands.entries()) {
+    if (!commandMeta || !Number.isFinite(commandMeta.expiresAt) || commandMeta.expiresAt <= now) {
+      queueCommands.delete(id);
+    }
+  }
 }
 
 function clampWaitMs(value, maxMs) {
@@ -115,8 +131,19 @@ function getQueueItem() {
 
 function dispatchQueueItem(item) {
   if (!item || !item.id) return;
+  const commandId = String(item.id);
+  const previousMeta = queueCommands.get(commandId) || {};
+  queueCommands.set(commandId, {
+    ...previousMeta,
+    id: commandId,
+    actionType: String(item.actionType || ""),
+    type: String(item.type || ""),
+    status: "dispatched",
+    updatedAt: Date.now(),
+    expiresAt: Date.now() + QUEUE_COMMAND_TTL_MS
+  });
   pushBridgeEvent("queue.dispatched", {
-    id: String(item.id),
+    id: commandId,
     type: String(item.type || ""),
     queueSize: queue.length
   });
@@ -147,12 +174,52 @@ function removeQueueNextWaiter(target) {
   if (idx >= 0) queueNextWaiters.splice(idx, 1);
 }
 
+function normalizeQueueActionType(inputType) {
+  const raw = String(inputType || "").trim().toLowerCase();
+  if (raw === "ps.capture.selection") return "capture-selection";
+  if (raw === "ps.capture.canvas") return "capture-canvas";
+  if (raw === "ps.import" || raw === "ps.import.image") return "import-image";
+  return raw;
+}
+
+function normalizeBridgeProtocolVersion(inputVersion) {
+  const parsedVersion = Number(inputVersion);
+  if (!Number.isFinite(parsedVersion)) return 0;
+  const normalizedVersion = Math.floor(parsedVersion);
+  return normalizedVersion > 0 ? normalizedVersion : 0;
+}
+
+function extractBridgeProtocolVersion(payload = {}) {
+  if (!payload || typeof payload !== "object") return 0;
+  return normalizeBridgeProtocolVersion(
+    payload?.bridgeProtocolVersion
+    || payload?.payload?.bridgeProtocolVersion
+    || payload?.image?.bridgeProtocolVersion
+    || payload?.captureMeta?.bridgeProtocolVersion
+  );
+}
+
 function enqueueQueueItem(type, payload = {}) {
+  const actionType = normalizeQueueActionType(type);
+  const now = Date.now();
   const item = {
-    id: `cmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    type: String(type || "").trim(),
+    id: `cmd-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    commandId: "",
+    actionType: actionType || "",
+    type: actionType || String(type || "").trim(),
     payload: payload && typeof payload === "object" ? payload : {}
   };
+  item.commandId = item.id;
+  queueCommands.set(item.id, {
+    id: item.id,
+    commandId: item.id,
+    actionType: String(item.actionType || ""),
+    type: String(item.type || ""),
+    status: "queued",
+    createdAt: now,
+    updatedAt: now,
+    expiresAt: now + QUEUE_COMMAND_TTL_MS
+  });
   queue.push(item);
   pushBridgeEvent("queue.enqueued", {
     id: item.id,
@@ -184,6 +251,8 @@ function settleQueueResultWaiters(id, entry) {
       waiter.res.json({
         ok: true,
         id,
+        commandId: entry?.commandId || id,
+        actionType: entry?.actionType || "",
         status: entry?.status || "done",
         result: entry
       });
@@ -203,21 +272,101 @@ function syncPsConnectionState(force = false) {
 
 function setQueueResult(queueId, payload = {}) {
   const id = String(queueId || "").trim();
-  if (!id) return;
+  if (!id) {
+    return { ok: false, error: "id_required" };
+  }
+  const payloadObj = payload && typeof payload === "object" ? payload : {};
+  const normalizedActionType = normalizeQueueActionType(
+    payloadObj?.actionType
+    || payloadObj?.payload?.actionType
+    || ""
+  );
+  const commandMeta = queueCommands.get(id) || null;
+  const expectedActionType = normalizeQueueActionType(commandMeta?.actionType || "");
+  if (
+    expectedActionType
+    && normalizedActionType
+    && expectedActionType !== normalizedActionType
+  ) {
+    const now = Date.now();
+    const mismatchPayload = {
+      ok: false,
+      error: "action_type_mismatch",
+      errorCode: "action_type_mismatch",
+      message: "queue_result_action_mismatch",
+      expectedActionType,
+      gotActionType: normalizedActionType
+    };
+    const entry = {
+      id,
+      commandId: id,
+      actionType: expectedActionType || normalizedActionType || "",
+      status: "error",
+      payload: mismatchPayload,
+      updatedAt: now,
+      expiresAt: now + QUEUE_RESULT_TTL_MS
+    };
+    queueResults.set(id, entry);
+    queueCommands.set(id, {
+      ...(commandMeta || {}),
+      id,
+      commandId: id,
+      actionType: entry.actionType,
+      type: commandMeta?.type || entry.actionType || "",
+      status: entry.status,
+      updatedAt: now,
+      expiresAt: now + QUEUE_COMMAND_TTL_MS
+    });
+    pushBridgeEvent("queue.result.rejected", {
+      id,
+      status: String(payloadObj?.status || "done"),
+      expectedActionType,
+      gotActionType: normalizedActionType
+    });
+    pushBridgeEvent("queue.result", {
+      id,
+      status: entry.status,
+      actionType: entry.actionType
+    });
+    settleQueueResultWaiters(id, entry);
+    return {
+      ok: false,
+      error: "action_type_mismatch",
+      id,
+      expectedActionType,
+      gotActionType: normalizedActionType,
+      entry
+    };
+  }
+  const actionType = normalizedActionType || expectedActionType || "";
   const now = Date.now();
   const entry = {
     id,
-    status: String(payload?.status || "done"),
-    payload: payload?.payload !== undefined ? payload.payload : payload,
+    commandId: id,
+    actionType,
+    status: String(payloadObj?.status || "done"),
+    payload: payloadObj?.payload !== undefined ? payloadObj.payload : payloadObj,
     updatedAt: now,
     expiresAt: now + QUEUE_RESULT_TTL_MS
   };
   queueResults.set(id, entry);
+  queueCommands.set(id, {
+    ...(commandMeta || {}),
+    id,
+    commandId: id,
+    actionType,
+    type: commandMeta?.type || actionType || "",
+    status: entry.status,
+    updatedAt: now,
+    expiresAt: now + QUEUE_COMMAND_TTL_MS
+  });
   pushBridgeEvent("queue.result", {
     id,
-    status: entry.status
+    status: entry.status,
+    actionType
   });
   settleQueueResultWaiters(id, entry);
+  return { ok: true, entry };
 }
 
 function isPsConnected() {
@@ -403,6 +552,54 @@ function deriveTargetRectNorm(targetRect, targetCanvas) {
   });
 }
 
+function sanitizeCaptureMeta(input) {
+  if (!input || typeof input !== "object") return null;
+  const sourceBounds = normalizeTargetRect(input?.sourceBounds);
+  const targetSize = normalizeTargetCanvas(input?.targetSize);
+  const schemaVersionRaw = Number(input?.schemaVersion);
+  const componentSizeRaw = Number(input?.componentSize);
+  const rawByteLengthRaw = Number(input?.rawByteLength);
+  const imageDataWidthRaw = Number(input?.imageDataWidth);
+  const imageDataHeightRaw = Number(input?.imageDataHeight);
+  const bitsPerChannelRaw = Number(input?.bitsPerChannel);
+  const normalized = {
+    schemaVersion: Number.isFinite(schemaVersionRaw) ? Math.max(1, Math.round(schemaVersionRaw)) : undefined,
+    colorSpace: input?.colorSpace ? String(input.colorSpace) : undefined,
+    componentSize: Number.isFinite(componentSizeRaw) ? Math.max(1, Math.round(componentSizeRaw)) : undefined,
+    colorProfile: input?.colorProfile ? String(input.colorProfile) : undefined,
+    usedPreferredColorProfile:
+      typeof input?.usedPreferredColorProfile === "boolean"
+        ? input.usedPreferredColorProfile
+        : undefined,
+    preferredColorProfileError:
+      input?.preferredColorProfileError ? String(input.preferredColorProfileError) : undefined,
+    fallbackGetPixelsError:
+      input?.fallbackGetPixelsError ? String(input.fallbackGetPixelsError) : undefined,
+    usedMinimalGetPixelsRequest:
+      typeof input?.usedMinimalGetPixelsRequest === "boolean"
+        ? input.usedMinimalGetPixelsRequest
+        : undefined,
+    sourceBounds: sourceBounds || undefined,
+    targetSize: targetSize || undefined,
+    rawByteLength: Number.isFinite(rawByteLengthRaw)
+      ? Math.max(0, Math.round(rawByteLengthRaw))
+      : undefined,
+    imageDataWidth: Number.isFinite(imageDataWidthRaw)
+      ? Math.max(1, Math.round(imageDataWidthRaw))
+      : undefined,
+    imageDataHeight: Number.isFinite(imageDataHeightRaw)
+      ? Math.max(1, Math.round(imageDataHeightRaw))
+      : undefined,
+    documentMode: input?.documentMode ? String(input.documentMode) : undefined,
+    bitsPerChannel: Number.isFinite(bitsPerChannelRaw)
+      ? Math.max(1, Math.round(bitsPerChannelRaw))
+      : undefined
+  };
+  return Object.keys(normalized).some((key) => normalized[key] !== undefined)
+    ? normalized
+    : null;
+}
+
 function normalizeCaptureFilePath(inputPath) {
   const raw = String(inputPath || "").trim();
   if (!raw) return "";
@@ -452,6 +649,7 @@ function sanitizeCaptureBaseName(input) {
 
 function persistCaptureToCache(kind, body = {}) {
   const image = body?.image && typeof body.image === "object" ? body.image : {};
+  const captureMeta = sanitizeCaptureMeta(image?.captureMeta);
   const captureImage = resolveCaptureImageBinary(image);
   if (!captureImage || !captureImage.buffer?.length) {
     throw new Error("capture_file_buffer_empty");
@@ -493,7 +691,12 @@ function persistCaptureToCache(kind, body = {}) {
       targetRectNorm: targetRectNorm || null,
       targetCanvas: targetCanvas || null,
       documentId: Number(image?.documentId) || undefined,
-      documentName: image?.documentName ? String(image.documentName) : undefined
+      documentName: image?.documentName ? String(image.documentName) : undefined,
+      documentMode: image?.documentMode ? String(image.documentMode) : undefined,
+      bitsPerChannel: Number.isFinite(Number(image?.bitsPerChannel))
+        ? Number(image.bitsPerChannel)
+        : undefined,
+      captureMeta: captureMeta || undefined
     },
     bridge: {
       source: String(body?.source || "plugin"),
@@ -649,6 +852,8 @@ function nowId(prefix) {
 app.get("/status", (req, res) => {
   res.json({
     ok: true,
+    bridgeProtocolVersion: BRIDGE_PROTOCOL_VERSION,
+    forceLegacyCaptureRelay: FORCE_LEGACY_CAPTURE_RELAY,
     psConnected: isPsConnected(),
     queueSize: queue.length,
     psLastSeenAt,
@@ -706,6 +911,8 @@ app.get("/queue/result/:id", (req, res) => {
   return res.json({
     ok: true,
     id,
+    commandId: entry?.commandId || id,
+    actionType: entry?.actionType || "",
     status: entry.status || "done",
     result: entry
   });
@@ -724,6 +931,8 @@ app.get("/queue/result/:id/wait", (req, res) => {
     return res.json({
       ok: true,
       id,
+      commandId: entry?.commandId || id,
+      actionType: entry?.actionType || "",
       status: entry.status || "done",
       result: entry
     });
@@ -757,9 +966,29 @@ app.post("/queue/result", (req, res) => {
     return res.status(400).json({ ok: false, error: "id_required", message: "id 必填" });
   }
   const status = String(body?.status || "done").trim() || "done";
+  const actionType = normalizeQueueActionType(
+    body?.actionType
+    || body?.payload?.actionType
+    || ""
+  );
   const payload = body?.payload !== undefined ? body.payload : {};
-  setQueueResult(id, { status, payload });
-  return res.json({ ok: true, id, status });
+  const applyResult = setQueueResult(id, { status, actionType, payload });
+  if (!applyResult?.ok) {
+    return res.status(409).json({
+      ok: false,
+      id,
+      error: String(applyResult?.error || "queue_result_rejected"),
+      expectedActionType: String(applyResult?.expectedActionType || ""),
+      gotActionType: String(applyResult?.gotActionType || actionType || "")
+    });
+  }
+  return res.json({
+    ok: true,
+    id,
+    commandId: id,
+    actionType: String(applyResult?.entry?.actionType || actionType || ""),
+    status
+  });
 });
 
 app.get("/events", (req, res) => {
@@ -796,25 +1025,88 @@ app.get("/events", (req, res) => {
   });
 });
 
+function pushQueueResultRejectedLog(scene, queueId, applyResult) {
+  if (!applyResult || applyResult.ok) return;
+  pushPsPluginLog({
+    level: "warn",
+    scene,
+    source: "bridge",
+    message: "queue result rejected by action domain guard",
+    detail: `queueId=${String(queueId || "")} expected=${String(applyResult?.expectedActionType || "")} got=${String(applyResult?.gotActionType || "")}`,
+    at: Date.now()
+  });
+}
+
+function trySetLegacyRelayQueueResult(scene, queueId, payload = {}) {
+  const id = String(queueId || "").trim();
+  if (!id) {
+    return { ok: false, error: "id_required" };
+  }
+  const bridgeProtocolVersion = extractBridgeProtocolVersion(payload);
+  if (bridgeProtocolVersion >= LEGACY_RELAY_SKIP_PROTOCOL_VERSION) {
+    pushBridgeEvent("queue.result.legacy.skipped", {
+      id,
+      scene: String(scene || "legacy-relay"),
+      reason: "protocol_v2_direct_result",
+      bridgeProtocolVersion
+    });
+    return {
+      ok: true,
+      skipped: true,
+      reason: "protocol_v2_direct_result",
+      bridgeProtocolVersion
+    };
+  }
+  const commandMeta = queueCommands.get(id) || null;
+  const commandStatus = String(commandMeta?.status || "").trim().toLowerCase();
+  if (commandStatus === "done" || commandStatus === "error") {
+    pushBridgeEvent("queue.result.legacy.skipped", {
+      id,
+      scene: String(scene || "legacy-relay"),
+      reason: "already_settled",
+      status: commandStatus
+    });
+    return { ok: true, skipped: true, reason: "already_settled", status: commandStatus };
+  }
+  const applyResult = setQueueResult(id, payload);
+  if (!applyResult?.ok) {
+    pushQueueResultRejectedLog(scene, id, applyResult);
+    return applyResult;
+  }
+  pushBridgeEvent("queue.result.legacy.applied", {
+    id,
+    scene: String(scene || "legacy-relay"),
+    actionType: String(applyResult?.entry?.actionType || ""),
+    status: String(applyResult?.entry?.status || "")
+  });
+  return applyResult;
+}
+
 app.post("/ps/selection", (req, res) => {
   markPsSeen();
   const body = req.body || {};
+  const bridgeProtocolVersion = extractBridgeProtocolVersion(body);
+  const shouldUseLegacyCaptureRelay =
+    FORCE_LEGACY_CAPTURE_RELAY ||
+    bridgeProtocolVersion < LEGACY_RELAY_SKIP_PROTOCOL_VERSION;
   let persisted = null;
   let persistError = "";
-  try {
-    persisted = persistCaptureToCache("selection", body);
-  } catch (err) {
-    persistError = String(err?.message || err || "capture_cache_persist_failed");
-    pushPsPluginLog({
-      level: "warn",
-      scene: "capture-cache",
-      source: "bridge",
-      message: "selection capture cache persist failed",
-      detail: persistError,
-      at: Date.now()
-    });
+  if (shouldUseLegacyCaptureRelay) {
+    try {
+      persisted = persistCaptureToCache("selection", body);
+    } catch (err) {
+      persistError = String(err?.message || err || "capture_cache_persist_failed");
+      pushPsPluginLog({
+        level: "warn",
+        scene: "capture-cache",
+        source: "bridge",
+        message: "selection capture cache persist failed",
+        detail: persistError,
+        at: Date.now()
+      });
+    }
   }
-  if (body?.queueId) {
+  if (body?.queueId && shouldUseLegacyCaptureRelay) {
     const payload = persisted
       ? {
           ...body,
@@ -826,6 +1118,7 @@ app.post("/ps/selection", (req, res) => {
               })()
             : body?.image,
           captureKind: "selection",
+          actionType: "capture-selection",
           captureCommPath: persisted.commPath,
           captureCommFile: persisted.commFileName,
           captureImagePath: persisted.imagePath,
@@ -834,39 +1127,49 @@ app.post("/ps/selection", (req, res) => {
       : {
           ...body,
           captureKind: "selection",
+          actionType: "capture-selection",
           captureCommError: persistError || undefined
         };
-    setQueueResult(body.queueId, {
+    trySetLegacyRelayQueueResult("capture-selection", body.queueId, {
       status: "done",
+      actionType: "capture-selection",
       payload
     });
   }
   res.json({
     ok: true,
-    captureCommPath: persisted?.commPath || null,
-    captureCommError: persistError || ""
+    bridgeProtocolVersion,
+    captureRelayMode: shouldUseLegacyCaptureRelay ? "legacy-comm" : "queue-result-v2",
+    captureCommPath: shouldUseLegacyCaptureRelay ? persisted?.commPath || null : null,
+    captureCommError: shouldUseLegacyCaptureRelay ? persistError || "" : ""
   });
 });
 
 app.post("/ps/canvas", (req, res) => {
   markPsSeen();
   const body = req.body || {};
+  const bridgeProtocolVersion = extractBridgeProtocolVersion(body);
+  const shouldUseLegacyCaptureRelay =
+    FORCE_LEGACY_CAPTURE_RELAY ||
+    bridgeProtocolVersion < LEGACY_RELAY_SKIP_PROTOCOL_VERSION;
   let persisted = null;
   let persistError = "";
-  try {
-    persisted = persistCaptureToCache("canvas", body);
-  } catch (err) {
-    persistError = String(err?.message || err || "capture_cache_persist_failed");
-    pushPsPluginLog({
-      level: "warn",
-      scene: "capture-cache",
-      source: "bridge",
-      message: "canvas capture cache persist failed",
-      detail: persistError,
-      at: Date.now()
-    });
+  if (shouldUseLegacyCaptureRelay) {
+    try {
+      persisted = persistCaptureToCache("canvas", body);
+    } catch (err) {
+      persistError = String(err?.message || err || "capture_cache_persist_failed");
+      pushPsPluginLog({
+        level: "warn",
+        scene: "capture-cache",
+        source: "bridge",
+        message: "canvas capture cache persist failed",
+        detail: persistError,
+        at: Date.now()
+      });
+    }
   }
-  if (body?.queueId) {
+  if (body?.queueId && shouldUseLegacyCaptureRelay) {
     const payload = persisted
       ? {
           ...body,
@@ -878,6 +1181,7 @@ app.post("/ps/canvas", (req, res) => {
               })()
             : body?.image,
           captureKind: "canvas",
+          actionType: "capture-canvas",
           captureCommPath: persisted.commPath,
           captureCommFile: persisted.commFileName,
           captureImagePath: persisted.imagePath,
@@ -886,30 +1190,43 @@ app.post("/ps/canvas", (req, res) => {
       : {
           ...body,
           captureKind: "canvas",
+          actionType: "capture-canvas",
           captureCommError: persistError || undefined
         };
-    setQueueResult(body.queueId, {
+    trySetLegacyRelayQueueResult("capture-canvas", body.queueId, {
       status: "done",
+      actionType: "capture-canvas",
       payload
     });
   }
   res.json({
     ok: true,
-    captureCommPath: persisted?.commPath || null,
-    captureCommError: persistError || ""
+    bridgeProtocolVersion,
+    captureRelayMode: shouldUseLegacyCaptureRelay ? "legacy-comm" : "queue-result-v2",
+    captureCommPath: shouldUseLegacyCaptureRelay ? persisted?.commPath || null : null,
+    captureCommError: shouldUseLegacyCaptureRelay ? persistError || "" : ""
   });
 });
 
 app.post("/ps/import", (req, res) => {
   markPsSeen();
   const body = req.body || {};
-  if (body?.queueId) {
-    setQueueResult(body.queueId, {
+  const bridgeProtocolVersion = extractBridgeProtocolVersion(body);
+  if (
+    body?.queueId &&
+    (FORCE_LEGACY_CAPTURE_RELAY ||
+      bridgeProtocolVersion < LEGACY_RELAY_SKIP_PROTOCOL_VERSION)
+  ) {
+    trySetLegacyRelayQueueResult("import-image", body.queueId, {
       status: body?.ok === false ? "error" : "done",
+      actionType: "import-image",
       payload: body
     });
   }
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    bridgeProtocolVersion
+  });
 });
 
 app.post("/ps/heartbeat", (req, res) => {

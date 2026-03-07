@@ -1,12 +1,15 @@
 {
   "id": "com.xiaodi.prompthelper.psbridge",
   "name": "小迪助手 - PS 桥接插件",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "index.html",
   "manifestVersion": 5,
   "host": {
     "app": "PS",
-    "minVersion": "24.0.0"
+    "minVersion": "24.0.0",
+    "data": {
+      "loadEvent": "startup"
+    }
   },
   "requiredPermissions": {
     "network": {
@@ -39,7 +42,71 @@
       "preferredFloatingSize": {
         "width": 340,
         "height": 620
-      }
+      },
+      "icons": [
+        {
+          "width": 23,
+          "height": 23,
+          "path": "icons/xiaodi_D.png",
+          "scale": [
+            1,
+            2
+          ],
+          "theme": [
+            "darkest",
+            "dark",
+            "medium"
+          ]
+        },
+        {
+          "width": 23,
+          "height": 23,
+          "path": "icons/xiaodi_L.png",
+          "scale": [
+            1,
+            2
+          ],
+          "theme": [
+            "lightest",
+            "light"
+          ]
+        }
+      ]
+    }
+  ],
+  "icons": [
+    {
+      "width": 23,
+      "height": 23,
+      "path": "icons/xiaodi_D.png",
+      "scale": [
+        1,
+        2
+      ],
+      "theme": [
+        "darkest",
+        "dark",
+        "medium"
+      ],
+      "species": [
+        "pluginList"
+      ]
+    },
+    {
+      "width": 48,
+      "height": 48,
+      "path": "icons/xiaodi_L.png",
+      "scale": [
+        1,
+        2
+      ],
+      "theme": [
+        "lightest",
+        "light"
+      ],
+      "species": [
+        "pluginList"
+      ]
     }
   ]
 }
