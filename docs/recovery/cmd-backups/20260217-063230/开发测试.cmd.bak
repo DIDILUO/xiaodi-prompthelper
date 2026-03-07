@@ -1,6 +1,0 @@
-@echo off
-chcp 65001 >nul
-REM Dev launcher
-cd /d "%~dp0"
-set "ELECTRON_RUN_AS_NODE="
-cmd /c npm run dev
