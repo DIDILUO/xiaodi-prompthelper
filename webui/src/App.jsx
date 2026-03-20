@@ -15204,16 +15204,28 @@ function normalizeRunQueueTaskImageItem(imageItem) {
   const rawLegacyImageSnapshot =
       imageItem?.legacy && typeof imageItem.legacy === "object"
         ? imageItem.legacy
-        : {},
+        : {};
+  const {
+      chatCacheId: normalizedTaskChatCacheId,
+      psCacheId: normalizedTaskPsCacheId,
+    } = resolveSessionImageCacheIds(imageItem),
     legacyPsCacheId = String(
-      imageItem?.psCacheId || rawLegacyImageSnapshot.psCacheId || "",
+      normalizedTaskPsCacheId || rawLegacyImageSnapshot.psCacheId || "",
     ).trim(),
     legacyCacheId = String(
-      imageItem?.cacheId || rawLegacyImageSnapshot.cacheId || "",
+      normalizedTaskChatCacheId ||
+        imageItem?.cacheId ||
+        rawLegacyImageSnapshot.cacheId ||
+        "",
     ).trim(),
     legacyChatCacheId = String(
-      imageItem?.chatCacheId || rawLegacyImageSnapshot.chatCacheId || "",
+      normalizedTaskChatCacheId || rawLegacyImageSnapshot.chatCacheId || "",
     ).trim(),
+    legacyPsCacheExpiresAt = Number.isFinite(imageItem?.psCacheExpiresAt)
+      ? Number(imageItem.psCacheExpiresAt)
+      : Number.isFinite(rawLegacyImageSnapshot?.psCacheExpiresAt)
+        ? Number(rawLegacyImageSnapshot.psCacheExpiresAt)
+        : void 0,
     dataUrl = String(imageItem?.dataUrl || "").trim();
   if (
     !hasResolvableImageRecord(imageItem) &&
@@ -15257,9 +15269,7 @@ function normalizeRunQueueTaskImageItem(imageItem) {
     cacheId: legacyCacheId,
     psCacheId: legacyPsCacheId,
     chatCacheId: legacyChatCacheId,
-    psCacheExpiresAt: Number.isFinite(imageItem.psCacheExpiresAt)
-      ? Number(imageItem.psCacheExpiresAt)
-      : void 0,
+    psCacheExpiresAt: legacyPsCacheExpiresAt,
     width: Number.isFinite(imageWidth) && imageWidth > 0 ? imageWidth : void 0,
     height: Number.isFinite(imageHeight) && imageHeight > 0 ? imageHeight : void 0,
     targetRect: normalizedTargetMeta.targetRect || null,
@@ -15282,7 +15292,7 @@ function normalizeRunQueueTaskImageItem(imageItem) {
       },
     },
   );
-  return {
+  const normalizedTaskImageRecord = {
     ...normalizedLegacyImageRecord,
     assetId: assetImageRecord.assetId,
     fileName: assetImageRecord.fileName,
@@ -15302,6 +15312,23 @@ function normalizeRunQueueTaskImageItem(imageItem) {
     legacyIdConversionRemoveAfter:
       assetImageRecord.legacyIdConversionRemoveAfter,
   };
+  const normalizedTaskImageLegacy =
+    normalizedTaskImageRecord.legacy &&
+    typeof normalizedTaskImageRecord.legacy === "object"
+      ? { ...normalizedTaskImageRecord.legacy }
+      : {};
+  if (Number.isFinite(legacyPsCacheExpiresAt)) {
+    normalizedTaskImageLegacy.psCacheExpiresAt = legacyPsCacheExpiresAt;
+  }
+  return stripTopLevelLegacyImageReferenceFields(
+    {
+      ...normalizedTaskImageRecord,
+      legacy: Object.keys(normalizedTaskImageLegacy).length
+        ? normalizedTaskImageLegacy
+        : void 0,
+    },
+    { clearPsCache: true },
+  );
 }
 
 function normalizeRunTaskImageSourceMode(imageSourceInput) {
@@ -15357,10 +15384,23 @@ function normalizeRunQueueHistoryImageItem(
       : null;
   if (!imageItem) return null;
   const normalizedDisplayName = resolveAssetRecordDisplayName(
-    imageItem,
-    "image",
-  );
-  const baseImageRecord = {
+      imageItem,
+      "image",
+    ),
+    rawLegacyImageSnapshot =
+      imageItem.legacy && typeof imageItem.legacy === "object"
+        ? imageItem.legacy
+        : {},
+    {
+      chatCacheId: normalizedHistoryChatCacheId,
+      psCacheId: normalizedHistoryPsCacheId,
+    } = resolveSessionImageCacheIds(imageItem),
+    legacyPsCacheExpiresAt = Number.isFinite(imageItem?.psCacheExpiresAt)
+      ? Number(imageItem.psCacheExpiresAt)
+      : Number.isFinite(rawLegacyImageSnapshot?.psCacheExpiresAt)
+        ? Number(rawLegacyImageSnapshot.psCacheExpiresAt)
+        : void 0,
+    baseImageRecord = {
       ...imageItem,
       id: String(imageItem.id || "").trim(),
       fileName: String(
@@ -15372,13 +15412,29 @@ function normalizeRunQueueHistoryImageItem(
       filePath: String(
         imageItem.filePath || imageItem.cacheFilePath || "",
       ).trim(),
-      cacheFileName: String(imageItem.cacheFileName || "").trim(),
-      cacheFilePath: String(imageItem.cacheFilePath || "").trim(),
+      cacheFileName: String(
+        imageItem.cacheFileName || rawLegacyImageSnapshot.cacheFileName || "",
+      ).trim(),
+      cacheFilePath: String(
+        imageItem.cacheFilePath || rawLegacyImageSnapshot.cacheFilePath || "",
+      ).trim(),
       name: normalizedDisplayName,
       originName: normalizedDisplayName,
-      cacheId: String(imageItem.cacheId || "").trim(),
-      psCacheId: String(imageItem.psCacheId || "").trim(),
-      chatCacheId: String(imageItem.chatCacheId || "").trim(),
+      cacheId: String(
+        normalizedHistoryChatCacheId ||
+          imageItem.cacheId ||
+          rawLegacyImageSnapshot.cacheId ||
+          "",
+      ).trim(),
+      psCacheId: String(
+        normalizedHistoryPsCacheId || rawLegacyImageSnapshot.psCacheId || "",
+      ).trim(),
+      chatCacheId: String(
+        normalizedHistoryChatCacheId ||
+          rawLegacyImageSnapshot.chatCacheId ||
+          "",
+      ).trim(),
+      psCacheExpiresAt: legacyPsCacheExpiresAt,
       assetId: String(imageItem.assetId || "").trim(),
       internalCacheId: String(imageItem.internalCacheId || "").trim(),
       itemId: String(imageItem.itemId || "").trim(),
@@ -15422,7 +15478,7 @@ function normalizeRunQueueHistoryImageItem(
     widthValue = Number(imageItem.width),
     heightValue = Number(imageItem.height);
   if (!cacheFilePath && !cacheFileName) return null;
-  return {
+  const normalizedHistoryImageRecord = {
     ...baseImageRecord,
     assetId: assetImageRecord.assetId,
     fileName: assetImageRecord.fileName,
@@ -15452,6 +15508,23 @@ function normalizeRunQueueHistoryImageItem(
         ? Math.round(heightValue)
         : 0,
   };
+  const normalizedHistoryImageLegacy =
+    normalizedHistoryImageRecord.legacy &&
+    typeof normalizedHistoryImageRecord.legacy === "object"
+      ? { ...normalizedHistoryImageRecord.legacy }
+      : {};
+  if (Number.isFinite(legacyPsCacheExpiresAt)) {
+    normalizedHistoryImageLegacy.psCacheExpiresAt = legacyPsCacheExpiresAt;
+  }
+  return stripTopLevelLegacyImageReferenceFields(
+    {
+      ...normalizedHistoryImageRecord,
+      legacy: Object.keys(normalizedHistoryImageLegacy).length
+        ? normalizedHistoryImageLegacy
+        : void 0,
+    },
+    { clearPsCache: true },
+  );
 }
 
 function buildRunQueueTaskItemStatusLabel(statusInput) {
@@ -15793,15 +15866,36 @@ function stripRunQueueHistoryImageItemForStorage(
     fallbackIndex,
   );
   if (!normalizedImageItem) return null;
-  return {
+  const {
+      chatCacheId: normalizedStoredChatCacheId,
+      psCacheId: normalizedStoredPsCacheId,
+    } = resolveSessionImageCacheIds(normalizedImageItem),
+    normalizedStoredLegacy =
+      normalizedImageItem.legacy &&
+      typeof normalizedImageItem.legacy === "object"
+        ? { ...normalizedImageItem.legacy }
+        : {},
+    normalizedStoredPsCacheExpiresAt = Number.isFinite(
+      normalizedImageItem?.psCacheExpiresAt,
+    )
+      ? Number(normalizedImageItem.psCacheExpiresAt)
+      : Number.isFinite(normalizedStoredLegacy?.psCacheExpiresAt)
+        ? Number(normalizedStoredLegacy.psCacheExpiresAt)
+        : void 0;
+  if (normalizedStoredChatCacheId) {
+    normalizedStoredLegacy.cacheId = normalizedStoredChatCacheId;
+    normalizedStoredLegacy.chatCacheId = normalizedStoredChatCacheId;
+  }
+  if (normalizedStoredPsCacheId) {
+    normalizedStoredLegacy.psCacheId = normalizedStoredPsCacheId;
+  }
+  if (Number.isFinite(normalizedStoredPsCacheExpiresAt)) {
+    normalizedStoredLegacy.psCacheExpiresAt = normalizedStoredPsCacheExpiresAt;
+  }
+  return stripTopLevelLegacyImageReferenceFields({
     id: String(normalizedImageItem.id || "").trim(),
     fileName: String(normalizedImageItem.fileName || "").trim(),
     filePath: String(normalizedImageItem.filePath || "").trim(),
-    cacheFileName: String(normalizedImageItem.cacheFileName || "").trim(),
-    cacheFilePath: String(normalizedImageItem.cacheFilePath || "").trim(),
-    cacheId: String(normalizedImageItem.cacheId || "").trim(),
-    psCacheId: String(normalizedImageItem.psCacheId || "").trim(),
-    chatCacheId: String(normalizedImageItem.chatCacheId || "").trim(),
     assetId: String(normalizedImageItem.assetId || "").trim(),
     internalCacheId: String(normalizedImageItem.internalCacheId || "").trim(),
     itemId: String(normalizedImageItem.itemId || "").trim(),
@@ -15813,10 +15907,7 @@ function stripRunQueueHistoryImageItemForStorage(
         ? { ...normalizedImageItem.usageMeta }
         : void 0,
     legacy:
-      normalizedImageItem.legacy &&
-      typeof normalizedImageItem.legacy === "object"
-        ? { ...normalizedImageItem.legacy }
-        : void 0,
+      Object.keys(normalizedStoredLegacy).length ? normalizedStoredLegacy : void 0,
     width:
       Number.isFinite(Number(normalizedImageItem.width)) &&
       Number(normalizedImageItem.width) > 0
@@ -15827,7 +15918,7 @@ function stripRunQueueHistoryImageItemForStorage(
       Number(normalizedImageItem.height) > 0
         ? Math.round(Number(normalizedImageItem.height))
         : 0,
-  };
+  }, { clearPsCache: true });
 }
 
 function serializeRunQueueTaskItemResultForStorage(
