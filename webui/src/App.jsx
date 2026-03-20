@@ -53705,6 +53705,24 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                         alt="cancel-run-queue-task"
                       />
                     </button>
+                  ) : runQueueTaskItem.canRerun ? (
+                    <button
+                      type="button"
+                      className="run-queue-task-action-btn run-queue-task-rerun-btn"
+                      onClick={(runQueueTaskRerunClickEvent) => {
+                        runQueueTaskRerunClickEvent.stopPropagation();
+                        void rerunRunQueueTaskById(runQueueTaskItem.id);
+                      }}
+                      data-tip-text="重新加入队列"
+                      data-tip-placement="bottom"
+                      disabled={!runQueueTaskItem.canRerun}
+                    >
+                      <img
+                        className="icon-14"
+                        src={iconRunQueueRetry}
+                        alt="retry-run-queue-task"
+                      />
+                    </button>
                   ) : null}
                 </div>
               </div>
@@ -53742,27 +53760,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                         {`${runQueueTaskItem.sourceLabel || "未知来源"} · ${runQueueTaskItem.providerLabel || "服务商未设"} · ${runQueueTaskItem.modelLabel || "模型未设"}`}
                       </div>
                     </div>
-                    {isHistoryTask ? (
-                      <div className="run-queue-task-ref-actions">
-                        <button
-                          type="button"
-                          className="run-queue-task-action-btn run-queue-task-rerun-btn"
-                          onClick={(runQueueTaskRerunClickEvent) => {
-                            runQueueTaskRerunClickEvent.stopPropagation();
-                            void rerunRunQueueTaskById(runQueueTaskItem.id);
-                          }}
-                          data-tip-text="重新加入队列"
-                          data-tip-placement="bottom"
-                          disabled={!runQueueTaskItem.canRerun}
-                        >
-                          <img
-                            className="icon-14"
-                            src={iconRunQueueRetry}
-                            alt="retry-run-queue-task"
-                          />
-                        </button>
-                      </div>
-                    ) : (
+                    {!isHistoryTask ? (
                       <div className="run-queue-task-ref-actions">
                         <button
                           type="button"
@@ -53781,7 +53779,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                           />
                         </button>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                   {runQueueTaskItem.resultMessage ? (
                     <div className="run-queue-task-result-text">
