@@ -1230,6 +1230,29 @@ function pickLegacyImageReferenceSnapshot(imageRecord = {}) {
   }, {});
 }
 
+function stripTopLevelLegacyImageReferenceFields(
+  imageRecordInput = {},
+  { clearPsCache = false } = {},
+) {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === 'object'
+      ? { ...imageRecordInput }
+      : {};
+  ['cacheId', 'chatCacheId', 'cacheFileName', 'cacheFilePath'].forEach((fieldName) => {
+    if (Object.prototype.hasOwnProperty.call(imageRecord, fieldName)) {
+      delete imageRecord[fieldName];
+    }
+  });
+  if (clearPsCache) {
+    ['psCacheId', 'psCacheExpiresAt'].forEach((fieldName) => {
+      if (Object.prototype.hasOwnProperty.call(imageRecord, fieldName)) {
+        delete imageRecord[fieldName];
+      }
+    });
+  }
+  return imageRecord;
+}
+
 function normalizeImageInputMethodValue(inputMethodInput, fallback = 'unknown') {
   const normalizedValue = normalizeTraceTextPart(inputMethodInput);
   return normalizedValue || normalizeTraceTextPart(fallback, 'unknown');
@@ -2514,10 +2537,13 @@ function readChatImageCacheDataUrl(cacheIdOrPayload, options = {}) {
     resolvedChatCacheFile;
   const buffer = fs.readFileSync(filePath);
   if (!buffer?.length) return null;
+  const resolvedDisplayName = String(hintedFileName || matchedFileName || '').trim();
   const normalizedLegacyImageRecord = {
     ok: true,
     cacheId: normalizedCacheId,
-    fileName: matchedFileName,
+    cacheFileName: matchedFileName,
+    cacheFilePath: filePath,
+    fileName: resolvedDisplayName || matchedFileName,
     filePath,
     mimeType,
     dataUrl: `data:${mimeType};base64,${buffer.toString('base64')}`
@@ -2528,8 +2554,11 @@ function readChatImageCacheDataUrl(cacheIdOrPayload, options = {}) {
       prefix: 'chat',
       imageSourceKind: 'chat',
       imageSourceMethod: 'cache',
-      displayFileName: hintedFileName || normalizedLegacyImageRecord.fileName || '',
-      fileName: normalizedLegacyImageRecord.fileName || '',
+      assetId: normalizedCacheId,
+      internalCacheId: normalizedCacheId,
+      itemId: normalizedCacheId,
+      displayFileName: resolvedDisplayName || matchedFileName || '',
+      fileName: resolvedDisplayName || matchedFileName || '',
       filePath,
       inputMethod: 'chat-cache',
       usageMeta: {
@@ -2539,9 +2568,8 @@ function readChatImageCacheDataUrl(cacheIdOrPayload, options = {}) {
     }
   );
   return {
-    ...assetRecord,
+    ...stripTopLevelLegacyImageReferenceFields(assetRecord),
     ok: true,
-    cacheId: normalizedCacheId,
     dataUrl: normalizedLegacyImageRecord.dataUrl
   };
 }
@@ -3655,11 +3683,19 @@ function resolveImageFilePathForSystemOpen(payload = {}) {
   }
 
   const chatCacheLookupKey = String(assetLookupKeys[0] || '').trim();
-  const chatCacheFileName = resolveAssetRecordDisplayName(payload, '');
-  if (chatCacheLookupKey || chatCacheFileName) {
+  const chatCacheDisplayName = resolveAssetRecordDisplayName(payload, '');
+  if (chatCacheLookupKey || chatCacheDisplayName) {
     const chatCacheData = readChatImageCacheDataUrl({
-      cacheId: chatCacheLookupKey,
-      cacheFileName: chatCacheFileName,
+      assetId: String(payload?.assetId || '').trim(),
+      internalCacheId: String(payload?.internalCacheId || '').trim(),
+      itemId: String(payload?.itemId || '').trim(),
+      sourceRefKey: String(payload?.sourceRefKey || '').trim(),
+      fileName: chatCacheDisplayName,
+      filePath: resolveAssetRecordStoragePath(payload),
+      legacy:
+        payload?.legacy && typeof payload.legacy === 'object'
+          ? { ...payload.legacy }
+          : void 0
     });
     const chatCacheFilePath = resolveExistingImageFilePath(chatCacheData?.filePath);
     if (chatCacheFilePath) return chatCacheFilePath;

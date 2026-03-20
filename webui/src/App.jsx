@@ -4028,17 +4028,47 @@ function buildAssetViewerOpenPayload(
       imageRecordInput && typeof imageRecordInput === "object"
         ? imageRecordInput
         : {},
+    legacyImageRecord =
+      imageRecord.legacy && typeof imageRecord.legacy === "object"
+        ? imageRecord.legacy
+        : {},
     resolvedDisplayName = resolveAssetRecordDisplayName(
       imageRecord,
       fallbackLabel,
     ),
     resolvedStoragePath = resolveAssetRecordStoragePath(imageRecord),
+    normalizedLegacyOpenPayload = Object.entries({
+      cacheId: imageRecord.cacheId || legacyImageRecord.cacheId,
+      chatCacheId: imageRecord.chatCacheId || legacyImageRecord.chatCacheId,
+      psCacheId: imageRecord.psCacheId || legacyImageRecord.psCacheId,
+      cacheFileName:
+        imageRecord.cacheFileName || legacyImageRecord.cacheFileName,
+      cacheFilePath:
+        imageRecord.cacheFilePath ||
+        legacyImageRecord.cacheFilePath ||
+        resolvedStoragePath,
+      originName:
+        imageRecord.originName ||
+        legacyImageRecord.originName ||
+        resolvedDisplayName,
+      oldFileName: legacyImageRecord.oldFileName,
+    }).reduce((result, [fieldName, fieldValue]) => {
+      const normalizedFieldValue = String(fieldValue || "").trim();
+      if (normalizedFieldValue) {
+        result[fieldName] = normalizedFieldValue;
+      }
+      return result;
+    }, {}),
     widthValue = Number(imageRecord.width),
     heightValue = Number(imageRecord.height);
   return {
-    cacheFilePath: resolvedStoragePath,
-    cacheFileName: resolvedDisplayName,
+    filePath: resolvedStoragePath,
+    fileName: resolvedDisplayName,
+    displayFileName: resolvedDisplayName,
     name: resolvedDisplayName,
+    legacy: Object.keys(normalizedLegacyOpenPayload).length
+      ? normalizedLegacyOpenPayload
+      : void 0,
     width:
       Number.isFinite(widthValue) && widthValue > 0
         ? Math.round(widthValue)
@@ -31240,6 +31270,21 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         const normalizedLegacyChatCacheId = String(
           imageItem?.chatCacheId || imageLegacySnapshot?.chatCacheId || "",
         ).trim();
+        const normalizedLegacyOpenPayload = Object.entries({
+          ...(assetViewerPayload?.legacy &&
+          typeof assetViewerPayload.legacy === "object"
+            ? assetViewerPayload.legacy
+            : {}),
+          cacheId: normalizedLegacyCacheId,
+          chatCacheId: normalizedLegacyChatCacheId,
+          psCacheId: normalizedLegacyPsCacheId,
+        }).reduce((result, [fieldName, fieldValue]) => {
+          const normalizedFieldValue = String(fieldValue || "").trim();
+          if (normalizedFieldValue) {
+            result[fieldName] = normalizedFieldValue;
+          }
+          return result;
+        }, {});
         const openImageResult = await window.shell.openImageDefault({
           assetId: String(imageItem.assetId || "").trim(),
           itemId: String(imageItem.itemId || "").trim(),
@@ -31247,14 +31292,15 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           sourceRefKey: String(imageItem.sourceRefKey || "").trim(),
           name: assetViewerPayload.name,
           originName: resolveAssetRecordDisplayName(imageItem, ""),
+          displayFileName: String(
+            assetViewerPayload.displayFileName || assetViewerPayload.fileName || "",
+          ).trim(),
           type: String(imageItem.type || "").trim(),
-          filePath: assetViewerPayload.cacheFilePath,
-          cacheFilePath: assetViewerPayload.cacheFilePath,
-          fileName: assetViewerPayload.cacheFileName,
-          cacheFileName: assetViewerPayload.cacheFileName,
-          psCacheId: normalizedLegacyPsCacheId,
-          cacheId: normalizedLegacyCacheId,
-          chatCacheId: normalizedLegacyChatCacheId,
+          filePath: String(assetViewerPayload.filePath || "").trim(),
+          fileName: String(assetViewerPayload.fileName || "").trim(),
+          legacy: Object.keys(normalizedLegacyOpenPayload).length
+            ? normalizedLegacyOpenPayload
+            : void 0,
           dataUrl: dataUrlOrSource,
         });
         if (openImageResult?.ok) return true;
