@@ -1,7 +1,8 @@
-﻿"use strict";
+"use strict";
 
-const { app, core, action, imaging } = require("photoshop");
+const { app, core, action, imaging, constants } = require("photoshop");
 const { storage } = require("uxp");
+const BUILD_META = require("./build-meta");
 
 const fs = storage.localFileSystem;
 
@@ -14,12 +15,18 @@ const QUEUE_RETRY_DELAY_MS = 1200;
 const REQUEST_TIMEOUT_MS = 15000;
 const CAPTURE_DEFAULT_MAX_SIDE = 0;
 const CAPTURE_DEFAULT_OUTPUT_FORMAT = "jpg";
-const CAPTURE_DEFAULT_OUTPUT_QUALITY = 0.92;
-const PLUGIN_VERSION = "0.1.1";
-const PLUGIN_BUILD_TAG = "capture-v3-20260215-sdppp-chain";
+const CAPTURE_DEFAULT_OUTPUT_QUALITY = 1;
+const PLUGIN_VERSION = String(BUILD_META.pluginVersion || "0.1.1");
+const PLUGIN_BUILD_TAG = String(
+  BUILD_META.pluginBuildTag || "capture-v3-20260215-sdppp-chain",
+);
+const PLUGIN_REVISION = String(BUILD_META.revision || "");
 const CAPTURE_OUTPUT_COMPONENT_SIZE = 8;
 const CAPTURE_PREFERRED_RGB_PROFILE = "sRGB IEC61966-2.1";
 const CAPTURE_SCHEMA_VERSION = 2;
+const CAPTURE_TEMP_FILE_PREFIX = "xiaodi-capture-lossless";
+const CAPTURE_TEMP_FILE_KIND = "plugin-lossless-intermediate";
+const CAPTURE_TEMP_FILE_CLEANUP_POLICY = "software-exit";
 const BRIDGE_PROTOCOL_VERSION = 2;
 const UI_LOG_LIMIT = 240;
 const UI_LOG_TEXT_LIMIT = 1600;
@@ -50,9 +57,11 @@ const ui = {
   importDataInput: null,
   importToPsBtn: null,
   statusChip: null,
-  clearLogsBtn: null,
+  copyLogsBtn: null,
+  exportLogsBtn: null,
   logSinkHint: null,
-  pluginLogPanel: null
+  pluginLogPanel: null,
+  pluginBuildMeta: null
 };
 
 let cachedCaptureRgbProfile = undefined;
@@ -104,13 +113,13 @@ function appendLog(level, message, detail, options = {}) {
 }
 
 function setStatusChip(mode, text) {
+  state.statusText = text;
   if (!ui.statusChip) return;
   ui.statusChip.classList.remove("is-ok", "is-warn", "is-error");
   ui.statusChip.classList.add(
     mode === "ok" ? "is-ok" : mode === "error" ? "is-error" : "is-warn"
   );
   ui.statusChip.textContent = text;
-  state.statusText = text;
 }
 
 function formatUiLogTime(input = Date.now()) {
@@ -148,6 +157,15 @@ function renderUiLogs() {
   ui.pluginLogPanel.scrollTop = ui.pluginLogPanel.scrollHeight;
 }
 
+function renderBuildIdentity() {
+  if (!ui.pluginBuildMeta) return;
+  const identityParts = [`v${PLUGIN_VERSION}`];
+  if (PLUGIN_REVISION) {
+    identityParts.push(PLUGIN_REVISION);
+  }
+  ui.pluginBuildMeta.textContent = identityParts.join(" · ");
+}
+
 function pushUiLog(entry = {}) {
   const next = {
     ts: formatUiLogTime(Date.now()),
@@ -165,9 +183,61 @@ function pushUiLog(entry = {}) {
   renderUiLogs();
 }
 
-function clearUiLogs() {
-  state.uiLogs = [];
-  renderUiLogs();
+function getPluginLogText() {
+  if (!Array.isArray(state.uiLogs) || state.uiLogs.length <= 0) {
+    return "";
+  }
+  return state.uiLogs
+    .map((entry) => {
+      const ts = entry?.ts || "--:--:--";
+      const level = String(entry?.level || "info").toUpperCase();
+      const scene = entry?.scene ? `[${entry.scene}]` : "";
+      const text = [entry?.message || "", entry?.detail || ""]
+        .filter(Boolean)
+        .join(" | ");
+      return `[${ts}] [${level}]${scene ? ` ${scene}` : ""} ${text}`;
+    })
+    .join("\n");
+}
+
+async function copyUiLogs() {
+  const text = getPluginLogText();
+  if (!text) {
+    appendLog("warn", "暂无插件日志可复制");
+    return;
+  }
+  const clipboard = navigator?.clipboard;
+  if (!clipboard) {
+    throw new Error("clipboard_write_unavailable");
+  }
+  if (typeof clipboard.setContent === "function") {
+    await clipboard.setContent({ "text/plain": text });
+  } else if (typeof clipboard.writeText === "function") {
+    await clipboard.writeText(text);
+  } else {
+    throw new Error("clipboard_write_unavailable");
+  }
+  appendLog("success", "插件日志已复制");
+}
+
+async function exportUiLogs() {
+  const text = getPluginLogText();
+  if (!text) {
+    appendLog("warn", "暂无插件日志可导出");
+    return;
+  }
+  if (typeof fs.getFileForSaving !== "function") {
+    throw new Error("log_export_picker_unavailable");
+  }
+  const targetFile = await fs.getFileForSaving("xiaodi-plugin-logs.txt", {
+    types: ["txt"],
+  });
+  if (!targetFile) {
+    appendLog("info", "已取消导出插件日志");
+    return;
+  }
+  await targetFile.write(text, { format: storage.formats.utf8 });
+  appendLog("success", `插件日志已导出：${String(targetFile.nativePath || targetFile.name || "xiaodi-plugin-logs.txt")}`);
 }
 
 function updateLogSinkHint() {
@@ -272,7 +342,15 @@ async function getPixelsForCapture(requestBase) {
           documentID: Number(requestBase?.documentID),
           sourceBounds: requestBase?.sourceBounds,
           targetSize: requestBase?.targetSize,
-          colorSpace: String(requestBase?.colorSpace || "RGB")
+          colorSpace: String(requestBase?.colorSpace || "RGB"),
+          hasAlpha:
+            typeof requestBase?.hasAlpha === "boolean"
+              ? requestBase.hasAlpha
+              : undefined,
+          applyAlpha:
+            typeof requestBase?.applyAlpha === "boolean"
+              ? requestBase.applyAlpha
+              : undefined
         };
         const pixels = await imaging.getPixels(minimalRequest);
         return {
@@ -506,23 +584,32 @@ function listOpenDocumentsMeta() {
     .filter(Boolean);
 }
 
-async function selectDocumentById(documentId) {
+async function selectDocumentById(documentId, errorContext = "") {
   const safeId = Math.round(Number(documentId));
   if (!Number.isFinite(safeId) || safeId <= 0) return;
   if (Number(app.activeDocument?.id) === safeId) return;
-  await action.batchPlay([
-    {
-      _obj: "select",
-      _target: [{ _ref: "document", _id: safeId }]
+  try {
+    await action.batchPlay([
+      {
+        _obj: "select",
+        _target: [{ _ref: "document", _id: safeId }]
+      }
+    ], {});
+  } catch (err) {
+    const message = String(err?.message || err || "unknown");
+    if (errorContext) {
+      throw new Error(`${errorContext}/select-document:${message}`);
     }
-  ], {});
+    throw err;
+  }
 }
 
-async function getDocumentSelectionRect(doc) {
+async function getDocumentSelectionRect(doc, errorContext = "") {
   if (!doc) return null;
-  await selectDocumentById(doc.id);
+  await selectDocumentById(doc.id, errorContext);
+  let selectionGetResult = null;
   try {
-    const selectionGetResult = await action.batchPlay(
+    selectionGetResult = await action.batchPlay(
       [
         {
           _obj: "get",
@@ -535,19 +622,23 @@ async function getDocumentSelectionRect(doc) {
       ],
       {},
     );
-    const selectionPayload = selectionGetResult?.[0]?.selection;
-    if (
-      !selectionPayload ||
-      (typeof selectionPayload === "object" && String(selectionPayload?._enum || "").toLowerCase() === "ordinal")
-    ) {
-      return null;
+  } catch (err) {
+    const message = String(err?.message || err || "unknown");
+    if (errorContext) {
+      throw new Error(`${errorContext}/get-selection:${message}`);
     }
-    const bounds = normalizeSelectionBounds(selectionPayload);
-    if (!bounds || bounds.isEmpty) return null;
-    return normalizeTargetRect(bounds);
-  } catch (_) {
+    throw err;
+  }
+  const selectionPayload = selectionGetResult?.[0]?.selection;
+  if (
+    !selectionPayload ||
+    (typeof selectionPayload === "object" && String(selectionPayload?._enum || "").toLowerCase() === "ordinal")
+  ) {
     return null;
   }
+  const bounds = normalizeSelectionBounds(selectionPayload);
+  if (!bounds || bounds.isEmpty) return null;
+  return normalizeTargetRect(bounds);
 }
 
 async function clearDocumentSelection(doc) {
@@ -582,6 +673,26 @@ async function restoreDocumentSelection(doc, rect) {
       }
     }
   ], {});
+}
+
+async function createRevealSelectionMaskOnActiveLayer() {
+  await action.batchPlay([
+    {
+      _obj: "make",
+      new: { _class: "channel" },
+      at: { _ref: "channel", _enum: "channel", _value: "mask" },
+      using: { _enum: "userMaskEnabled", _value: "revealSelection" }
+    }
+  ], {});
+}
+
+async function createRevealSelectionMaskForLayerId(doc, layerId, rect) {
+  const safeRect = normalizeTargetRect(rect);
+  if (!doc || !safeRect) return false;
+  await restoreDocumentSelection(doc, safeRect);
+  await ensureSingleLayerSelectedById(layerId);
+  await createRevealSelectionMaskOnActiveLayer();
+  return true;
 }
 
 function base64ToArrayBuffer(base64) {
@@ -677,108 +788,6 @@ function extractBinaryFromEncodeResult(resultValue) {
     } catch (_) {}
   }
   return null;
-}
-
-async function encodeImageDataViaPhotoshop(imageData, captureOptions = {}) {
-  if (!imageData || typeof imaging?.encodeImageData !== "function") {
-    return { ok: false, error: "imaging_encode_unavailable" };
-  }
-  const normalizedOptions = normalizeCaptureEncodeOptions(captureOptions);
-  const outputFormat = normalizedOptions.format;
-  const outputMimeType = outputFormat === "png" ? "image/png" : "image/jpeg";
-  const outputQuality = normalizedOptions.quality;
-  const attempts = [
-    { imageData, format: outputMimeType, quality: outputQuality, base64: false },
-    { imageData, format: outputMimeType, quality: outputQuality },
-    { imageData, format: outputFormat, quality: outputQuality, base64: false },
-    { imageData, format: outputFormat, quality: outputQuality },
-    { imageData, mimeType: outputMimeType, quality: outputQuality, base64: false },
-    { imageData, mimeType: outputMimeType, quality: outputQuality }
-  ];
-
-  let lastError = "";
-  for (const attempt of attempts) {
-    try {
-      const encoded = await imaging.encodeImageData(attempt);
-      const bytes = extractBinaryFromEncodeResult(encoded);
-      if (bytes && bytes.byteLength) {
-        return {
-          ok: true,
-          mimeType: outputMimeType,
-          bytes,
-          encodeStrategy: "imaging.encodeImageData"
-        };
-      }
-    } catch (err) {
-      lastError = String(err?.message || err || "imaging_encode_failed");
-    }
-  }
-  return { ok: false, error: lastError || "imaging_encode_failed" };
-}
-
-async function encodeRgbaViaCanvas(rgbaBytes, width, height, captureOptions = {}) {
-  const hasDomCanvas =
-    typeof document !== "undefined" &&
-    typeof document.createElement === "function";
-  if (!hasDomCanvas) {
-    return { ok: false, error: "canvas_unavailable" };
-  }
-  const safeWidth = Math.max(1, Math.round(Number(width) || 1));
-  const safeHeight = Math.max(1, Math.round(Number(height) || 1));
-  const rgba = normalizeRawCaptureBytesToRgba(rgbaBytes, safeWidth, safeHeight);
-  const normalizedOptions = normalizeCaptureEncodeOptions(captureOptions);
-  const outputFormat = normalizedOptions.format;
-  const outputMimeType = outputFormat === "png" ? "image/png" : "image/jpeg";
-  const outputQuality = normalizedOptions.quality;
-
-  try {
-    const canvasElement = document.createElement("canvas");
-    canvasElement.width = safeWidth;
-    canvasElement.height = safeHeight;
-    const context2d = canvasElement.getContext("2d");
-    if (!context2d) {
-      return { ok: false, error: "canvas_context_missing" };
-    }
-
-    let imageData = null;
-    if (typeof ImageData === "function") {
-      imageData = new ImageData(
-        new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.byteLength),
-        safeWidth,
-        safeHeight
-      );
-    } else if (typeof context2d.createImageData === "function") {
-      imageData = context2d.createImageData(safeWidth, safeHeight);
-      imageData.data.set(rgba);
-    }
-    if (!imageData) {
-      return { ok: false, error: "canvas_image_data_unavailable" };
-    }
-    context2d.putImageData(imageData, 0, 0);
-
-    const encodedDataUrl = outputFormat === "png"
-      ? canvasElement.toDataURL(outputMimeType)
-      : canvasElement.toDataURL(outputMimeType, outputQuality);
-    const parsed = parseDataUrl(encodedDataUrl);
-    if (!parsed?.base64) {
-      return { ok: false, error: "canvas_data_url_invalid" };
-    }
-    const encodedBytes = toUint8Array(base64ToArrayBuffer(parsed.base64));
-    if (!encodedBytes || !encodedBytes.byteLength) {
-      return { ok: false, error: "canvas_encode_empty" };
-    }
-    return {
-      ok: true,
-      mimeType: parsed.mimeType || outputMimeType,
-      bytes: encodedBytes,
-      encodeStrategy: "canvas.toDataURL"
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      error: String(err?.message || err || "canvas_encode_failed")
-    };
-  }
 }
 
 function concatUint8Arrays(parts) {
@@ -1287,73 +1296,89 @@ function encodeRgbaToPngBytes(rgbaBytes, width, height) {
   ]);
 }
 
+function formatCaptureFileTimestampPrecise(timestampValue = Date.now()) {
+  const normalizedTimestamp = Number.isFinite(Number(timestampValue))
+      ? Number(timestampValue)
+      : Date.now(),
+    dateObject = new Date(normalizedTimestamp),
+    padTwoDigits = (numberValue) => String(numberValue).padStart(2, "0"),
+    padThreeDigits = (numberValue) => String(numberValue).padStart(3, "0");
+  return `${dateObject.getFullYear()}${padTwoDigits(dateObject.getMonth() + 1)}${padTwoDigits(dateObject.getDate())}T${padTwoDigits(dateObject.getHours())}${padTwoDigits(dateObject.getMinutes())}${padTwoDigits(dateObject.getSeconds())}${padThreeDigits(dateObject.getMilliseconds())}`;
+}
+
+function resolveCaptureTempSourceToken(sourceInput = "") {
+  const normalizedSource = String(sourceInput || "").trim().toLowerCase();
+  if (normalizedSource === "psselect" || normalizedSource === "ps-select") return "psselect";
+  if (normalizedSource === "pscanvas" || normalizedSource === "ps-full") return "pscanvas";
+  return "capture";
+}
+
+function normalizeCaptureTempSequenceToken(sequenceTokenInput = "") {
+  const normalizedSequenceToken = String(sequenceTokenInput || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+  return normalizedSequenceToken || "ps01";
+}
+
+function buildCaptureTempFilePrefix({
+  sourceToken = "",
+  occurredAt = Date.now(),
+  sequenceToken = "",
+  tempKind = "lossless",
+} = {}) {
+  const normalizedSourceToken = resolveCaptureTempSourceToken(sourceToken);
+  const normalizedSequenceToken = normalizeCaptureTempSequenceToken(sequenceToken);
+  const normalizedTempKind = String(tempKind || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_") || "lossless";
+  return `${normalizedSourceToken}_temp_${normalizedTempKind}_${formatCaptureFileTimestampPrecise(occurredAt)}_${normalizedSequenceToken}`;
+}
+
 async function saveCaptureRgbaToTempFile(
   rgbaBytes,
   width,
   height,
-  filePrefix = "xiaodi-capture",
-  captureOptions = {},
-  imageData = null
+  filePrefix = CAPTURE_TEMP_FILE_PREFIX,
+  captureOptions = {}
 ) {
   const normalizedCaptureOptions = normalizeCaptureEncodeOptions(captureOptions);
-  const outputFormat = normalizedCaptureOptions.format;
-  const outputMimeType = outputFormat === "png" ? "image/png" : "image/jpeg";
-
-  let encodedResult = await encodeImageDataViaPhotoshop(imageData, normalizedCaptureOptions);
-  if (!encodedResult?.ok) {
-    encodedResult = await encodeRgbaViaCanvas(
-      rgbaBytes,
-      width,
-      height,
-      normalizedCaptureOptions
-    );
+  const pngBytes = encodeRgbaToPngBytes(rgbaBytes, width, height);
+  if (!pngBytes || !pngBytes.byteLength) {
+    throw new Error("capture_temp_lossless_png_empty");
   }
-  if (!encodedResult?.ok) {
-    const pngBytes = encodeRgbaToPngBytes(rgbaBytes, width, height);
-    encodedResult = {
-      ok: true,
-      mimeType: "image/png",
-      bytes: pngBytes,
-      encodeStrategy: "custom-png-fallback",
-      fallbackReason: String(encodedResult?.error || "encode_fallback")
-    };
-  }
-
-  const outputBytes = toUint8Array(encodedResult?.bytes);
-  if (!outputBytes || !outputBytes.byteLength) {
-    throw new Error("capture_encoded_bytes_empty");
-  }
-  const resolvedMimeType = String(encodedResult?.mimeType || outputMimeType).toLowerCase();
-  const fileExtension = resolvedMimeType.includes("jpeg") || resolvedMimeType.includes("jpg")
-    ? "jpg"
-    : "png";
   const tempFolder = await fs.getTemporaryFolder();
+  const normalizedPrefix = String(filePrefix || CAPTURE_TEMP_FILE_PREFIX).trim() || CAPTURE_TEMP_FILE_PREFIX;
+  const tempFileName = `${normalizedPrefix}.png`;
   const tempFile = await tempFolder.createFile(
-    `${filePrefix}-${Date.now()}.${fileExtension}`,
+    tempFileName,
     { overwrite: true }
   );
-  const binary = outputBytes.buffer.slice(
-    outputBytes.byteOffset,
-    outputBytes.byteOffset + outputBytes.byteLength
+  const binary = pngBytes.buffer.slice(
+    pngBytes.byteOffset,
+    pngBytes.byteOffset + pngBytes.byteLength
   );
   await tempFile.write(binary, { format: storage.formats.binary });
   const nativePath = String(tempFile?.nativePath || tempFile?.path || "").trim();
   if (!nativePath) return null;
   return {
     filePath: nativePath,
-    mimeType: resolvedMimeType,
-    byteLength: Number(outputBytes.byteLength) || 0,
-    outputFormat,
+    fileName: tempFileName,
+    mimeType: "image/png",
+    byteLength: Number(pngBytes.byteLength) || 0,
+    outputFormat: "png",
     outputQuality: normalizedCaptureOptions.quality,
     outputMaxSide: normalizedCaptureOptions.maxSide,
-    encodeStrategy: String(encodedResult?.encodeStrategy || "unknown"),
-    fallbackReason: encodedResult?.fallbackReason
-      ? String(encodedResult.fallbackReason)
-      : ""
+    encodeStrategy: "plugin.temp-lossless-png",
+    tempFileKind: CAPTURE_TEMP_FILE_KIND,
+    tempFileCleanupPolicy: CAPTURE_TEMP_FILE_CLEANUP_POLICY,
+    primaryEncodeError: "",
+    fallbackReason: ""
   };
 }
 
-async function readDocumentRegionAsCaptureFile(documentId, bounds, captureOptions = {}) {
+async function readDocumentRegionAsCaptureFile(documentId, bounds, captureOptions = {}, traceOptions = {}) {
   const left = Math.round(Number(bounds?.left) || 0);
   const top = Math.round(Number(bounds?.top) || 0);
   const right = Math.round(Number(bounds?.right) || 0);
@@ -1361,6 +1386,17 @@ async function readDocumentRegionAsCaptureFile(documentId, bounds, captureOption
   const sourceWidth = Math.max(1, right - left);
   const sourceHeight = Math.max(1, bottom - top);
   const normalizedCaptureOptions = normalizeCaptureEncodeOptions(captureOptions);
+  const normalizedOccurredAt = Number.isFinite(Number(traceOptions?.occurredAt))
+    ? Number(traceOptions.occurredAt)
+    : Date.now();
+  const normalizedSourceToken = resolveCaptureTempSourceToken(
+    traceOptions?.sourceToken || traceOptions?.source || normalizedCaptureOptions?.source || ""
+  );
+  const normalizedSequenceToken = normalizeCaptureTempSequenceToken(
+    traceOptions?.sequenceToken || traceOptions?.sequence || "ps01"
+  );
+  const normalizedSourceRefKey = `${formatCaptureFileTimestampPrecise(normalizedOccurredAt)}_${normalizedSequenceToken}`;
+  const captureHasAlpha = normalizedCaptureOptions.format === "png";
   const targetSize = getScaledSizeWithinLimit(
     sourceWidth,
     sourceHeight,
@@ -1374,8 +1410,8 @@ async function readDocumentRegionAsCaptureFile(documentId, bounds, captureOption
       targetSize,
       colorSpace: "RGB",
       componentSize: CAPTURE_OUTPUT_COMPONENT_SIZE,
-      hasAlpha: true,
-      applyAlpha: false
+      hasAlpha: captureHasAlpha,
+      applyAlpha: !captureHasAlpha
     });
   } catch (err) {
     throw new Error(`capture_get_pixels_failed:${String(err?.message || err || "unknown")}`);
@@ -1410,9 +1446,13 @@ async function readDocumentRegionAsCaptureFile(documentId, bounds, captureOption
         rawPixels,
         width,
         height,
-        "xiaodi-capture",
-        normalizedCaptureOptions,
-        imageData
+        buildCaptureTempFilePrefix({
+          sourceToken: normalizedSourceToken,
+          occurredAt: normalizedOccurredAt,
+          sequenceToken: normalizedSequenceToken,
+          tempKind: "lossless",
+        }),
+        normalizedCaptureOptions
       );
     } catch (err) {
       throw new Error(`capture_save_file_failed:${String(err?.message || err || "unknown")}`);
@@ -1422,6 +1462,10 @@ async function readDocumentRegionAsCaptureFile(documentId, bounds, captureOption
       throw new Error("capture_file_path_empty");
     }
     return {
+      capturedAt: normalizedOccurredAt,
+      sourceToken: normalizedSourceToken,
+      sequenceToken: normalizedSequenceToken,
+      sourceRefKey: normalizedSourceRefKey,
       mimeType: String(captureFileResult?.mimeType || "image/png"),
       width,
       height,
@@ -1430,6 +1474,9 @@ async function readDocumentRegionAsCaptureFile(documentId, bounds, captureOption
         schemaVersion: CAPTURE_SCHEMA_VERSION,
         colorSpace: "RGB",
         componentSize: CAPTURE_OUTPUT_COMPONENT_SIZE,
+        alphaPreserved: captureHasAlpha,
+        outputChannelCount: captureHasAlpha ? 4 : 3,
+        outputPixelDepth: CAPTURE_OUTPUT_COMPONENT_SIZE * (captureHasAlpha ? 4 : 3),
         colorProfile: String(pixelsResult?.colorProfile || ""),
         usedPreferredColorProfile: !!pixelsResult?.usedPreferredProfile,
         preferredColorProfileError: String(pixelsResult?.preferredProfileError || ""),
@@ -1449,9 +1496,17 @@ async function readDocumentRegionAsCaptureFile(documentId, bounds, captureOption
         outputQualityRequested: normalizedCaptureOptions.quality,
         outputMaxSideRequested: normalizedCaptureOptions.maxSide,
         outputFormatActual: String(captureFileResult?.outputFormat || normalizedCaptureOptions.format),
-        outputQualityActual: Number(captureFileResult?.outputQuality) || normalizedCaptureOptions.quality,
         outputMaxSideActual: Number(captureFileResult?.outputMaxSide) || normalizedCaptureOptions.maxSide,
+        sourceToken: normalizedSourceToken,
+        sequenceToken: normalizedSequenceToken,
+        sourceRefKey: normalizedSourceRefKey,
         encodeStrategy: String(captureFileResult?.encodeStrategy || ""),
+        tempFileKind: String(captureFileResult?.tempFileKind || CAPTURE_TEMP_FILE_KIND),
+        tempFileCleanupPolicy: String(
+          captureFileResult?.tempFileCleanupPolicy || CAPTURE_TEMP_FILE_CLEANUP_POLICY
+        ),
+        tempFileName: String(captureFileResult?.fileName || ""),
+        primaryEncodeError: String(captureFileResult?.primaryEncodeError || ""),
         fallbackReason: String(captureFileResult?.fallbackReason || ""),
         encodedByteLength: Number(captureFileResult?.byteLength) || 0,
         rawByteLength: Number(rawPixels?.byteLength) || 0,
@@ -1464,15 +1519,6 @@ async function readDocumentRegionAsCaptureFile(documentId, bounds, captureOption
       imageData.dispose();
     } catch (_) {}
   }
-}
-
-async function closeDocSilently(doc) {
-  if (!doc) return;
-  try {
-    await core.executeAsModal(async () => {
-      await doc.closeWithoutSaving();
-    }, { commandName: "Close temporary document" });
-  } catch (_) {}
 }
 
 function readDocumentModeText(doc) {
@@ -1518,13 +1564,18 @@ async function captureSelectionData(captureOptions = {}) {
       if (sourceDocumentId > 0 && Number(modalDoc.id) !== sourceDocumentId) {
         throw new Error("no_selection");
       }
-      const selectionRect = await getDocumentSelectionRect(modalDoc);
+      const selectionRect = await getDocumentSelectionRect(modalDoc, "capture-selection");
       if (!selectionRect) throw new Error("no_selection");
       const targetCanvas = getDocumentCanvasSize(modalDoc);
       const capture = await readDocumentRegionAsCaptureFile(
         modalDoc.id,
         selectionRect,
-        captureOptions
+        captureOptions,
+        {
+          sourceToken: "psselect",
+          occurredAt: Date.now(),
+          sequenceToken: "ps01",
+        }
       );
       const targetRect = normalizeTargetRect(selectionRect);
       const targetRectNorm = deriveTargetRectNorm(targetRect, targetCanvas);
@@ -1532,6 +1583,8 @@ async function captureSelectionData(captureOptions = {}) {
       const bitsPerChannel = readDocumentBitsPerChannel(modalDoc);
       result = {
         filePath: capture.filePath || "",
+        capturedAt: capture.capturedAt,
+        sourceRefKey: capture.sourceRefKey,
         mimeType: capture.mimeType,
         width: capture.width,
         height: capture.height,
@@ -1581,7 +1634,12 @@ async function captureCanvasData(captureOptions = {}) {
       const capture = await readDocumentRegionAsCaptureFile(
         activeDoc.id,
         docBounds,
-        captureOptions
+        captureOptions,
+        {
+          sourceToken: "pscanvas",
+          occurredAt: Date.now(),
+          sequenceToken: "ps01",
+        }
       );
       const targetCanvas = {
         width: docWidth,
@@ -1593,6 +1651,8 @@ async function captureCanvasData(captureOptions = {}) {
       const bitsPerChannel = readDocumentBitsPerChannel(activeDoc);
       result = {
         filePath: capture.filePath || "",
+        capturedAt: capture.capturedAt,
+        sourceRefKey: capture.sourceRefKey,
         mimeType: capture.mimeType,
         width: capture.width,
         height: capture.height,
@@ -1653,6 +1713,11 @@ function getPrimaryActiveLayerId() {
   return Math.round(activeLayerId);
 }
 
+function getPrimaryActiveLayerName() {
+  const activeLayerName = String(app?.activeDocument?.activeLayers?.[0]?.name || "").trim();
+  return activeLayerName || "";
+}
+
 async function selectSingleLayerById(layerId) {
   const normalizedLayerId = Math.round(Number(layerId));
   if (!Number.isFinite(normalizedLayerId) || normalizedLayerId <= 0) {
@@ -1678,6 +1743,18 @@ async function selectSingleLayerById(layerId) {
     } catch (_) {}
   }
   return false;
+}
+
+async function ensureSingleLayerSelectedById(layerId) {
+  const normalizedLayerId = Math.round(Number(layerId));
+  if (!Number.isFinite(normalizedLayerId) || normalizedLayerId <= 0) {
+    throw new Error("layer_id_invalid");
+  }
+  const selected = await selectSingleLayerById(normalizedLayerId);
+  if (!selected) {
+    throw new Error(`layer_select_failed:${normalizedLayerId}`);
+  }
+  return normalizedLayerId;
 }
 
 async function moveActiveLayer(deltaX, deltaY) {
@@ -1766,6 +1843,16 @@ async function alignActiveLayerToRect(targetRect) {
   return readActiveLayerBounds();
 }
 
+async function readLayerBoundsById(layerId) {
+  await ensureSingleLayerSelectedById(layerId);
+  return readActiveLayerBounds();
+}
+
+async function alignLayerByIdToRect(layerId, targetRect) {
+  await ensureSingleLayerSelectedById(layerId);
+  return alignActiveLayerToRect(targetRect);
+}
+
 async function rasterizeActivePlacedLayer() {
   const rasterizeAttempts = [
     {
@@ -1795,6 +1882,70 @@ async function rasterizeActivePlacedLayer() {
   if (lastErr) throw lastErr;
 }
 
+async function rasterizePlacedLayerById(layerId) {
+  const normalizedLayerId = await ensureSingleLayerSelectedById(layerId);
+  await rasterizeActivePlacedLayer();
+  return getPrimaryActiveLayerId() || normalizedLayerId;
+}
+
+function stripFileExtension(fileName) {
+  return String(fileName || "").replace(/\.[^./\\]+$/, "").trim();
+}
+
+function resolveImportedLayerGroupName(returnFileName, returnIndex) {
+  const strippedFileName = stripFileExtension(returnFileName);
+  if (strippedFileName) return strippedFileName;
+  const normalizedReturnIndex = Number(returnIndex);
+  return Number.isFinite(normalizedReturnIndex) && normalizedReturnIndex >= 0
+    ? `回传图层-${normalizedReturnIndex + 1}`
+    : "回传图层";
+}
+
+function findLayerByIdInCollection(layerCollection, targetLayerId) {
+  const normalizedTargetLayerId = Math.round(Number(targetLayerId));
+  if (!Array.isArray(layerCollection) || !Number.isFinite(normalizedTargetLayerId) || normalizedTargetLayerId <= 0) {
+    return null;
+  }
+  for (const layerItem of layerCollection) {
+    if (!layerItem || typeof layerItem !== "object") continue;
+    if (Math.round(Number(layerItem.id)) === normalizedTargetLayerId) {
+      return layerItem;
+    }
+    const nestedLayers = Array.isArray(layerItem.layers) ? layerItem.layers : null;
+    if (nestedLayers?.length) {
+      const nestedMatch = findLayerByIdInCollection(nestedLayers, normalizedTargetLayerId);
+      if (nestedMatch) return nestedMatch;
+    }
+  }
+  return null;
+}
+
+async function createLayerGroupFromImportedLayer(doc, layerId, groupName) {
+  const normalizedLayerId = await ensureSingleLayerSelectedById(layerId);
+  const targetDoc = doc || app.activeDocument;
+  if (!targetDoc || typeof targetDoc.createLayerGroup !== "function") {
+    throw new Error("create_layer_group_unavailable");
+  }
+  const sourceLayer = findLayerByIdInCollection(targetDoc.layers, normalizedLayerId);
+  if (!sourceLayer) {
+    throw new Error(`group_source_layer_not_found:${normalizedLayerId}`);
+  }
+  const createdGroup = await targetDoc.createLayerGroup({
+    name: String(groupName || "").trim() || "回传图层",
+    fromLayers: [sourceLayer]
+  });
+  return {
+    groupId: Number(createdGroup?.id) || null,
+    groupName: String(createdGroup?.name || groupName || "回传图层").trim()
+  };
+}
+
+function formatImportedAutoActionError(errorPrefix, errorInput) {
+  const normalizedPrefix = String(errorPrefix || "auto_action_failed").trim() || "auto_action_failed";
+  const normalizedMessage = String(errorInput?.message || errorInput || "").trim();
+  return `${normalizedPrefix}:${normalizedMessage || normalizedPrefix}`;
+}
+
 async function importDataUrlToCurrentDocument(inputData, options = {}) {
   const parsed = parseDataUrl(inputData);
   if (!parsed?.base64) throw new Error("invalid_data_url_or_base64");
@@ -1808,13 +1959,28 @@ async function importDataUrlToCurrentDocument(inputData, options = {}) {
   const hasRequestedDocumentId = Number.isFinite(requestedDocumentId) && requestedDocumentId > 0;
   const layerTypeRaw = String(options?.layerType || "").trim().toLowerCase();
   const layerType = layerTypeRaw === "rasterized" ? "rasterized" : "smart-object";
+  const autoGroup = options?.autoGroup === true;
+  const autoMask = options?.autoMask === true;
   const requestedDocumentName = String(options?.targetDocumentName || "").trim();
+  const returnFileName = String(options?.returnFileName || "").trim();
+  const returnIndexRaw = Number(options?.returnIndex);
+  const returnIndex =
+    Number.isFinite(returnIndexRaw) && returnIndexRaw >= 0
+      ? Math.floor(returnIndexRaw)
+      : undefined;
+  const returnTargetSignature = String(options?.returnTargetSignature || "").trim();
   let appliedDocumentId = null;
   let appliedDocumentName = "";
   let appliedTargetRect = null;
   let appliedTargetRectNorm = null;
   let appliedTargetCanvas = null;
   let finalLayerBounds = null;
+  let finalLayerId = null;
+  let finalLayerName = "";
+  let finalGroupId = null;
+  let finalGroupName = "";
+  let groupCreated = false;
+  let maskCreated = false;
   let unresolvedImport = null;
   let modalError = null;
 
@@ -1875,7 +2041,7 @@ async function importDataUrlToCurrentDocument(inputData, options = {}) {
       );
       appliedTargetRectNorm = deriveTargetRectNorm(appliedTargetRect, documentCanvas);
 
-      const selectionSnapshot = await getDocumentSelectionRect(targetDoc);
+      const selectionSnapshot = await getDocumentSelectionRect(targetDoc, "import-image");
       try {
         if (selectionSnapshot) {
           await clearDocumentSelection(targetDoc);
@@ -1903,32 +2069,57 @@ async function importDataUrlToCurrentDocument(inputData, options = {}) {
               _kind: "local"
             },
             linked: false
-          },
-          {
-            _obj: "select",
-            _target: [{ _ref: "layer", _enum: "ordinal", _value: "front" }],
-            makeVisible: false
           }
         ], {});
         const importedLayerId = getPrimaryActiveLayerId();
-        if (importedLayerId) {
-          await selectSingleLayerById(importedLayerId);
-        }
+        if (!importedLayerId) throw new Error("imported_layer_id_missing");
+        finalLayerId = importedLayerId;
+        await ensureSingleLayerSelectedById(importedLayerId);
 
         // placeEvent already creates a placed (smart object) layer.
         // Running newPlacedLayer again can trigger unnecessary smart-object updates.
 
         if (appliedTargetRect) {
-          await alignActiveLayerToRect(appliedTargetRect);
+          finalLayerBounds = await alignLayerByIdToRect(finalLayerId, appliedTargetRect);
         }
         if (layerType === "rasterized") {
-          await rasterizeActivePlacedLayer();
+          finalLayerId = await rasterizePlacedLayerById(finalLayerId);
         }
-        finalLayerBounds = await readActiveLayerBounds();
+        finalLayerBounds = await readLayerBoundsById(finalLayerId);
+        finalLayerName = getPrimaryActiveLayerName();
+        if (autoGroup) {
+          try {
+            const createdGroup = await createLayerGroupFromImportedLayer(
+              targetDoc,
+              finalLayerId,
+              resolveImportedLayerGroupName(returnFileName, returnIndex)
+            );
+            finalGroupId = createdGroup.groupId;
+            finalGroupName = createdGroup.groupName;
+            groupCreated = !!(finalGroupId || finalGroupName);
+          } catch (autoGroupError) {
+            throw new Error(formatImportedAutoActionError("auto_group_failed", autoGroupError));
+          }
+        }
+        if (autoMask && appliedTargetRect) {
+          try {
+            maskCreated = await createRevealSelectionMaskForLayerId(
+              targetDoc,
+              finalLayerId,
+              appliedTargetRect
+            );
+          } catch (autoMaskError) {
+            throw new Error(formatImportedAutoActionError("auto_mask_failed", autoMaskError));
+          }
+        }
       } finally {
         if (selectionSnapshot) {
           try {
             await restoreDocumentSelection(targetDoc, selectionSnapshot);
+          } catch (_) {}
+        } else {
+          try {
+            await clearDocumentSelection(targetDoc);
           } catch (_) {}
         }
       }
@@ -1946,10 +2137,19 @@ async function importDataUrlToCurrentDocument(inputData, options = {}) {
     ok: true,
     documentId: appliedDocumentId,
     documentName: appliedDocumentName,
+    returnFileName: returnFileName || undefined,
+    returnIndex,
+    returnTargetSignature: returnTargetSignature || undefined,
     targetRect: appliedTargetRect,
     targetRectNorm: appliedTargetRectNorm,
     targetCanvas: appliedTargetCanvas,
-    layerBounds: finalLayerBounds
+    layerId: finalLayerId,
+    layerName: finalLayerName,
+    layerBounds: finalLayerBounds,
+    groupId: finalGroupId,
+    groupName: finalGroupName || undefined,
+    groupCreated,
+    maskCreated
   };
 }
 
@@ -2083,9 +2283,10 @@ function buildQueueCaptureResultPayload(kind, capture, item = {}, payload = {}) 
     role: payload?.role ? String(payload.role) : "",
     captureKind: normalizedKind,
     actionType: normalizedActionType,
-    capturedAt: Date.now(),
+    capturedAt: Number(safeCapture?.capturedAt) || Date.now(),
     image: {
       filePath: String(safeCapture?.filePath || "").trim(),
+      sourceRefKey: String(safeCapture?.sourceRefKey || "").trim(),
       mimeType: String(safeCapture?.mimeType || "image/png"),
       width: Number(safeCapture?.width) || undefined,
       height: Number(safeCapture?.height) || undefined,
@@ -2158,12 +2359,27 @@ async function handleQueueItem(item) {
   if (actionType === "import-image") {
     const dataUrl = String(payload?.dataUrl || payload?.imageDataUrl || "").trim();
     if (!dataUrl) throw new Error("回传命令缺少 dataUrl");
+    const returnFileName = String(payload?.returnFileName || "").trim();
+    const returnIndexRaw = Number(payload?.returnIndex);
+    const returnIndex =
+      Number.isFinite(returnIndexRaw) && returnIndexRaw >= 0
+        ? Math.floor(returnIndexRaw)
+        : undefined;
+    const returnTargetSignature = String(payload?.returnTargetSignature || "").trim();
+    const importTraceLabelParts = [];
+    returnIndex >= 0 && importTraceLabelParts.push(`#${returnIndex + 1}`);
+    returnFileName && importTraceLabelParts.push(returnFileName);
+    returnTargetSignature && importTraceLabelParts.push(`[${returnTargetSignature}]`);
+    const importTraceLabel = importTraceLabelParts.join(" ");
     const importResult = await importDataUrlToCurrentDocument(dataUrl, {
       targetRect: payload?.targetRect || null,
       targetRectNorm: payload?.targetRectNorm || null,
       targetCanvas: payload?.targetCanvas || null,
       targetDocumentId: payload?.targetDocumentId || null,
       targetDocumentName: payload?.targetDocumentName || "",
+      returnFileName,
+      returnIndex,
+      returnTargetSignature,
       layerType: payload?.layerType || "smart-object"
     });
     if (importResult?.ok === false) {
@@ -2178,6 +2394,9 @@ async function handleQueueItem(item) {
           message: String(importResult?.message || "target_document_required"),
           requestedDocumentId: Number(importResult?.requestedDocumentId) || undefined,
           requestedDocumentName: String(importResult?.requestedDocumentName || ""),
+          returnFileName: returnFileName || undefined,
+          returnIndex,
+          returnTargetSignature: returnTargetSignature || undefined,
           activeDocumentId: Number(importResult?.activeDocumentId) || undefined,
           activeDocumentName: String(importResult?.activeDocumentName || ""),
           openDocuments: Array.isArray(importResult?.openDocuments)
@@ -2186,7 +2405,10 @@ async function handleQueueItem(item) {
         },
         actionType,
       );
-      appendLog("warn", String(importResult?.message || "目标文档未解析"));
+      appendLog(
+        "warn",
+        `${String(importResult?.message || "目标文档未解析")}${importTraceLabel ? ` ${importTraceLabel}` : ""}`,
+      );
       return;
     }
     await reportQueueResult(
@@ -2199,6 +2421,18 @@ async function handleQueueItem(item) {
         layerType: String(payload?.layerType || "smart-object"),
         documentId: Number(importResult?.documentId) || undefined,
         documentName: importResult?.documentName ? String(importResult.documentName) : undefined,
+        returnFileName: importResult?.returnFileName
+          ? String(importResult.returnFileName)
+          : undefined,
+        returnIndex:
+          Number.isFinite(importResult?.returnIndex) && Number(importResult.returnIndex) >= 0
+            ? Math.floor(Number(importResult.returnIndex))
+            : undefined,
+        returnTargetSignature: importResult?.returnTargetSignature
+          ? String(importResult.returnTargetSignature)
+          : undefined,
+        layerId: Number(importResult?.layerId) || undefined,
+        layerName: importResult?.layerName ? String(importResult.layerName) : undefined,
         targetRect: importResult?.targetRect || null,
         targetRectNorm: importResult?.targetRectNorm || null,
         targetCanvas: importResult?.targetCanvas || null,
@@ -2206,7 +2440,10 @@ async function handleQueueItem(item) {
       },
       actionType,
     );
-    appendLog("success", `已执行回传命令（${type || actionType}）`);
+    appendLog(
+      "success",
+      `已执行回传命令（${type || actionType}）${importTraceLabel ? ` ${importTraceLabel}` : ""}`,
+    );
     return;
   }
 
@@ -2304,6 +2541,7 @@ function startBackgroundTasks() {
   if (state.started) return;
   state.started = true;
   appendLog("info", `插件构建：${PLUGIN_BUILD_TAG}`);
+  PLUGIN_REVISION && appendLog("info", `插件修订：${PLUGIN_REVISION}`);
   appendLog("info", `桥接地址：${getBridgeBase()}`);
 
   const heartbeatTick = async () => {
@@ -2372,9 +2610,12 @@ function bindUi() {
   ui.importDataInput = document.getElementById("importDataInput");
   ui.importToPsBtn = document.getElementById("importToPsBtn");
   ui.statusChip = document.getElementById("statusChip");
-  ui.clearLogsBtn = document.getElementById("clearLogsBtn");
+  ui.copyLogsBtn = document.getElementById("copyLogsBtn");
+  ui.exportLogsBtn = document.getElementById("exportLogsBtn");
   ui.logSinkHint = document.getElementById("logSinkHint");
   ui.pluginLogPanel = document.getElementById("pluginLogPanel");
+  ui.pluginBuildMeta = document.getElementById("pluginBuildMeta");
+  renderBuildIdentity();
 }
 
 function bindEvents() {
@@ -2429,24 +2670,66 @@ function bindEvents() {
     }
   });
 
-  ui.clearLogsBtn?.addEventListener("click", () => {
-    clearUiLogs();
+  ui.copyLogsBtn?.addEventListener("click", async () => {
+    try {
+      await copyUiLogs();
+    } catch (err) {
+      appendLog("error", `复制插件日志失败: ${String(err?.message || err)}`);
+    }
+  });
+
+  ui.exportLogsBtn?.addEventListener("click", async () => {
+    try {
+      await exportUiLogs();
+    } catch (err) {
+      appendLog("error", `导出插件日志失败: ${String(err?.message || err)}`);
+    }
   });
 }
 
-function init() {
+let runtimeInitialized = false;
+let uiInitialized = false;
+
+function ensureRuntimeStarted() {
+  if (runtimeInitialized) return;
+  runtimeInitialized = true;
   loadConfig();
-  bindUi();
-  if (ui.portInput) ui.portInput.value = String(state.bridgePort);
-  updateLogSinkHint();
-  renderUiLogs();
-  bindEvents();
-  appendLog("info", "插件已启动（" + PLUGIN_BUILD_TAG + "）");
+  appendLog(
+    "info",
+    "插件已启动（" +
+      [PLUGIN_BUILD_TAG, PLUGIN_REVISION].filter(Boolean).join(" / ") +
+      "）",
+  );
   setStatusChip("warn", "等待连接");
   startBackgroundTasks();
 }
 
-document.addEventListener("DOMContentLoaded", init);
+function initUi() {
+  bindUi();
+  if (ui.portInput) ui.portInput.value = String(state.bridgePort);
+  updateLogSinkHint();
+  renderUiLogs();
+  if (!uiInitialized) {
+    bindEvents();
+    uiInitialized = true;
+  }
+  if (ui.statusChip) {
+    const currentStatusText = String(state.statusText || "等待连接");
+    const statusMode = state.bridgeConnected
+      ? "ok"
+      : state.lastBridgeErrorKey
+        ? "error"
+        : "warn";
+    setStatusChip(statusMode, currentStatusText);
+  }
+}
+
+ensureRuntimeStarted();
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initUi);
+} else {
+  initUi();
+}
 window.addEventListener("beforeunload", stopBackgroundTasks);
 
 

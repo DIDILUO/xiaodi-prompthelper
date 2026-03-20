@@ -47,7 +47,15 @@ let pendingScaledBoundsRequest = null;
 let internalMainResizeExpectation = null;
 let floatWin = null;
 let floatingToggleEnabled = true;
-let floatingToggleStatus = 'connected';
+let floatingToggleStatus = 'idle';
+let floatingToggleRunnerSource = 'none';
+let floatingToggleRunnerPhase = 'idle';
+let floatingToggleRunnerLen = 'soft-short';
+let floatingToggleRunnerColorTone = 'orange';
+let floatingToggleRunnerVisible = false;
+let floatingToggleRunnerFrozen = false;
+let floatingToggleRunnerFading = false;
+let floatingToggleRunnerSpinDurationMs = 2000;
 let mainAlwaysOnTop = true;
 let autoMinimizeOnBlur = false;
 const MAIN_ALWAYS_ON_TOP_LEVEL = 'screen-saver';
@@ -73,7 +81,6 @@ let suppressMainMoveSyncTimer = null;
 let floatingResizeAnimationTimer = null;
 let mainMoveSettleTimer = null;
 let blurMinimizeTimer = null;
-let alwaysOnTopReapplyTimer = null;
 let lastFloatingBounds = null;
 let serverProc = null;
 let serverProcStartedAt = 0;
@@ -82,6 +89,7 @@ const BRIDGE_PORT_MIN = 1;
 const BRIDGE_PORT_MAX = 65535;
 let bridgePort = BRIDGE_PORT_DEFAULT;
 let logFile = null;
+let perfLogFile = null;
 let stateFile = null;
 let bridgeConfigFile = null;
 let bridgeConfigState = {};
@@ -116,6 +124,7 @@ const CAPTURE_PAYLOAD_HARD_LIMIT_BYTES = 256 * 1024 * 1024;
 const GENERATED_CACHE_MAX_FILES_DEFAULT = 120;
 const GENERATED_CACHE_MAX_FILES_MIN = 10;
 const GENERATED_CACHE_MAX_FILES_MAX = 500;
+const PS_CAPTURE_SHARP_OUTPUT_DIRNAME = 'ps-capture-temp-compressed';
 const CHAT_IMAGE_CACHE_MAX_FILES = 1200;
 const CACHE_RETENTION_DAYS_DEFAULT = {
   chatRecords: 30,
@@ -132,6 +141,11 @@ const CHAT_INDEX_FILE_BASENAME = 'chat-index.json';
 const CHAT_SESSION_SHARDS_DIRNAME = 'sessions';
 let cachePolicy = { ...CACHE_RETENTION_DAYS_DEFAULT, updatedAt: 0 };
 let cachePolicyCleanupTimer = null;
+let sharpModuleRef = null;
+let sharpModuleConfigured = false;
+let psCaptureCompressionActive = false;
+const psCaptureCompressionQueue = [];
+const pluginIntermediateCapturePaths = new Set();
 const psImageCacheMap = new Map();
 const migratedCachePaths = new Set();
 const deletedChatSessionIdGuardSet = new Set();
@@ -486,7 +500,11 @@ function getChatImageCacheSearchDirs() {
 }
 
 function isPsCacheId(cacheIdInput = '') {
-  return /^pscache_/i.test(String(cacheIdInput || '').trim());
+  const normalizedCacheId = String(cacheIdInput || '').trim();
+  return (
+    /^pscache_/i.test(normalizedCacheId)
+    || /^(psselect_upload|pscanvas_upload|upload_input|run_result|return_export)(_|$)/i.test(normalizedCacheId)
+  );
 }
 
 function deriveCacheIdFromFileName(fileNameInput = '') {
@@ -697,6 +715,346 @@ function getExtByMimeType(mime) {
   return 'bin';
 }
 
+function replaceFileNameExtension(fileNameInput, nextExtInput) {
+  const normalizedFileName = String(fileNameInput || '').trim();
+  const normalizedNextExt = String(nextExtInput || '').trim().replace(/^\./, '').toLowerCase();
+  if (!normalizedNextExt) return normalizedFileName;
+  if (!normalizedFileName) return `ps-capture.${normalizedNextExt}`;
+  const baseName = stripTrailingImageExtensions(path.basename(normalizedFileName));
+  return `${baseName || 'ps-capture'}.${normalizedNextExt}`;
+}
+
+function stripTrailingImageExtensions(fileNameInput = '') {
+  let normalizedName = String(fileNameInput || '').trim();
+  if (!normalizedName) return '';
+  while (true) {
+    const ext = String(path.extname(normalizedName) || '').trim().toLowerCase();
+    if (!ext || !/^\.(png|jpe?g|webp|gif|bmp|svg|bin)$/i.test(ext)) {
+      break;
+    }
+    const nextName = path.basename(normalizedName, ext).trim();
+    if (!nextName || nextName === normalizedName) {
+      break;
+    }
+    normalizedName = nextName;
+  }
+  return normalizedName;
+}
+
+function getPsCaptureCompressedCacheDir() {
+  return path.join(getGeneratedCacheDir(), PS_CAPTURE_SHARP_OUTPUT_DIRNAME);
+}
+
+function getSharpModule() {
+  if (!sharpModuleRef) {
+    // Lazy-load sharp so main process startup cost stays low until the
+    // PS capture compression path is actually used.
+    // eslint-disable-next-line global-require, import/no-dynamic-require
+    sharpModuleRef = require('sharp');
+  }
+  if (!sharpModuleConfigured && sharpModuleRef) {
+    try {
+      sharpModuleRef.concurrency(1);
+      sharpModuleRef.cache(false);
+      if (typeof sharpModuleRef.simd === 'function') {
+        sharpModuleRef.simd(true);
+      }
+    } catch (err) {
+      log('sharp configure failed', { message: err.message });
+    }
+    sharpModuleConfigured = true;
+  }
+  return sharpModuleRef;
+}
+
+function normalizeSharpOutputFormat(rawFormat, fallback = 'jpg') {
+  const normalizedFallback = String(fallback || 'jpg').trim().toLowerCase() === 'png' ? 'png' : 'jpg';
+  const normalizedRaw = String(rawFormat || '').trim().toLowerCase();
+  if (normalizedRaw === 'png') return 'png';
+  if (normalizedRaw === 'jpg' || normalizedRaw === 'jpeg') return 'jpg';
+  return normalizedFallback;
+}
+
+function normalizeSharpQualityPercent(rawQuality, fallback = 1) {
+  const normalizedFallback = Number.isFinite(Number(fallback))
+    ? Math.max(0.01, Math.min(1, Number(fallback)))
+    : 1;
+  const normalizedQuality = Number.isFinite(Number(rawQuality))
+    ? Math.max(0.01, Math.min(1, Number(rawQuality)))
+    : normalizedFallback;
+  return Math.max(1, Math.min(100, Math.round(normalizedQuality * 100)));
+}
+
+function normalizeSharpPngCompressionLevel(rawQuality, fallback = 1) {
+  const normalizedFallback = Number.isFinite(Number(fallback))
+    ? Math.max(0.01, Math.min(1, Number(fallback)))
+    : 1;
+  const normalizedQuality = Number.isFinite(Number(rawQuality))
+    ? Math.max(0.01, Math.min(1, Number(rawQuality)))
+    : normalizedFallback;
+  return Math.max(0, Math.min(9, Math.round(normalizedQuality * 9)));
+}
+
+async function compressPsCaptureTempFileWithSharp({
+  inputFilePath,
+  inputBuffer,
+  inputMimeType = '',
+  outputFormat = 'jpg',
+  maxSide = 0,
+  quality = 1,
+  source = '',
+  occurredAt = Date.now(),
+  sequenceIndex = 1,
+} = {}) {
+  const sourceFilePath = String(inputFilePath || '').trim();
+  const sourceBinary = Buffer.isBuffer(inputBuffer)
+    ? inputBuffer
+    : (inputBuffer ? Buffer.from(inputBuffer) : Buffer.alloc(0));
+  const hasSourceFilePath = !!sourceFilePath;
+  if (!hasSourceFilePath && !sourceBinary.length) {
+    throw new Error('sharp_input_missing');
+  }
+  if (hasSourceFilePath) {
+    if (!fs.existsSync(sourceFilePath)) {
+      throw new Error('sharp_input_file_missing');
+    }
+    const sourceStat = fs.statSync(sourceFilePath);
+    if (!sourceStat.isFile() || !Number(sourceStat.size)) {
+      throw new Error('sharp_input_file_empty');
+    }
+  } else if (!sourceBinary.length) {
+    throw new Error('sharp_input_buffer_empty');
+  }
+  ensureUnifiedCacheLayout();
+  const sharp = getSharpModule();
+  const normalizedOutputFormat = normalizeSharpOutputFormat(outputFormat, 'jpg');
+  const normalizedMaxSide = Number.isFinite(Number(maxSide)) && Number(maxSide) > 0
+    ? Math.max(1, Math.round(Number(maxSide)))
+    : 0;
+  const normalizedQualityPercent = normalizeSharpQualityPercent(quality, 1);
+  const normalizedPngCompressionLevel = normalizeSharpPngCompressionLevel(quality, 1);
+  const outputDir = getPsCaptureCompressedCacheDir();
+  fs.mkdirSync(outputDir, { recursive: true });
+  const tempIdentity = buildPsAssetTempIdentity({
+    mimeType: normalizedOutputFormat === 'png' ? 'image/png' : 'image/jpeg',
+    source,
+    tempKind: 'compressed',
+    occurredAt,
+    sequenceIndex,
+  });
+  const outputFileName = tempIdentity.fileName;
+  const outputFilePath = path.join(outputDir, outputFileName);
+  try {
+    if (fs.existsSync(outputFilePath) && fs.statSync(outputFilePath).isFile()) {
+      fs.unlinkSync(outputFilePath);
+    }
+  } catch {}
+
+  let pipeline = hasSourceFilePath
+    ? sharp(sourceFilePath, {
+      sequentialRead: true,
+      limitInputPixels: false
+    }).rotate()
+    : sharp(sourceBinary, {
+      sequentialRead: true,
+      limitInputPixels: false,
+      ...(String(inputMimeType || '').trim()
+        ? { failOn: 'none' }
+        : {})
+    }).rotate();
+
+  const inputMetadata = await pipeline.metadata();
+  if (normalizedMaxSide > 0) {
+    pipeline = pipeline.resize({
+      width: normalizedMaxSide,
+      height: normalizedMaxSide,
+      fit: 'inside',
+      withoutEnlargement: true
+    });
+  }
+
+  if (normalizedOutputFormat === 'png') {
+    pipeline = pipeline.png({
+      compressionLevel: normalizedPngCompressionLevel,
+      adaptiveFiltering: true,
+      palette: false
+    });
+  } else {
+    pipeline = pipeline.jpeg({
+      quality: normalizedQualityPercent,
+      mozjpeg: false,
+      chromaSubsampling: '4:4:4'
+    });
+  }
+
+  await pipeline.toFile(outputFilePath);
+  const outputStat = fs.statSync(outputFilePath);
+  const outputMetadata = await sharp(outputFilePath, {
+    sequentialRead: true,
+    limitInputPixels: false
+  }).metadata();
+
+  return {
+    ok: true,
+    inputFilePath: hasSourceFilePath ? sourceFilePath : '',
+    outputFilePath,
+    outputFileName,
+    outputFormat: normalizedOutputFormat,
+    outputMimeType: normalizedOutputFormat === 'png' ? 'image/png' : 'image/jpeg',
+    outputQualityPercent: normalizedOutputFormat === 'jpg' ? normalizedQualityPercent : undefined,
+    outputPngCompressionLevel: normalizedOutputFormat === 'png' ? normalizedPngCompressionLevel : undefined,
+    inputByteLength: hasSourceFilePath
+      ? Number(fs.statSync(sourceFilePath).size || 0)
+      : Number(sourceBinary.length || 0),
+    outputByteLength: Number(outputStat.size || 0),
+    inputWidth: Number(inputMetadata?.width) || 0,
+    inputHeight: Number(inputMetadata?.height) || 0,
+    outputWidth: Number(outputMetadata?.width) || 0,
+    outputHeight: Number(outputMetadata?.height) || 0
+  };
+}
+
+function trackPluginIntermediateCaptureFile(filePathInput = '') {
+  const normalizedFilePath = String(filePathInput || '').trim();
+  if (!normalizedFilePath) return '';
+  pluginIntermediateCapturePaths.add(normalizedFilePath);
+  return normalizedFilePath;
+}
+
+function forgetPluginIntermediateCaptureFile(filePathInput = '') {
+  const normalizedFilePath = String(filePathInput || '').trim();
+  if (!normalizedFilePath) return;
+  pluginIntermediateCapturePaths.delete(normalizedFilePath);
+}
+
+function removePluginIntermediateCaptureFile(filePathInput = '') {
+  const normalizedFilePath = String(filePathInput || '').trim();
+  if (!normalizedFilePath) return;
+  pluginIntermediateCapturePaths.delete(normalizedFilePath);
+  try {
+    if (fs.existsSync(normalizedFilePath) && fs.statSync(normalizedFilePath).isFile()) {
+      fs.unlinkSync(normalizedFilePath);
+    }
+  } catch (err) {
+    log('plugin intermediate capture cleanup failed', {
+      filePath: normalizedFilePath,
+      message: err.message
+    }, 'warn');
+  }
+}
+
+function clearPluginIntermediateCaptureFiles() {
+  Array.from(pluginIntermediateCapturePaths).forEach((filePath) => {
+    removePluginIntermediateCaptureFile(filePath);
+  });
+}
+
+function schedulePsCaptureCompressionQueuePump() {
+  if (psCaptureCompressionActive || !psCaptureCompressionQueue.length) return;
+  psCaptureCompressionActive = true;
+  setTimeout(async () => {
+    while (psCaptureCompressionQueue.length) {
+      const job = psCaptureCompressionQueue.shift();
+      const queueStartedAt = Date.now();
+      try {
+        const result = await runPsCaptureCompressionJob(job.options);
+        job.resolve({
+          ...result,
+          queueWaitMs: Math.max(0, queueStartedAt - job.enqueuedAt),
+          queueRunMs: Math.max(0, Date.now() - queueStartedAt),
+        });
+      } catch (err) {
+        job.reject(err);
+      }
+    }
+    psCaptureCompressionActive = false;
+  }, 0);
+}
+
+function enqueuePsCaptureCompressionJob(options = {}) {
+  return new Promise((resolve, reject) => {
+    psCaptureCompressionQueue.push({
+      options,
+      resolve,
+      reject,
+      enqueuedAt: Date.now(),
+    });
+    schedulePsCaptureCompressionQueuePump();
+  });
+}
+
+async function runPsCaptureCompressionJob(options = {}) {
+  const trackedInputFilePath = trackPluginIntermediateCaptureFile(options.inputFilePath);
+  if (!trackedInputFilePath || !fs.existsSync(trackedInputFilePath)) {
+    throw new Error('ps_capture_temp_file_missing');
+  }
+  let sharpResult = null;
+  try {
+    sharpResult = await compressPsCaptureTempFileWithSharp({
+      inputFilePath: trackedInputFilePath,
+      outputFormat: options.outputFormat,
+      maxSide: options.maxSide,
+      quality: options.quality,
+      source: options.source,
+      occurredAt: options.occurredAt,
+      sequenceIndex: options.sequenceIndex,
+    });
+
+    const normalizedOutputExt = sharpResult.outputFormat === 'png' ? 'png' : 'jpg';
+    const normalizedDisplayName = replaceFileNameExtension(
+      options.displayFileName || options.originName || options.name || sharpResult.outputFileName,
+      normalizedOutputExt,
+    );
+    const cacheMeta = {
+      ...(options.meta && typeof options.meta === 'object' ? options.meta : {}),
+      compressionStrategy: 'electron-sharp',
+      sharpOutputFormat: sharpResult.outputFormat,
+      sharpOutputQualityPercent: Number(sharpResult.outputQualityPercent) || null,
+      sharpPngCompressionLevel: Number(sharpResult.outputPngCompressionLevel) || null,
+      sharpInputByteLength: Number(sharpResult.inputByteLength) || 0,
+      sharpOutputByteLength: Number(sharpResult.outputByteLength) || 0,
+      sharpInputWidth: Number(sharpResult.inputWidth) || 0,
+      sharpInputHeight: Number(sharpResult.inputHeight) || 0,
+      sharpOutputWidth: Number(sharpResult.outputWidth) || 0,
+      sharpOutputHeight: Number(sharpResult.outputHeight) || 0,
+    };
+
+    const cachedResult = cacheExistingFileToPsImageCache({
+      filePath: sharpResult.outputFilePath,
+      mimeType: sharpResult.outputMimeType,
+      ttlMs: options.ttlMs,
+      name: normalizedDisplayName,
+      originName: normalizedDisplayName,
+      source: options.source || 'ps',
+      occurredAt: options.occurredAt || Date.now(),
+      sequenceIndex: Number.isFinite(Number(options.sequenceIndex))
+        ? Number(options.sequenceIndex)
+        : 1,
+      role: options.role || '',
+      slotIndex: options.slotIndex,
+      clientRef: options.clientRef || '',
+      meta: cacheMeta,
+    });
+
+    removePluginIntermediateCaptureFile(trackedInputFilePath);
+    return {
+      entry: cachedResult.entry,
+      ttlMs: cachedResult.ttlMs,
+      sharpResult,
+      displayFileName: normalizedDisplayName,
+    };
+  } catch (err) {
+    if (sharpResult?.outputFilePath) {
+      try {
+        if (fs.existsSync(sharpResult.outputFilePath) && fs.statSync(sharpResult.outputFilePath).isFile()) {
+          fs.unlinkSync(sharpResult.outputFilePath);
+        }
+      } catch {}
+    }
+    throw err;
+  }
+}
+
 function parseImageDataUrl(dataUrl) {
   const raw = String(dataUrl || '');
   const matched = raw.match(/^data:([^;,]+);base64,([\s\S]+)$/i);
@@ -711,17 +1069,344 @@ function computeBufferSha1(buffer) {
   return crypto.createHash('sha1').update(buffer).digest('hex');
 }
 
-function writeChatImageCacheFromDataUrl(dataUrl, context = {}) {
-  const parsed = parseImageDataUrl(dataUrl);
-  if (!parsed?.buffer?.length) return null;
-  const cacheId = computeBufferSha1(parsed.buffer);
-  const ext = getExtByMimeType(parsed.mime);
+const LEGACY_IMAGE_ID_CONVERSION_REMOVE_AFTER = '2026-05-18';
+
+function normalizeTraceTextPart(value, fallback = '') {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || String(fallback || '').trim().toLowerCase();
+}
+
+function formatImageTraceTimestamp(timestampValue) {
+  const normalizedTimestamp = Number.isFinite(timestampValue)
+    ? Number(timestampValue)
+    : Date.now();
+  const dateObject = new Date(normalizedTimestamp);
+  const padTwoDigits = (numberValue) => String(numberValue).padStart(2, '0');
+  return `${dateObject.getFullYear()}${padTwoDigits(dateObject.getMonth() + 1)}${padTwoDigits(dateObject.getDate())}T${padTwoDigits(dateObject.getHours())}${padTwoDigits(dateObject.getMinutes())}${padTwoDigits(dateObject.getSeconds())}`;
+}
+
+function normalizeParentImageTraceIds(parentImageTraceIdsInput) {
+  const parentImageTraceIds = Array.isArray(parentImageTraceIdsInput)
+    ? parentImageTraceIdsInput
+    : [];
+  return Array.from(
+    new Set(
+      parentImageTraceIds
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function normalizeImageSourceKindValue(sourceKindInput) {
+  const normalizedValue = normalizeTraceTextPart(sourceKindInput);
+  return normalizedValue || 'unknown';
+}
+
+function normalizeImageSourceMethodValue(sourceMethodInput) {
+  const normalizedValue = normalizeTraceTextPart(sourceMethodInput);
+  return normalizedValue || 'unknown';
+}
+
+function buildImageTraceId({
+  prefix = 'image',
+  sourceKind = '',
+  sourceMethod = '',
+  occurredAt = Date.now(),
+  parentImageTraceIds = []
+} = {}) {
+  const normalizedPrefix = normalizeTraceTextPart(prefix, 'image');
+  const normalizedSourceKind = normalizeImageSourceKindValue(sourceKind);
+  const normalizedSourceMethod = normalizeImageSourceMethodValue(sourceMethod);
+  const normalizedParentImageTraceIds = normalizeParentImageTraceIds(parentImageTraceIds);
+  const parentSignature = normalizedParentImageTraceIds.length
+    ? normalizedParentImageTraceIds.join('-')
+    : '';
+  const traceSegments = [
+    normalizedPrefix,
+    normalizedSourceKind,
+    normalizedSourceMethod,
+    parentSignature,
+    formatImageTraceTimestamp(occurredAt)
+  ].filter(Boolean);
+  return traceSegments.join('-');
+}
+
+function resolveLegacyImageDisplayFileName(imageRecord = {}, options = {}) {
+  const fileNameCandidates = [
+    options.displayFileName,
+    imageRecord.displayFileName,
+    imageRecord.originName,
+    imageRecord.name,
+    imageRecord.fileName,
+    imageRecord.cacheFileName
+  ];
+  for (const fileNameCandidate of fileNameCandidates) {
+    const normalizedFileName = String(fileNameCandidate || '').trim();
+    if (normalizedFileName) return normalizedFileName;
+  }
+  const imageExt = getExtByMimeType(
+    imageRecord.mimeType || imageRecord.type || options.mimeType || 'image/png'
+  );
+  return `${buildImageTraceId({
+    prefix: options.prefix || 'image',
+    sourceKind: options.imageSourceKind || imageRecord.imageSourceKind || imageRecord.source || 'unknown',
+    sourceMethod: options.imageSourceMethod || imageRecord.imageSourceMethod || imageRecord.role || 'unknown',
+    occurredAt: options.occurredAt || imageRecord.capturedAt || imageRecord.cachedAt || Date.now(),
+    parentImageTraceIds: options.parentImageTraceIds || imageRecord.parentImageTraceIds || []
+  })}.${imageExt}`;
+}
+
+function normalizeLegacyImageRecordToTraceImage(imageRecordInput, options = {}) {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === 'object' ? imageRecordInput : {};
+  const normalizedParentImageTraceIds = normalizeParentImageTraceIds(
+    options.parentImageTraceIds || imageRecord.parentImageTraceIds
+  );
+  const normalizedSourceKind = normalizeImageSourceKindValue(
+    options.imageSourceKind || imageRecord.imageSourceKind || imageRecord.source
+  );
+  const normalizedSourceMethod = normalizeImageSourceMethodValue(
+    options.imageSourceMethod || imageRecord.imageSourceMethod || imageRecord.role
+  );
+  const imageTraceId = String(
+    imageRecord.imageTraceId ||
+      options.imageTraceId ||
+      buildImageTraceId({
+        prefix: options.prefix || 'image',
+        sourceKind: normalizedSourceKind,
+        sourceMethod: normalizedSourceMethod,
+        occurredAt:
+          options.occurredAt ||
+          imageRecord.capturedAt ||
+          imageRecord.cachedAt ||
+          imageRecord.createdAt ||
+          Date.now(),
+        parentImageTraceIds: normalizedParentImageTraceIds
+      })
+  ).trim();
+  return {
+    ...imageRecord,
+    imageTraceId,
+    parentImageTraceIds: normalizedParentImageTraceIds,
+    imageSourceKind: normalizedSourceKind,
+    imageSourceMethod: normalizedSourceMethod,
+    displayFileName: resolveLegacyImageDisplayFileName(imageRecord, {
+      ...options,
+      imageSourceKind: normalizedSourceKind,
+      imageSourceMethod: normalizedSourceMethod,
+      parentImageTraceIds: normalizedParentImageTraceIds,
+      prefix: options.prefix || 'image'
+    }),
+    legacyIdConversionTag: 'legacy-image-id-conversion-remove-after-2026-05-18',
+    legacyIdConversionRemoveAfter: LEGACY_IMAGE_ID_CONVERSION_REMOVE_AFTER
+  };
+}
+
+function extractImageFileLeafName(fileNameInput) {
+  const normalizedFileName = String(fileNameInput || '').trim();
+  if (!normalizedFileName) return '';
+  return normalizedFileName.split(/[\\/]/).filter(Boolean).pop() || '';
+}
+
+function pickLegacyImageReferenceSnapshot(imageRecord = {}) {
+  const legacyFieldMap = {
+    cacheId: imageRecord.cacheId,
+    psCacheId: imageRecord.psCacheId,
+    chatCacheId: imageRecord.chatCacheId,
+    cacheFileName: imageRecord.cacheFileName,
+    cacheFilePath: imageRecord.cacheFilePath,
+    originName: imageRecord.originName,
+    oldFileName: imageRecord.oldFileName
+  };
+  return Object.entries(legacyFieldMap).reduce((legacyRecord, [fieldName, fieldValue]) => {
+    const normalizedFieldValue = String(fieldValue || '').trim();
+    if (normalizedFieldValue) legacyRecord[fieldName] = normalizedFieldValue;
+    return legacyRecord;
+  }, {});
+}
+
+function normalizeImageInputMethodValue(inputMethodInput, fallback = 'unknown') {
+  const normalizedValue = normalizeTraceTextPart(inputMethodInput);
+  return normalizedValue || normalizeTraceTextPart(fallback, 'unknown');
+}
+
+function resolveAssetRecordFileName(imageRecord = {}, options = {}) {
+  const fileNameCandidates = [
+    options.fileName,
+    imageRecord.fileName,
+    imageRecord.cacheFileName,
+    imageRecord.displayFileName,
+    imageRecord.originName,
+    imageRecord.name,
+    imageRecord.assetId,
+    imageRecord.itemId,
+    imageRecord.internalCacheId
+  ];
+  for (const fileNameCandidate of fileNameCandidates) {
+    const normalizedFileName = extractImageFileLeafName(fileNameCandidate);
+    if (normalizedFileName) return normalizedFileName;
+  }
+  const imageExt = getExtByMimeType(
+    imageRecord.mimeType || imageRecord.type || options.mimeType || 'image/png'
+  );
+  return `${buildImageTraceId({
+    prefix: options.prefix || 'image',
+    sourceKind: options.imageSourceKind || imageRecord.imageSourceKind || imageRecord.source || 'unknown',
+    sourceMethod: options.imageSourceMethod || imageRecord.imageSourceMethod || imageRecord.role || 'unknown',
+    occurredAt:
+      options.occurredAt ||
+      imageRecord.capturedAt ||
+      imageRecord.cachedAt ||
+      imageRecord.createdAt ||
+      Date.now(),
+    parentImageTraceIds: options.parentImageTraceIds || imageRecord.parentImageTraceIds || []
+  })}.${imageExt}`;
+}
+
+function buildImageRecordLookupKeys(imageRecordInput = {}) {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === 'object' ? imageRecordInput : {};
+  const stableLookupKeys = Array.from(
+    new Set(
+      [
+        imageRecord.assetId,
+        imageRecord.internalCacheId,
+        imageRecord.itemId,
+        imageRecord.cacheId,
+        imageRecord.psCacheId,
+        imageRecord.chatCacheId,
+        imageRecord.fileName
+      ]
+        .map((item) => String(item || '').trim())
+        .filter(Boolean)
+    )
+  );
+  if (stableLookupKeys.length) return stableLookupKeys;
+  return Array.from(
+    new Set(
+      [imageRecord.cacheFileName, imageRecord.originName]
+        .map((item) => extractImageFileLeafName(item))
+        .filter(Boolean)
+    )
+  );
+}
+
+function resolveAssetRecordDisplayName(imageRecordInput, fallbackLabel = 'image') {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === 'object' ? imageRecordInput : {};
+  const displayNameCandidates = [
+    imageRecord.fileName,
+    imageRecord.displayFileName,
+    imageRecord.internalCacheId,
+    imageRecord.itemId,
+    imageRecord.cacheFileName,
+    imageRecord.originName,
+    imageRecord.name
+  ];
+  for (const displayNameCandidate of displayNameCandidates) {
+    const normalizedDisplayName = extractImageFileLeafName(displayNameCandidate);
+    if (normalizedDisplayName) return normalizedDisplayName;
+  }
+  return toSafeText(fallbackLabel, 'image');
+}
+
+function resolveAssetRecordStoragePath(imageRecordInput) {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === 'object' ? imageRecordInput : {};
+  const storagePathCandidates = [imageRecord.filePath, imageRecord.cacheFilePath];
+  for (const storagePathCandidate of storagePathCandidates) {
+    const normalizedStoragePath = String(storagePathCandidate || '').trim();
+    if (normalizedStoragePath) return normalizedStoragePath;
+  }
+  return '';
+}
+
+function normalizeLegacyImageRecordToAssetRecord(imageRecordInput, options = {}) {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === 'object' ? imageRecordInput : {};
+  const traceImageRecord = normalizeLegacyImageRecordToTraceImage(imageRecord, options);
+  const resolvedFileName = resolveAssetRecordFileName(traceImageRecord, options);
+  const parsedAssetIdentity = parseAssetIdentityFromFileName(resolvedFileName);
+  const resolvedFilePath = String(
+    options.filePath || imageRecord.filePath || imageRecord.cacheFilePath || ''
+  ).trim();
+  const normalizedInputMethod = normalizeImageInputMethodValue(
+    options.inputMethod ||
+      imageRecord.inputMethod ||
+      traceImageRecord.imageSourceMethod ||
+      imageRecord.source ||
+      'unknown'
+  );
+  const normalizedAssetId = String(
+    options.assetId ||
+      imageRecord.assetId ||
+      imageRecord.itemId ||
+      imageRecord.internalCacheId ||
+      resolvedFileName ||
+      traceImageRecord.imageTraceId
+  ).trim();
+  const normalizedInternalCacheId = String(
+    options.internalCacheId ||
+      imageRecord.internalCacheId ||
+      resolvedFileName ||
+      normalizedAssetId
+  ).trim();
+  const normalizedItemId = String(
+    options.itemId ||
+      imageRecord.itemId ||
+      normalizedInternalCacheId ||
+      normalizedAssetId
+  ).trim();
+  const normalizedSourceRefKey = String(
+    options.sourceRefKey ||
+      imageRecord.sourceRefKey ||
+      parsedAssetIdentity?.sourceRefKey ||
+      traceImageRecord.imageTraceId ||
+      normalizedAssetId
+  ).trim();
+  const mergedUsageMeta = {
+    ...(traceImageRecord.usageMeta && typeof traceImageRecord.usageMeta === 'object'
+      ? traceImageRecord.usageMeta
+      : {}),
+    ...(options.usageMeta && typeof options.usageMeta === 'object' ? options.usageMeta : {})
+  };
+  const legacySnapshot = {
+    ...(traceImageRecord.legacy && typeof traceImageRecord.legacy === 'object'
+      ? traceImageRecord.legacy
+      : {}),
+    ...pickLegacyImageReferenceSnapshot(imageRecord)
+  };
+  return {
+    ...traceImageRecord,
+    assetId: normalizedAssetId,
+    fileName: resolvedFileName,
+    filePath: resolvedFilePath,
+    internalCacheId: normalizedInternalCacheId,
+    itemId: normalizedItemId,
+    sourceRefKey: normalizedSourceRefKey,
+    inputMethod: normalizedInputMethod,
+    usageMeta: mergedUsageMeta,
+    legacy: legacySnapshot
+  };
+}
+
+function writeChatImageCacheFromBuffer(bufferInput, mimeTypeInput, context = {}) {
+  const buffer = Buffer.isBuffer(bufferInput) ? bufferInput : null;
+  if (!buffer?.length) return null;
+  const mimeType = String(mimeTypeInput || 'image/png').trim() || 'image/png';
+  const cacheId = computeBufferSha1(buffer);
+  const ext = getExtByMimeType(mimeType);
   const fileName = `${cacheId}.${ext}`;
   const dir = ensureChatImageCacheDir();
   const filePath = path.join(dir, fileName);
   if (!fs.existsSync(filePath)) {
     try {
-      fs.writeFileSync(filePath, parsed.buffer);
+      fs.writeFileSync(filePath, buffer);
     } catch (err) {
       const wrapped = new Error(
         `聊天图片落盘失败：写入缓存文件失败（${String(err?.code || 'UNKNOWN')}）`
@@ -731,8 +1416,8 @@ function writeChatImageCacheFromDataUrl(dataUrl, context = {}) {
         ...(context && typeof context === 'object' ? context : {}),
         filePath,
         cacheId,
-        mimeType: parsed.mime,
-        byteLength: Number(parsed.buffer?.length) || 0
+        mimeType,
+        byteLength: Number(buffer?.length) || 0
       };
       wrapped.cause = err;
       throw wrapped;
@@ -742,7 +1427,169 @@ function writeChatImageCacheFromDataUrl(dataUrl, context = {}) {
     cacheId,
     fileName,
     filePath,
-    mimeType: parsed.mime
+    mimeType
+  };
+}
+
+function writeChatImageCacheFromDataUrl(dataUrl, context = {}) {
+  const parsed = parseImageDataUrl(dataUrl);
+  if (!parsed?.buffer?.length) return null;
+  return writeChatImageCacheFromBuffer(parsed.buffer, parsed.mime, context);
+}
+
+function writeChatImageCacheFromFilePath(filePathInput, context = {}) {
+  const resolvedFilePath = resolveExistingImageFilePath(filePathInput);
+  if (!resolvedFilePath) return null;
+  const buffer = fs.readFileSync(resolvedFilePath);
+  if (!buffer?.length) return null;
+  return writeChatImageCacheFromBuffer(
+    buffer,
+    getMimeTypeByExt(resolvedFilePath) || 'image/png',
+    {
+      ...(context && typeof context === 'object' ? context : {}),
+      sourceFilePath: resolvedFilePath
+    }
+  );
+}
+
+function resolveChatImageCacheFileRecord(cacheIdOrPayload, options = {}) {
+  const payload =
+    cacheIdOrPayload && typeof cacheIdOrPayload === 'object'
+      ? cacheIdOrPayload
+      : {
+          cacheId: cacheIdOrPayload,
+          cacheFileName: options?.cacheFileName || options?.fileName || ''
+        };
+  const hintedFileName = extractImageFileLeafName(
+    payload?.cacheFileName ||
+      payload?.fileName ||
+      payload?.name ||
+      payload?.filePath ||
+      payload?.cacheFilePath ||
+      ''
+  );
+  const normalizedLookupPayload = {
+    ...payload,
+    fileName: hintedFileName || extractImageFileLeafName(payload?.fileName || ''),
+    cacheFileName: hintedFileName || extractImageFileLeafName(payload?.cacheFileName || ''),
+    name: hintedFileName || extractImageFileLeafName(payload?.name || ''),
+    filePath: String(payload?.filePath || payload?.cacheFilePath || '').trim()
+  };
+  const lookupKeys = Array.from(
+    new Set(
+      [
+        ...buildImageRecordLookupKeys(normalizedLookupPayload),
+        String(payload?.cacheId || '').trim(),
+        deriveCacheIdFromFileName(hintedFileName)
+      ]
+        .map((item) => extractImageFileLeafName(item))
+        .filter(Boolean)
+    )
+  );
+  const lookupLeafNameSet = new Set(
+    lookupKeys.map((item) => extractImageFileLeafName(item)).filter(Boolean)
+  );
+  const lookupBaseNameSet = new Set(
+    lookupKeys
+      .map((item) => {
+        const normalizedLeafName = extractImageFileLeafName(item);
+        return String(
+          path.basename(normalizedLeafName, path.extname(normalizedLeafName)) || ''
+        ).trim();
+      })
+      .filter(Boolean)
+  );
+  const hintedFileNames = Array.from(
+    new Set(
+      [
+        hintedFileName,
+        extractImageFileLeafName(payload?.fileName || ''),
+        extractImageFileLeafName(payload?.cacheFileName || ''),
+        extractImageFileLeafName(payload?.name || '')
+      ].filter(Boolean)
+    )
+  );
+  const searchDirs = getChatImageCacheSearchDirs().filter((dirPath) => fs.existsSync(dirPath));
+  if (!searchDirs.length) return null;
+
+  const findMatchedFileName = (dirPath) => {
+    try {
+      return (
+        fs.readdirSync(dirPath).find((entryName) => {
+          const normalizedEntryName = extractImageFileLeafName(entryName);
+          const normalizedEntryBaseName = String(
+            path.basename(normalizedEntryName, path.extname(normalizedEntryName)) || ''
+          ).trim();
+          return (
+            hintedFileNames.includes(normalizedEntryName) ||
+            lookupLeafNameSet.has(normalizedEntryName) ||
+            lookupBaseNameSet.has(normalizedEntryName) ||
+            lookupBaseNameSet.has(normalizedEntryBaseName)
+          );
+        }) || ''
+      );
+    } catch {
+      return '';
+    }
+  };
+
+  let matchedDir = '';
+  let matchedFileName = '';
+  for (const dirPath of searchDirs) {
+    const fileNameByLookup = findMatchedFileName(dirPath);
+    if (fileNameByLookup) {
+      matchedDir = dirPath;
+      matchedFileName = fileNameByLookup;
+      break;
+    }
+    for (const hintedName of hintedFileNames) {
+      const hintedBaseName = String(path.basename(hintedName) || '').trim();
+      const hintedPath = path.join(dirPath, hintedBaseName);
+      if (hintedBaseName && fs.existsSync(hintedPath)) {
+        matchedDir = dirPath;
+        matchedFileName = hintedBaseName;
+        break;
+      }
+    }
+    if (matchedFileName) break;
+  }
+  if (!matchedFileName) return null;
+
+  let filePath = path.join(matchedDir, matchedFileName);
+  if (!fs.existsSync(filePath)) return null;
+
+  const primaryDir = getChatImageCacheDir();
+  if (
+    primaryDir &&
+    matchedDir &&
+    path.resolve(primaryDir).toLowerCase() !== path.resolve(matchedDir).toLowerCase()
+  ) {
+    try {
+      fs.mkdirSync(primaryDir, { recursive: true });
+      const primaryFilePath = path.join(primaryDir, matchedFileName);
+      if (!fs.existsSync(primaryFilePath)) {
+        fs.copyFileSync(filePath, primaryFilePath);
+      }
+      filePath = primaryFilePath;
+    } catch {}
+  }
+
+  const ext = String(path.extname(filePath) || '').replace(/^\./, '').toLowerCase();
+  const mimeByExt = {
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    bmp: 'image/bmp',
+    svg: 'image/svg+xml'
+  };
+  return {
+    cacheId: String(path.basename(matchedFileName, path.extname(matchedFileName)) || '').trim(),
+    fileName: matchedFileName,
+    filePath,
+    mimeType: mimeByExt[ext] || 'application/octet-stream',
+    hintedFileName
   };
 }
 
@@ -990,6 +1837,17 @@ function getManagedCacheStats() {
   };
 }
 
+function emitCacheCleanupResult(cleanupPayload = {}) {
+  if (!win || win.isDestroyed() || !win.webContents || win.webContents.isDestroyed()) {
+    return;
+  }
+  try {
+    win.webContents.send(SHELL_EVENT_CHANNELS.cacheCleanupResult, cleanupPayload);
+  } catch (err) {
+    log('cache cleanup event emit failed', { message: err.message }, 'warn');
+  }
+}
+
 function cleanupByCachePolicy(policyInput, reason = 'manual') {
   ensureUnifiedCacheLayout();
   const policy = sanitizeCachePolicy(policyInput || cachePolicy);
@@ -1033,7 +1891,7 @@ function cleanupByCachePolicy(policyInput, reason = 'manual') {
     removedOtherFiles,
     totalBytes: stats.totalBytes
   });
-  return {
+  const cleanupResult = {
     ok: true,
     policy,
     removedChatSessions,
@@ -1041,6 +1899,12 @@ function cleanupByCachePolicy(policyInput, reason = 'manual') {
     removedOtherFiles,
     stats
   };
+  emitCacheCleanupResult({
+    ...cleanupResult,
+    reason,
+    cleanedAt: now
+  });
+  return cleanupResult;
 }
 
 function scheduleCachePolicyCleanup() {
@@ -1083,6 +1947,75 @@ function persistChatImageForSession(
     }
     markChanged();
   };
+  const resolveStableDisplayFileName = (fallbackFileName = '') =>
+    String(
+      next?.fileName ||
+        next?.originName ||
+        next?.legacy?.originName ||
+        next?.name ||
+        fallbackFileName ||
+        ''
+    ).trim();
+  const syncStableAssetFields = (imageRecordInput, options = {}) => {
+    const assetRecord = normalizeLegacyImageRecordToAssetRecord(imageRecordInput, {
+      prefix: 'chat',
+      assetId:
+        options.assetId ||
+        imageRecordInput?.assetId ||
+        imageRecordInput?.internalCacheId ||
+        imageRecordInput?.itemId ||
+        imageRecordInput?.sourceRefKey ||
+        '',
+      internalCacheId:
+        options.internalCacheId ||
+        imageRecordInput?.internalCacheId ||
+        imageRecordInput?.assetId ||
+        imageRecordInput?.itemId ||
+        imageRecordInput?.sourceRefKey ||
+        '',
+      itemId:
+        options.itemId ||
+        imageRecordInput?.itemId ||
+        imageRecordInput?.internalCacheId ||
+        imageRecordInput?.assetId ||
+        imageRecordInput?.sourceRefKey ||
+        '',
+      fileName:
+        options.fileName ||
+        imageRecordInput?.fileName ||
+        imageRecordInput?.cacheFileName ||
+        imageRecordInput?.name ||
+        '',
+      filePath:
+        options.filePath ||
+        imageRecordInput?.filePath ||
+        imageRecordInput?.cacheFilePath ||
+        '',
+      inputMethod:
+        options.inputMethod ||
+        imageRecordInput?.inputMethod ||
+        imageRecordInput?.source ||
+        'chat',
+      sourceRefKey:
+        options.sourceRefKey ||
+        imageRecordInput?.sourceRefKey ||
+        '',
+      usageMeta: {
+        ownerType: 'chat-image-cache',
+        ...(imageRecordInput?.usageMeta && typeof imageRecordInput.usageMeta === 'object'
+          ? imageRecordInput.usageMeta
+          : {}),
+        ...(options.usageMeta && typeof options.usageMeta === 'object' ? options.usageMeta : {}),
+      },
+    });
+    setFieldIfChanged('assetId', assetRecord.assetId);
+    setFieldIfChanged('fileName', assetRecord.fileName);
+    setFieldIfChanged('filePath', assetRecord.filePath);
+    setFieldIfChanged('internalCacheId', assetRecord.internalCacheId);
+    setFieldIfChanged('itemId', assetRecord.itemId);
+    setFieldIfChanged('sourceRefKey', assetRecord.sourceRefKey);
+    setFieldIfChanged('inputMethod', assetRecord.inputMethod);
+  };
 
   const dataUrl = String(image.dataUrl || '').trim();
   if (dataUrl.startsWith('data:image/')) {
@@ -1091,6 +2024,7 @@ function persistChatImageForSession(
       usedCacheIds.add(cached.cacheId);
       setFieldIfChanged('cacheId', cached.cacheId);
       setFieldIfChanged('cacheFileName', cached.fileName);
+      setFieldIfChanged('cacheFilePath', cached.filePath);
       setFieldIfChanged('cacheMimeType', cached.mimeType);
       if (String(next.dataUrl || '').trim()) {
         ensureMutable();
@@ -1103,6 +2037,24 @@ function persistChatImageForSession(
         delete next.psCacheExpiresAt;
         markChanged();
       }
+      syncStableAssetFields(
+        {
+          ...next,
+          fileName: resolveStableDisplayFileName(cached.fileName),
+          filePath: cached.filePath,
+          cacheFileName: cached.fileName,
+          cacheFilePath: cached.filePath,
+          cacheId: cached.cacheId,
+          type: cached.mimeType,
+        },
+        {
+          assetId: String(next.assetId || next.internalCacheId || next.itemId || next.sourceRefKey || '').trim(),
+          internalCacheId: String(next.internalCacheId || next.assetId || next.itemId || next.sourceRefKey || '').trim(),
+          itemId: String(next.itemId || next.internalCacheId || next.assetId || next.sourceRefKey || '').trim(),
+          fileName: resolveStableDisplayFileName(cached.fileName),
+          filePath: cached.filePath,
+        }
+      );
       return next;
     }
   }
@@ -1111,12 +2063,25 @@ function persistChatImageForSession(
   if (chatCacheId) {
     usedCacheIds.add(chatCacheId);
     setFieldIfChanged('cacheId', chatCacheId);
+    const existingChatCache = resolveChatImageCacheFileRecord(
+      {
+        ...next,
+        cacheId: chatCacheId,
+        cacheFileName: next.cacheFileName || next.fileName || '',
+        filePath: next.cacheFilePath || next.filePath || '',
+      },
+      {},
+    );
     if (String(next.dataUrl || '').trim()) {
       ensureMutable();
       next.dataUrl = '';
       markChanged();
     }
-    if (!String(next.cacheFileName || '').trim() && fileDerivedId && !isPsCacheId(fileDerivedId)) {
+    if (existingChatCache?.fileName) {
+      setFieldIfChanged('cacheFileName', existingChatCache.fileName);
+      setFieldIfChanged('cacheFilePath', existingChatCache.filePath);
+      setFieldIfChanged('cacheMimeType', existingChatCache.mimeType);
+    } else if (!String(next.cacheFileName || '').trim() && fileDerivedId && !isPsCacheId(fileDerivedId)) {
       const currentMimeType = String(next.cacheMimeType || next.type || '').trim();
       const nextExt = getExtByMimeType(currentMimeType || 'image/png');
       setFieldIfChanged('cacheFileName', `${fileDerivedId}.${nextExt}`);
@@ -1129,6 +2094,24 @@ function persistChatImageForSession(
     } else if (psCacheId && !String(next.psCacheId || '').trim()) {
       setFieldIfChanged('psCacheId', psCacheId);
     }
+    syncStableAssetFields(
+      {
+        ...next,
+        cacheId: chatCacheId,
+        fileName: resolveStableDisplayFileName(existingChatCache?.fileName || next.cacheFileName || ''),
+        filePath: String(existingChatCache?.filePath || next.cacheFilePath || next.filePath || '').trim(),
+        cacheFileName: String(existingChatCache?.fileName || next.cacheFileName || '').trim(),
+        cacheFilePath: String(existingChatCache?.filePath || next.cacheFilePath || next.filePath || '').trim(),
+        type: String(existingChatCache?.mimeType || next.cacheMimeType || next.type || '').trim(),
+      },
+      {
+        assetId: String(next.assetId || next.internalCacheId || next.itemId || next.sourceRefKey || '').trim(),
+        internalCacheId: String(next.internalCacheId || next.assetId || next.itemId || next.sourceRefKey || '').trim(),
+        itemId: String(next.itemId || next.internalCacheId || next.assetId || next.sourceRefKey || '').trim(),
+        fileName: resolveStableDisplayFileName(existingChatCache?.fileName || next.cacheFileName || ''),
+        filePath: String(existingChatCache?.filePath || next.cacheFilePath || next.filePath || '').trim(),
+      }
+    );
     return next;
   }
 
@@ -1144,6 +2127,7 @@ function persistChatImageForSession(
         usedCacheIds.add(migrated.cacheId);
         setFieldIfChanged('cacheId', migrated.cacheId);
         setFieldIfChanged('cacheFileName', migrated.fileName);
+        setFieldIfChanged('cacheFilePath', migrated.filePath);
         setFieldIfChanged('cacheMimeType', migrated.mimeType);
         if (String(next.dataUrl || '').trim()) {
           ensureMutable();
@@ -1156,6 +2140,24 @@ function persistChatImageForSession(
           delete next.psCacheExpiresAt;
           markChanged();
         }
+        syncStableAssetFields(
+          {
+            ...next,
+            fileName: resolveStableDisplayFileName(migrated.fileName),
+            filePath: migrated.filePath,
+            cacheFileName: migrated.fileName,
+            cacheFilePath: migrated.filePath,
+            cacheId: migrated.cacheId,
+            type: migrated.mimeType,
+          },
+          {
+            assetId: String(next.assetId || next.internalCacheId || next.itemId || next.sourceRefKey || '').trim(),
+            internalCacheId: String(next.internalCacheId || next.assetId || next.itemId || next.sourceRefKey || '').trim(),
+            itemId: String(next.itemId || next.internalCacheId || next.assetId || next.sourceRefKey || '').trim(),
+            fileName: resolveStableDisplayFileName(migrated.fileName),
+            filePath: migrated.filePath,
+          }
+        );
         return next;
       }
     }
@@ -1327,6 +2329,107 @@ function persistChatSessionsWithoutInlineImages(sessions = []) {
   return { sessions: nextSessions, usedCacheIds, changed: !!changeTracker.changed };
 }
 
+function persistApiInputImageRecord(
+  imageInput,
+  usedCacheIds = new Set(),
+  context = {},
+) {
+  if (!imageInput || typeof imageInput !== 'object') return imageInput;
+  const image = {
+    ...imageInput,
+    usageMeta: {
+      ...(imageInput?.usageMeta && typeof imageInput.usageMeta === 'object'
+        ? imageInput.usageMeta
+        : {}),
+      ownerType:
+        String(
+          context?.usageMeta?.ownerType
+          || imageInput?.usageMeta?.ownerType
+          || 'api-input-cache'
+        ).trim() || 'api-input-cache',
+      ...(context?.usageMeta && typeof context.usageMeta === 'object'
+        ? context.usageMeta
+        : {})
+    }
+  };
+  const normalizedDataUrl = String(image.dataUrl || '').trim();
+  const directFilePath = resolveExistingImageFilePath(
+    image.filePath || image.cacheFilePath || ''
+  );
+  const { chatCacheId } = resolveChatImageIdsFromRecord(image);
+  if (!chatCacheId && !normalizedDataUrl.startsWith('data:image/') && directFilePath) {
+    const cached = writeChatImageCacheFromFilePath(directFilePath, context);
+    if (cached?.cacheId) {
+      return persistChatImageForSession(
+        {
+          ...image,
+          cacheId: cached.cacheId,
+          chatCacheId: cached.cacheId,
+          cacheFileName: cached.fileName,
+          cacheFilePath: cached.filePath,
+          filePath: cached.filePath,
+          type: cached.mimeType,
+          dataUrl: '',
+          psCacheId: '',
+          psCacheExpiresAt: undefined
+        },
+        usedCacheIds,
+        context,
+        null
+      );
+    }
+  }
+  return persistChatImageForSession(image, usedCacheIds, context, null);
+}
+
+function persistApiInputImageList(sourceImageListInput = [], options = {}) {
+  const sourceImageList = Array.isArray(sourceImageListInput) ? sourceImageListInput : [];
+  const usedCacheIds = options.usedCacheIds instanceof Set ? options.usedCacheIds : new Set();
+  return sourceImageList.map((imageItem, imageIndex) => {
+    const clientRef = String(
+      imageItem?.clientRef
+        || imageItem?.id
+        || imageItem?.assetId
+        || imageItem?.internalCacheId
+        || imageItem?.itemId
+        || imageItem?.sourceRefKey
+        || `api-image-${imageIndex + 1}`
+    ).trim();
+    const persistedImage = persistApiInputImageRecord(
+      {
+        ...(imageItem && typeof imageItem === 'object' ? imageItem : {}),
+        clientRef
+      },
+      usedCacheIds,
+      {
+        ...(options?.context && typeof options.context === 'object' ? options.context : {}),
+        clientRef,
+        imageIndex
+      }
+    );
+    const resolvedIds = resolveChatImageIdsFromRecord(persistedImage);
+    return {
+      ...(persistedImage && typeof persistedImage === 'object' ? persistedImage : {}),
+      clientRef,
+      cacheId: String(
+        persistedImage?.cacheId || resolvedIds.chatCacheId || ''
+      ).trim(),
+      chatCacheId: String(
+        persistedImage?.chatCacheId
+          || resolvedIds.chatCacheId
+          || persistedImage?.cacheId
+          || ''
+      ).trim(),
+      cacheFileName: String(
+        persistedImage?.cacheFileName || persistedImage?.fileName || ''
+      ).trim(),
+      cacheFilePath: String(
+        persistedImage?.cacheFilePath || persistedImage?.filePath || ''
+      ).trim()
+    };
+  });
+}
+
 function hasInlineImageDataInMessageList(messageListInput) {
   const sourceMessageList = Array.isArray(messageListInput) ? messageListInput : [];
   return sourceMessageList.some((message) => (
@@ -1352,112 +2455,41 @@ function hasInlineImageDataInSessions(sessions = []) {
 }
 
 function readChatImageCacheDataUrl(cacheIdOrPayload, options = {}) {
-  const payload =
-    cacheIdOrPayload && typeof cacheIdOrPayload === 'object'
-      ? cacheIdOrPayload
-      : {
-          cacheId: cacheIdOrPayload,
-          cacheFileName: options?.cacheFileName || options?.fileName || '',
-        };
-  const explicitCacheId = String(payload?.cacheId || '').trim();
-  const hintedFileName = String(
-    payload?.cacheFileName || payload?.fileName || payload?.name || '',
-  ).trim();
-  const hintedFileCacheId = deriveCacheIdFromFileName(hintedFileName);
-  const cacheIdCandidates = Array.from(
-    new Set(
-      [explicitCacheId, hintedFileCacheId]
-        .map((item) => String(item || '').trim())
-        .filter(Boolean),
-    ),
-  );
-  const searchDirs = getChatImageCacheSearchDirs().filter((dirPath) => fs.existsSync(dirPath));
-  if (!searchDirs.length) return null;
-
-  const findFileNameByCacheId = (dirPath, cacheIdCandidate) => {
-    if (!cacheIdCandidate) return '';
-    try {
-      return fs
-        .readdirSync(dirPath)
-        .find((entryName) => {
-          const baseName = String(path.basename(entryName, path.extname(entryName)) || '').trim();
-          return baseName === cacheIdCandidate;
-        }) || '';
-    } catch {
-      return '';
-    }
-  };
-
-  let matchedDir = '';
-  let matchedFileName = '';
-  let matchedCacheId = '';
-
-  for (const dirPath of searchDirs) {
-    for (const cacheIdCandidate of cacheIdCandidates) {
-      const fileNameByCacheId = findFileNameByCacheId(dirPath, cacheIdCandidate);
-      if (!fileNameByCacheId) continue;
-      matchedDir = dirPath;
-      matchedFileName = fileNameByCacheId;
-      matchedCacheId = cacheIdCandidate;
-      break;
-    }
-    if (matchedFileName) break;
-
-    if (hintedFileName) {
-      const hintedBaseName = String(path.basename(hintedFileName) || '').trim();
-      const hintedPath = path.join(dirPath, hintedBaseName);
-      if (hintedBaseName && fs.existsSync(hintedPath)) {
-        matchedDir = dirPath;
-        matchedFileName = hintedBaseName;
-        matchedCacheId = String(path.basename(hintedBaseName, path.extname(hintedBaseName)) || '').trim();
-        break;
-      }
-    }
-  }
-
-  if (!matchedFileName) return null;
-  let filePath = path.join(matchedDir, matchedFileName);
-  if (!fs.existsSync(filePath)) return null;
-
-  const primaryDir = getChatImageCacheDir();
-  if (
-    primaryDir &&
-    matchedDir &&
-    path.resolve(primaryDir).toLowerCase() !== path.resolve(matchedDir).toLowerCase()
-  ) {
-    try {
-      fs.mkdirSync(primaryDir, { recursive: true });
-      const primaryFilePath = path.join(primaryDir, matchedFileName);
-      if (!fs.existsSync(primaryFilePath)) {
-        fs.copyFileSync(filePath, primaryFilePath);
-      }
-      filePath = primaryFilePath;
-    } catch {}
-  }
-
-  const ext = String(path.extname(filePath) || '').replace(/^\./, '').toLowerCase();
-  const mimeByExt = {
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    webp: 'image/webp',
-    gif: 'image/gif',
-    bmp: 'image/bmp',
-    svg: 'image/svg+xml'
-  };
-  const mimeType = mimeByExt[ext] || 'application/octet-stream';
+  const resolvedChatCacheFile = resolveChatImageCacheFileRecord(cacheIdOrPayload, options);
+  if (!resolvedChatCacheFile) return null;
+  const { cacheId: normalizedCacheId, fileName: matchedFileName, filePath, mimeType, hintedFileName } =
+    resolvedChatCacheFile;
   const buffer = fs.readFileSync(filePath);
   if (!buffer?.length) return null;
-
-  const normalizedCacheId =
-    String(matchedCacheId || path.basename(matchedFileName, path.extname(matchedFileName)) || '').trim();
-  return {
+  const normalizedLegacyImageRecord = {
     ok: true,
     cacheId: normalizedCacheId,
     fileName: matchedFileName,
     filePath,
     mimeType,
     dataUrl: `data:${mimeType};base64,${buffer.toString('base64')}`
+  };
+  const assetRecord = normalizeLegacyImageRecordToAssetRecord(
+    normalizedLegacyImageRecord,
+    {
+      prefix: 'chat',
+      imageSourceKind: 'chat',
+      imageSourceMethod: 'cache',
+      displayFileName: hintedFileName || normalizedLegacyImageRecord.fileName || '',
+      fileName: normalizedLegacyImageRecord.fileName || '',
+      filePath,
+      inputMethod: 'chat-cache',
+      usageMeta: {
+        ownerType: 'chat-image-cache',
+        ownerId: normalizedCacheId
+      }
+    }
+  );
+  return {
+    ...assetRecord,
+    ok: true,
+    cacheId: normalizedCacheId,
+    dataUrl: normalizedLegacyImageRecord.dataUrl
   };
 }
 
@@ -1561,9 +2593,22 @@ function normalizeCaptureMeta(input) {
   const schemaVersionRaw = Number(input?.schemaVersion);
   const componentSizeRaw = Number(input?.componentSize);
   const rawByteLengthRaw = Number(input?.rawByteLength);
+  const encodedByteLengthRaw = Number(input?.encodedByteLength);
   const imageDataWidthRaw = Number(input?.imageDataWidth);
   const imageDataHeightRaw = Number(input?.imageDataHeight);
   const bitsPerChannelRaw = Number(input?.bitsPerChannel);
+  const outputQualityRequestedRaw = Number(input?.outputQualityRequested);
+  const outputQualityActualRaw = Number(input?.outputQualityActual);
+  const outputChannelCountRaw = Number(input?.outputChannelCount);
+  const outputPixelDepthRaw = Number(input?.outputPixelDepth);
+  const outputMaxSideRequestedRaw = Number(input?.outputMaxSideRequested);
+  const outputMaxSideActualRaw = Number(input?.outputMaxSideActual);
+  const normalizeCaptureOutputFormat = (rawValue) => {
+    const value = String(rawValue || '').trim().toLowerCase();
+    if (value === 'png') return 'png';
+    if (value === 'jpg' || value === 'jpeg') return 'jpg';
+    return undefined;
+  };
   const normalized = {
     schemaVersion: Number.isFinite(schemaVersionRaw) ? Math.max(1, Math.round(schemaVersionRaw)) : undefined,
     colorSpace: input?.colorSpace ? String(input.colorSpace) : undefined,
@@ -1580,6 +2625,9 @@ function normalizeCaptureMeta(input) {
     rawByteLength: Number.isFinite(rawByteLengthRaw)
       ? Math.max(0, Math.round(rawByteLengthRaw))
       : undefined,
+    encodedByteLength: Number.isFinite(encodedByteLengthRaw)
+      ? Math.max(0, Math.round(encodedByteLengthRaw))
+      : undefined,
     imageDataWidth: Number.isFinite(imageDataWidthRaw)
       ? Math.max(1, Math.round(imageDataWidthRaw))
       : undefined,
@@ -1589,7 +2637,34 @@ function normalizeCaptureMeta(input) {
     documentMode: input?.documentMode ? String(input.documentMode) : undefined,
     bitsPerChannel: Number.isFinite(bitsPerChannelRaw)
       ? Math.max(1, Math.round(bitsPerChannelRaw))
-      : undefined
+      : undefined,
+    alphaPreserved:
+      typeof input?.alphaPreserved === 'boolean'
+        ? input.alphaPreserved
+        : undefined,
+    outputChannelCount: Number.isFinite(outputChannelCountRaw)
+      ? Math.max(1, Math.round(outputChannelCountRaw))
+      : undefined,
+    outputPixelDepth: Number.isFinite(outputPixelDepthRaw)
+      ? Math.max(1, Math.round(outputPixelDepthRaw))
+      : undefined,
+    outputFormatRequested: normalizeCaptureOutputFormat(input?.outputFormatRequested),
+    outputFormatActual: normalizeCaptureOutputFormat(input?.outputFormatActual),
+    outputQualityRequested: Number.isFinite(outputQualityRequestedRaw)
+      ? Math.max(0, Math.min(1, outputQualityRequestedRaw))
+      : undefined,
+    outputQualityActual: Number.isFinite(outputQualityActualRaw)
+      ? Math.max(0, Math.min(1, outputQualityActualRaw))
+      : undefined,
+    outputMaxSideRequested: Number.isFinite(outputMaxSideRequestedRaw)
+      ? Math.max(1, Math.round(outputMaxSideRequestedRaw))
+      : undefined,
+    outputMaxSideActual: Number.isFinite(outputMaxSideActualRaw)
+      ? Math.max(1, Math.round(outputMaxSideActualRaw))
+      : undefined,
+    encodeStrategy: input?.encodeStrategy ? String(input.encodeStrategy) : undefined,
+    primaryEncodeError: input?.primaryEncodeError ? String(input.primaryEncodeError) : undefined,
+    fallbackReason: input?.fallbackReason ? String(input.fallbackReason) : undefined
   };
   return Object.keys(normalized).some((key) => normalized[key] !== undefined)
     ? normalized
@@ -1783,8 +2858,137 @@ function clearPsImageCache() {
   } catch {}
 }
 
-function makePsCacheId() {
-  return `pscache_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+function formatAssetFileTimestampPrecise(timestampValue = Date.now()) {
+  const normalizedTimestamp = Number.isFinite(Number(timestampValue))
+      ? Number(timestampValue)
+      : Date.now(),
+    dateObject = new Date(normalizedTimestamp),
+    padTwoDigits = (numberValue) => String(numberValue).padStart(2, '0'),
+    padThreeDigits = (numberValue) => String(numberValue).padStart(3, '0');
+  return `${dateObject.getFullYear()}${padTwoDigits(dateObject.getMonth() + 1)}${padTwoDigits(dateObject.getDate())}T${padTwoDigits(dateObject.getHours())}${padTwoDigits(dateObject.getMinutes())}${padTwoDigits(dateObject.getSeconds())}${padThreeDigits(dateObject.getMilliseconds())}`;
+}
+
+function resolvePsAssetSourceToken(sourceInput = '') {
+  const normalizedSource = String(sourceInput || '').trim().toLowerCase();
+  if (normalizedSource === 'ps-select') return 'psselect';
+  if (normalizedSource === 'ps-full') return 'pscanvas';
+  if (normalizedSource === 'local' || normalizedSource === 'drop' || normalizedSource === 'paste') {
+    return 'upload';
+  }
+  if (normalizedSource === 'run') return 'run';
+  if (normalizedSource === 'return') return 'return';
+  return normalizeTraceTextPart(normalizedSource, 'image');
+}
+
+function resolvePsAssetUsageToken(sourceToken = '', usageInput = '') {
+  const normalizedUsage = normalizeTraceTextPart(usageInput);
+  if (normalizedUsage) return normalizedUsage;
+  if (sourceToken === 'upload') return 'input';
+  if (sourceToken === 'run') return 'result';
+  if (sourceToken === 'return') return 'export';
+  return 'upload';
+}
+
+function buildPsAssetSequenceToken(sourceToken = '', sequenceIndex = 1) {
+  const normalizedSequenceIndex = Math.max(
+      1,
+      Math.floor(Number.isFinite(Number(sequenceIndex)) ? Number(sequenceIndex) : 1),
+    ),
+    sequencePrefix = sourceToken === 'upload'
+      ? 'up'
+      : sourceToken === 'run'
+        ? 'r'
+        : sourceToken === 'return'
+          ? 'rt'
+          : sourceToken.startsWith('ps')
+            ? 'ps'
+            : 'it';
+  return sequencePrefix === 'r'
+    ? `r${normalizedSequenceIndex}`
+    : `${sequencePrefix}${String(normalizedSequenceIndex).padStart(2, '0')}`;
+}
+
+function parseAssetIdentityFromFileName(fileNameInput = '') {
+  const normalizedLeafName = extractImageFileLeafName(fileNameInput);
+  if (!normalizedLeafName) return null;
+  const fileStem = String(path.basename(normalizedLeafName, path.extname(normalizedLeafName)) || '').trim();
+  if (!fileStem) return null;
+  const stemParts = fileStem
+    .split('_')
+    .map((part) => String(part || '').trim())
+    .filter(Boolean);
+  if (stemParts.length < 4) {
+    return { fileStem, stemParts, sourceRefKey: '' };
+  }
+  const sequenceToken = stemParts[stemParts.length - 1];
+  const timestampToken = stemParts[stemParts.length - 2];
+  const looksLikeTimestamp = /^\d{8}T\d{9}$/.test(timestampToken);
+  const looksLikeSequence = /^(?:ps|up|rt|it)\d{2}$|^r\d+$/.test(sequenceToken);
+  if (!looksLikeTimestamp || !looksLikeSequence) {
+    return { fileStem, stemParts, sourceRefKey: '' };
+  }
+  const isTempIdentity = stemParts[1] === 'temp';
+  return {
+    fileStem,
+    stemParts,
+    sourceToken: stemParts[0] || '',
+    usageToken: isTempIdentity ? 'temp' : (stemParts[1] || ''),
+    tempKind: isTempIdentity ? (stemParts.slice(2, -2).join('_') || '') : '',
+    timestampToken,
+    sequenceToken,
+    sourceRefKey: `${timestampToken}_${sequenceToken}`,
+  };
+}
+
+function buildPsAssetTempIdentity({
+  mimeType = 'image/png',
+  source = '',
+  tempKind = 'temp',
+  occurredAt = Date.now(),
+  sequenceIndex = 1,
+} = {}) {
+  const sourceToken = resolvePsAssetSourceToken(source);
+  const normalizedTempKind = normalizeTraceTextPart(tempKind, 'temp');
+  const timestampToken = formatAssetFileTimestampPrecise(occurredAt);
+  const sequenceToken = buildPsAssetSequenceToken(sourceToken, sequenceIndex);
+  const imageExt = getExtByMimeType(mimeType);
+  const tempId = [sourceToken, 'temp', normalizedTempKind, timestampToken, sequenceToken]
+    .filter(Boolean)
+    .join('_');
+  return {
+    tempId,
+    fileName: `${tempId}.${imageExt}`,
+    sourceToken,
+    sequenceToken,
+    sourceRefKey: `${timestampToken}_${sequenceToken}`,
+    occurredAt: Number.isFinite(Number(occurredAt)) ? Number(occurredAt) : Date.now(),
+  };
+}
+
+function buildPsAssetCacheIdentity({
+  mimeType = 'image/png',
+  source = '',
+  usage = '',
+  occurredAt = Date.now(),
+  sequenceIndex = 1,
+} = {}) {
+  const sourceToken = resolvePsAssetSourceToken(source),
+    usageToken = resolvePsAssetUsageToken(sourceToken, usage),
+    timestampToken = formatAssetFileTimestampPrecise(occurredAt),
+    sequenceToken = buildPsAssetSequenceToken(sourceToken, sequenceIndex),
+    imageExt = getExtByMimeType(mimeType),
+    cacheId = [sourceToken, usageToken, timestampToken, sequenceToken]
+      .filter(Boolean)
+      .join('_');
+  return {
+    cacheId,
+    fileName: `${cacheId}.${imageExt}`,
+    sourceToken,
+    usageToken,
+    sequenceToken,
+    sourceRefKey: `${timestampToken}_${sequenceToken}`,
+    occurredAt: Number.isFinite(Number(occurredAt)) ? Number(occurredAt) : Date.now(),
+  };
 }
 
 function cacheBufferToPsImageCache({
@@ -1794,10 +2998,13 @@ function cacheBufferToPsImageCache({
   name = '',
   originName = '',
   source = 'ps',
+  usage = '',
   role = '',
   slotIndex = undefined,
   clientRef = '',
-  meta = undefined
+  meta = undefined,
+  occurredAt = Date.now(),
+  sequenceIndex = 1,
 } = {}) {
   const binary = Buffer.isBuffer(buffer)
     ? buffer
@@ -1807,31 +3014,151 @@ function cacheBufferToPsImageCache({
   }
   prunePsImageCache();
   const normalizedTtlMs = sanitizePsCacheTtlMs(ttlMs);
-  const cacheId = makePsCacheId();
-  const ext = getExtByMimeType(mimeType);
-  const fileName = `${cacheId}.${ext}`;
+  const originalDisplayName = String(originName || name || '').trim();
+  const cacheIdentity = buildPsAssetCacheIdentity({
+    mimeType,
+    source,
+    usage,
+    occurredAt,
+    sequenceIndex,
+  });
+  const cacheId = cacheIdentity.cacheId;
+  const fileName = cacheIdentity.fileName;
   const filePath = path.join(ensurePsImageCacheDir(), fileName);
   fs.writeFileSync(filePath, binary);
-  const now = Date.now();
+  const now = cacheIdentity.occurredAt;
+  const entryMeta = {
+    ...(meta && typeof meta === 'object' ? meta : {}),
+    sourceToken: cacheIdentity.sourceToken,
+    usageToken: cacheIdentity.usageToken,
+    sequenceToken: cacheIdentity.sequenceToken,
+    sourceRefKey: cacheIdentity.sourceRefKey,
+  };
+  if (originalDisplayName && originalDisplayName !== fileName) {
+    entryMeta.originalInputName = originalDisplayName;
+  }
   const entry = {
     cacheId,
     filePath,
     fileName,
-    name: String(name || fileName),
-    originName: String(originName || name || fileName),
+    name: fileName,
+    originName: fileName,
     type: String(mimeType || 'application/octet-stream'),
     source: String(source || 'ps'),
     role: String(role || ''),
     slotIndex: Number.isFinite(slotIndex) ? Number(slotIndex) : undefined,
     clientRef: String(clientRef || ''),
-    meta: meta && typeof meta === 'object' ? meta : undefined,
+    meta: entryMeta,
     cachedAt: now,
     expiresAt: now + normalizedTtlMs,
     byteLength: binary.length
   };
-  psImageCacheMap.set(cacheId, entry);
+  const normalizedEntry = normalizeLegacyImageRecordToAssetRecord(entry, {
+    prefix: 'ps',
+    filePath,
+    fileName,
+    assetId: fileName,
+    internalCacheId: fileName,
+    itemId: fileName,
+    sourceRefKey: cacheIdentity.sourceRefKey,
+    inputMethod: source,
+    usageMeta: {
+      ownerType: 'ps-image-cache',
+      ownerId: fileName
+    }
+  });
+  psImageCacheMap.set(cacheId, normalizedEntry);
   prunePsImageCache();
-  return { entry, ttlMs: normalizedTtlMs };
+  return { entry: normalizedEntry, ttlMs: normalizedTtlMs };
+}
+
+function cacheExistingFileToPsImageCache({
+  filePath,
+  mimeType = '',
+  ttlMs = PS_CACHE_TTL_DEFAULT_MS,
+  name = '',
+  originName = '',
+  source = 'ps',
+  usage = '',
+  role = '',
+  slotIndex = undefined,
+  clientRef = '',
+  meta = undefined,
+  occurredAt = Date.now(),
+  sequenceIndex = 1,
+} = {}) {
+  const normalizedFilePath = String(filePath || '').trim();
+  if (!normalizedFilePath || !fs.existsSync(normalizedFilePath)) {
+    throw new Error('ps_cache_file_missing');
+  }
+  const stat = fs.statSync(normalizedFilePath);
+  if (!stat.isFile() || !Number(stat.size)) {
+    throw new Error('ps_cache_file_empty');
+  }
+  prunePsImageCache();
+  const normalizedTtlMs = sanitizePsCacheTtlMs(ttlMs);
+  const originalDisplayName = String(originName || name || '').trim();
+  const cacheIdentity = buildPsAssetCacheIdentity({
+    mimeType: mimeType || getMimeTypeByExt(normalizedFilePath) || 'image/png',
+    source,
+    usage,
+    occurredAt,
+    sequenceIndex,
+  });
+  const cacheId = cacheIdentity.cacheId;
+  const fileName = cacheIdentity.fileName;
+  const adoptedFilePath = path.join(ensurePsImageCacheDir(), fileName);
+  try {
+    fs.renameSync(normalizedFilePath, adoptedFilePath);
+  } catch {
+    fs.copyFileSync(normalizedFilePath, adoptedFilePath);
+    fs.unlinkSync(normalizedFilePath);
+  }
+  const adoptedStat = fs.statSync(adoptedFilePath);
+  const now = cacheIdentity.occurredAt;
+  const entryMeta = {
+    ...(meta && typeof meta === 'object' ? meta : {}),
+    sourceToken: cacheIdentity.sourceToken,
+    usageToken: cacheIdentity.usageToken,
+    sequenceToken: cacheIdentity.sequenceToken,
+    sourceRefKey: cacheIdentity.sourceRefKey,
+  };
+  if (originalDisplayName && originalDisplayName !== fileName) {
+    entryMeta.originalInputName = originalDisplayName;
+  }
+  const entry = {
+    cacheId,
+    filePath: adoptedFilePath,
+    fileName,
+    name: fileName,
+    originName: fileName,
+    type: String(mimeType || getMimeTypeByExt(adoptedFilePath) || 'application/octet-stream'),
+    source: String(source || 'ps'),
+    role: String(role || ''),
+    slotIndex: Number.isFinite(slotIndex) ? Number(slotIndex) : undefined,
+    clientRef: String(clientRef || ''),
+    meta: entryMeta,
+    cachedAt: now,
+    expiresAt: now + normalizedTtlMs,
+    byteLength: Number(adoptedStat.size || 0)
+  };
+  const normalizedEntry = normalizeLegacyImageRecordToAssetRecord(entry, {
+    prefix: 'ps',
+    filePath: adoptedFilePath,
+    fileName,
+    assetId: fileName,
+    internalCacheId: fileName,
+    itemId: fileName,
+    sourceRefKey: cacheIdentity.sourceRefKey,
+    inputMethod: source,
+    usageMeta: {
+      ownerType: 'ps-image-cache',
+      ownerId: fileName
+    }
+  });
+  psImageCacheMap.set(cacheId, normalizedEntry);
+  prunePsImageCache();
+  return { entry: normalizedEntry, ttlMs: normalizedTtlMs };
 }
 
 function rebuildPsCacheEntryFromDisk(cacheId) {
@@ -1839,13 +3166,19 @@ function rebuildPsCacheEntryFromDisk(cacheId) {
   if (!id) return null;
   try {
     const dir = ensurePsImageCacheDir();
+    const normalizedLeafId = extractImageFileLeafName(id);
     const matchedName = fs.readdirSync(dir).find((name) => {
       try {
         const filePath = path.join(dir, name);
         const stat = fs.statSync(filePath);
         if (!stat.isFile()) return false;
         const fileId = String(path.basename(name, path.extname(name)) || '').trim();
-        return fileId === id;
+        const fileLeafName = extractImageFileLeafName(name);
+        return (
+          fileId === id ||
+          name === id ||
+          (normalizedLeafId && fileLeafName === normalizedLeafId)
+        );
       } catch {
         return false;
       }
@@ -1856,8 +3189,11 @@ function rebuildPsCacheEntryFromDisk(cacheId) {
     if (!stat.isFile()) return null;
     const now = Date.now();
     const cachedAt = Number(stat.mtimeMs || stat.ctimeMs || now);
+    const resolvedCacheId = String(
+      path.basename(matchedName, path.extname(matchedName)) || ''
+    ).trim();
     const entry = {
-      cacheId: id,
+      cacheId: resolvedCacheId || id,
       filePath,
       fileName: matchedName,
       name: matchedName,
@@ -1872,8 +3208,19 @@ function rebuildPsCacheEntryFromDisk(cacheId) {
       expiresAt: Math.max(now + PS_CACHE_TTL_MIN_MS, cachedAt + PS_CACHE_TTL_DEFAULT_MS),
       byteLength: Number(stat.size || 0)
     };
-    psImageCacheMap.set(id, entry);
-    return entry;
+    const normalizedEntry = normalizeLegacyImageRecordToAssetRecord(entry, {
+      prefix: 'ps',
+      sourceRefKey: parseAssetIdentityFromFileName(matchedName)?.sourceRefKey || '',
+      filePath,
+      fileName: matchedName,
+      inputMethod: 'ps-disk-fallback',
+      usageMeta: {
+        ownerType: 'ps-image-cache',
+        ownerId: matchedName
+      }
+    });
+    psImageCacheMap.set(normalizedEntry.cacheId, normalizedEntry);
+    return normalizedEntry;
   } catch (err) {
     log('ps-cache rebuild from disk failed', { cacheId: id, message: err.message });
     return null;
@@ -1885,6 +3232,19 @@ function readPsImageCacheDataUrl(cacheId, options = {}) {
   if (!id) return null;
   const ignoreExpiry = !!options?.ignoreExpiry;
   let entry = psImageCacheMap.get(id);
+  if (!entry) {
+    entry =
+      Array.from(psImageCacheMap.values()).find((candidate) => {
+        if (!candidate || typeof candidate !== 'object') return false;
+        return [
+          candidate.cacheId,
+          candidate.internalCacheId,
+          candidate.itemId,
+          candidate.fileName,
+          candidate.cacheFileName
+        ].some((lookupValue) => String(lookupValue || '').trim() === id);
+      }) || null;
+  }
   if (!entry) {
     entry = rebuildPsCacheEntryFromDisk(id);
   }
@@ -1945,10 +3305,25 @@ function initLogger() {
     const dir = getLogsCacheDir();
     fs.mkdirSync(dir, { recursive: true });
     logFile = path.join(dir, 'main.log');
+    try {
+      const repoRoot = path.resolve(__dirname, '..');
+      const workspaceRoot = path.resolve(repoRoot, '..');
+      const workspacePerfLogsDir = path.join(
+        workspaceRoot,
+        '日志文件',
+        '01-开发日志',
+        'dev-logs',
+      );
+      fs.mkdirSync(workspacePerfLogsDir, { recursive: true });
+      perfLogFile = path.join(workspacePerfLogsDir, 'instruction-drag-perf.log');
+    } catch {
+      perfLogFile = path.join(dir, 'drag-perf.log');
+    }
     stateFile = path.join(app.getPath('userData'), 'window-state.json');
     bridgeConfigFile = path.join(app.getPath('userData'), 'bridge-config.json');
   } catch {
     logFile = null;
+    perfLogFile = null;
     stateFile = null;
     bridgeConfigFile = null;
   }
@@ -2008,6 +3383,27 @@ function log(message, extra, level = 'info') {
   try {
     if (logFile) fs.appendFileSync(logFile, line);
   } catch {}
+}
+
+function appendPerfLog(rawPayload) {
+  const nowIso = new Date().toISOString();
+  const payload =
+    rawPayload && typeof rawPayload === 'object'
+      ? rawPayload
+      : { message: String(rawPayload || '').trim() };
+  const scope = String(payload.scope || 'renderer').trim() || 'renderer';
+  const event = String(payload.event || 'sample').trim() || 'sample';
+  const message = String(payload.message || '').trim();
+  const data = payload.data && typeof payload.data === 'object' ? payload.data : null;
+  const extraText = data ? serializeLogExtra(data) : '';
+  const line = `[${nowIso}] [${scope}] [${event}]${message ? ` ${message}` : ''}${extraText ? ` ${extraText}` : ''}\n`;
+  try {
+    if (!perfLogFile) return buildShellErrorResponse('perf_log_path_missing', '性能日志路径不可用');
+    fs.appendFileSync(perfLogFile, line);
+    return buildShellOkResponse({ path: perfLogFile });
+  } catch (err) {
+    return buildShellErrorResponse('perf_log_write_failed', String(err?.message || err || 'write failed'));
+  }
 }
 
 function readFileTailUtf8(filePath, maxBytes = 180 * 1024) {
@@ -2168,7 +3564,7 @@ function writeOpenImageTempFileFromDataUrl(payload = {}, dataUrl = '') {
   if (!parsed?.buffer?.length) return '';
   const ext = getExtByMimeType(String(payload?.type || parsed.mime || 'image/png'));
   const stem = sanitizeGeneratedCacheFileStem(
-    payload?.originName || payload?.name || `open-image-${Date.now()}`
+    resolveAssetRecordDisplayName(payload, `open-image-${Date.now()}`)
   );
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${stem}.${ext}`;
   const filePath = path.join(ensureOpenImageTempDir(), fileName);
@@ -2177,36 +3573,39 @@ function writeOpenImageTempFileFromDataUrl(payload = {}, dataUrl = '') {
 }
 
 function resolveImageFilePathForSystemOpen(payload = {}) {
-  const directPathCandidates = [
-    payload?.filePath,
-    payload?.cacheFilePath
-  ];
+  const directPathCandidates = [resolveAssetRecordStoragePath(payload)];
   for (const directPathCandidate of directPathCandidates) {
     const resolvedDirectPath = resolveExistingImageFilePath(directPathCandidate);
     if (resolvedDirectPath) return resolvedDirectPath;
   }
 
   const generatedCachePath = resolveGeneratedCacheFilePath({
-    filePath: payload?.cacheFilePath || payload?.filePath,
-    fileName: payload?.cacheFileName || payload?.fileName
+    filePath: resolveAssetRecordStoragePath(payload),
+    fileName: resolveAssetRecordDisplayName(payload, '')
   });
   if (generatedCachePath) return generatedCachePath;
 
-  const psCacheId = String(payload?.psCacheId || '').trim();
-  if (psCacheId) {
+  const assetLookupKeys = buildImageRecordLookupKeys(payload);
+  if (assetLookupKeys.length) {
     prunePsImageCache();
-    const psCacheEntry = psImageCacheMap.get(psCacheId);
-    if (psCacheEntry && Number.isFinite(psCacheEntry.expiresAt) && psCacheEntry.expiresAt > Date.now()) {
-      const psCacheFilePath = resolveExistingImageFilePath(psCacheEntry.filePath);
-      if (psCacheFilePath) return psCacheFilePath;
+    for (const assetLookupKey of assetLookupKeys) {
+      const psCacheEntry = psImageCacheMap.get(assetLookupKey);
+      if (
+        psCacheEntry &&
+        Number.isFinite(psCacheEntry.expiresAt) &&
+        psCacheEntry.expiresAt > Date.now()
+      ) {
+        const psCacheFilePath = resolveExistingImageFilePath(psCacheEntry.filePath);
+        if (psCacheFilePath) return psCacheFilePath;
+      }
     }
   }
 
-  const chatCacheId = String(payload?.cacheId || '').trim();
-  const chatCacheFileName = String(payload?.cacheFileName || payload?.fileName || '').trim();
-  if (chatCacheId || chatCacheFileName) {
+  const chatCacheLookupKey = String(assetLookupKeys[0] || '').trim();
+  const chatCacheFileName = resolveAssetRecordDisplayName(payload, '');
+  if (chatCacheLookupKey || chatCacheFileName) {
     const chatCacheData = readChatImageCacheDataUrl({
-      cacheId: chatCacheId,
+      cacheId: chatCacheLookupKey,
       cacheFileName: chatCacheFileName,
     });
     const chatCacheFilePath = resolveExistingImageFilePath(chatCacheData?.filePath);
@@ -2713,7 +4112,7 @@ function sanitizeGeneratedCacheMaxFiles(input) {
 }
 
 function sanitizeGeneratedCacheFileStem(input) {
-  const text = String(input || '').trim();
+  const text = stripTrailingImageExtensions(String(input || '').trim());
   const replaced = text.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
   const compact = replaced.replace(/\s+/g, '_').replace(/_+/g, '_');
   const trimmed = compact.replace(/^_+|_+$/g, '');
@@ -2862,17 +4261,17 @@ function readCaptureFromCommFile(commPath) {
   const image = parsed?.image || {};
   const imgPath = String(image?.filePath || '').trim();
   if (!imgPath || !fs.existsSync(imgPath)) throw new Error('capture_image_missing');
+  const stat = fs.statSync(imgPath);
+  if (!stat.isFile() || !Number(stat.size)) throw new Error('capture_image_empty');
   const mimeType = String(image?.mimeType || 'image/png').trim();
-  const buffer = fs.readFileSync(imgPath);
-  if (!buffer?.length) throw new Error('capture_image_empty');
   const captureMeta = normalizeCaptureMeta({
     ...(image?.captureMeta && typeof image.captureMeta === 'object' ? image.captureMeta : {}),
     documentMode: image?.documentMode,
     bitsPerChannel: image?.bitsPerChannel
   });
   return {
-    buffer,
-    byteLength: buffer.length,
+    buffer: null,
+    byteLength: Number(stat.size || 0),
     imagePath: imgPath,
     mimeType,
     width: Number(image?.width) || undefined,
@@ -2909,8 +4308,8 @@ function readCaptureFromResultPayload(payloadBody = {}) {
   if (!fs.existsSync(imgPath)) {
     return { capture: null, error: 'capture_image_missing' };
   }
-  const buffer = fs.readFileSync(imgPath);
-  if (!buffer?.length) {
+  const stat = fs.statSync(imgPath);
+  if (!stat.isFile() || !Number(stat.size)) {
     return { capture: null, error: 'capture_image_empty' };
   }
   const mimeType = String(image?.mimeType || body?.mimeType || 'image/png').trim();
@@ -2921,8 +4320,8 @@ function readCaptureFromResultPayload(payloadBody = {}) {
   });
   return {
     capture: {
-      buffer,
-      byteLength: buffer.length,
+      buffer: null,
+      byteLength: Number(stat.size || 0),
       imagePath: imgPath,
       mimeType,
       width: Number(image?.width ?? body?.width) || undefined,
@@ -2958,6 +4357,15 @@ function readCaptureFromResultPayload(payloadBody = {}) {
   };
 }
 
+function hasCaptureBinaryOrPath(capture) {
+  const normalizedCapture = capture && typeof capture === 'object' ? capture : null;
+  if (!normalizedCapture) return false;
+  if (normalizedCapture.buffer && Buffer.isBuffer(normalizedCapture.buffer) && normalizedCapture.buffer.length > 0) {
+    return true;
+  }
+  return !!String(normalizedCapture.imagePath || '').trim();
+}
+
 function resolveCaptureFromBridgeResult(payloadBody = {}, action = 'select') {
   const expectedActionType = action === 'select' ? 'capture-selection' : 'capture-canvas';
   const resultActionType = normalizeBridgeActionType(
@@ -2986,7 +4394,7 @@ function resolveCaptureFromBridgeResult(payloadBody = {}, action = 'select') {
     bridgeProtocolVersion <= BRIDGE_CAPTURE_LEGACY_FALLBACK_MAX_VERSION;
   let commReadError = '';
   if (
-    (!capture || !capture.buffer || !capture.buffer.length) &&
+    !hasCaptureBinaryOrPath(capture) &&
     preferredCommPath &&
     shouldAllowLegacyCommFallback
   ) {
@@ -2997,14 +4405,14 @@ function resolveCaptureFromBridgeResult(payloadBody = {}, action = 'select') {
       log('capture comm read failed', { path: preferredCommPath, message: commReadError });
     }
   } else if (
-    (!capture || !capture.buffer || !capture.buffer.length) &&
+    !hasCaptureBinaryOrPath(capture) &&
     preferredCommPath &&
     !shouldAllowLegacyCommFallback
   ) {
     commReadError = 'legacy_comm_fallback_disabled';
   }
 
-  if (!capture || !capture.buffer || !capture.buffer.length) {
+  if (!hasCaptureBinaryOrPath(capture)) {
     const persistError = String(payloadBody?.captureCommError || '').trim();
     const parts = [persistError, directReadError, commReadError].filter(Boolean);
     if (!shouldAllowLegacyCommFallback && bridgeProtocolVersion) {
@@ -3761,13 +5169,80 @@ function scheduleSaveWindowState() {
 
 function normalizeFloatingToggleStatus(raw) {
   const value = String(raw || '').trim().toLowerCase();
-  if (value === 'error') return 'error';
-  if (value === 'ok') return 'ok';
-  if (value === 'connected') return 'connected';
-  if (value === 'busy') return 'busy';
+  if (value === 'error') return 'warn';
   if (value === 'info') return 'connected';
-  if (value === 'warn') return 'warn';
-  return 'connected';
+  if (
+    value === 'idle'
+    || value === 'ok'
+    || value === 'connected'
+    || value === 'busy'
+    || value === 'warn'
+    || value === 'task-running'
+    || value === 'task-success'
+    || value === 'task-failed'
+    || value === 'chat-running'
+    || value === 'chat-success'
+    || value === 'chat-failed'
+  ) {
+    return value;
+  }
+  return 'idle';
+}
+
+function normalizeFloatingToggleRunnerSource(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  if (value === 'run' || value === 'chat' || value === 'mixed' || value === 'none') {
+    return value;
+  }
+  return 'none';
+}
+
+function normalizeFloatingToggleRunnerPhase(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  if (
+    value === 'running'
+    || value === 'filling'
+    || value === 'frozen'
+    || value === 'shrinking'
+    || value === 'fading'
+    || value === 'idle'
+  ) {
+    return value;
+  }
+  return 'idle';
+}
+
+function normalizeFloatingToggleRunnerLen(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  if (
+    value === 'full'
+    || value === 'sharp-short'
+    || value === 'sharp-medium'
+    || value === 'sharp-long'
+    || value === 'soft-short'
+    || value === 'soft-medium'
+    || value === 'soft-long'
+  ) {
+    return value;
+  }
+  return 'soft-short';
+}
+
+function normalizeFloatingToggleRunnerColorTone(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  if (value === 'success' || value === 'error') return value;
+  return 'orange';
+}
+
+function normalizeFloatingToggleRunnerSpinDurationMs(raw) {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return 2000;
+  return Math.max(600, Math.min(6000, Math.round(value)));
+}
+
+function normalizeFloatingToggleRunnerFlag(raw, fallback = false) {
+  if (typeof raw === 'boolean') return raw;
+  return !!fallback;
 }
 
 function sanitizeFloatingToggleOpacity(raw) {
@@ -3910,34 +5385,33 @@ function scheduleAutoMinimizeIfUnfocused(delayMs = 140) {
   }, Math.max(40, Math.round(Number(delayMs) || 0)));
 }
 
-function clearAlwaysOnTopReapplyTimer() {
-  if (!alwaysOnTopReapplyTimer) return;
-  clearTimeout(alwaysOnTopReapplyTimer);
-  alwaysOnTopReapplyTimer = null;
-}
-
 function applyMainAlwaysOnTop() {
   if (!win || win.isDestroyed()) return;
+  const desiredAlwaysOnTop = !!mainAlwaysOnTop;
   try {
-    if (mainAlwaysOnTop) {
+    if (
+      typeof win.isAlwaysOnTop === 'function' &&
+      win.isAlwaysOnTop() === desiredAlwaysOnTop
+    ) {
+      return;
+    }
+    if (desiredAlwaysOnTop) {
       win.setAlwaysOnTop(true, MAIN_ALWAYS_ON_TOP_LEVEL);
     } else {
       win.setAlwaysOnTop(false);
     }
   } catch {
     try {
-      win.setAlwaysOnTop(!!mainAlwaysOnTop);
+      win.setAlwaysOnTop(desiredAlwaysOnTop);
     } catch {}
   }
 }
 
-function scheduleAlwaysOnTopReapply(delayMs = 160) {
-  if (!mainAlwaysOnTop) return;
-  clearAlwaysOnTopReapplyTimer();
-  alwaysOnTopReapplyTimer = setTimeout(() => {
-    alwaysOnTopReapplyTimer = null;
-    applyMainAlwaysOnTop();
-  }, Math.max(32, Math.round(Number(delayMs) || 0)));
+function syncFloatingToggleOnMainWindowActive(options = {}) {
+  if (!floatingToggleEnabled) return;
+  ensureFloatingToggleOnTop({
+    forceShow: !!options.forceShow,
+  });
 }
 
 function getFloatingToggleTargetHeight(mainVisible = isMainWindowShown()) {
@@ -4073,6 +5547,16 @@ function sendFloatingToggleState() {
       visible: mainVisible,
       enabled: !!floatingToggleEnabled,
       status: normalizeFloatingToggleStatus(floatingToggleStatus),
+      runnerSource: normalizeFloatingToggleRunnerSource(floatingToggleRunnerSource),
+      runnerPhase: normalizeFloatingToggleRunnerPhase(floatingToggleRunnerPhase),
+      runnerLen: normalizeFloatingToggleRunnerLen(floatingToggleRunnerLen),
+      runnerColorTone: normalizeFloatingToggleRunnerColorTone(floatingToggleRunnerColorTone),
+      runnerVisible: normalizeFloatingToggleRunnerFlag(floatingToggleRunnerVisible, false),
+      runnerFrozen: normalizeFloatingToggleRunnerFlag(floatingToggleRunnerFrozen, false),
+      runnerFading: normalizeFloatingToggleRunnerFlag(floatingToggleRunnerFading, false),
+      runnerSpinDurationMs: normalizeFloatingToggleRunnerSpinDurationMs(
+        floatingToggleRunnerSpinDurationMs,
+      ),
       opacity: floatingToggleOpacity,
       quickButtonsVisible
     });
@@ -4544,6 +6028,7 @@ function createWindow() {
     normalBounds = win.getBounds();
     syncMainDisplayScaleFactor(normalBounds);
     applyMainAlwaysOnTop();
+    syncFloatingToggleOnMainWindowActive();
     positionFloatingToggleWindow();
     sendFloatingToggleState();
     scheduleAutoMinimizeIfUnfocused(180);
@@ -4551,11 +6036,9 @@ function createWindow() {
   win.on('focus', () => {
     clearBlurMinimizeTimer();
     applyMainAlwaysOnTop();
+    syncFloatingToggleOnMainWindowActive();
   });
   win.on('blur', () => {
-    if (mainAlwaysOnTop) {
-      scheduleAlwaysOnTopReapply(220);
-    }
     scheduleAutoMinimizeIfUnfocused(140);
   });
   win.on('minimize', () => {
@@ -4565,6 +6048,7 @@ function createWindow() {
   win.on('restore', () => {
     clearBlurMinimizeTimer();
     applyMainAlwaysOnTop();
+    syncFloatingToggleOnMainWindowActive();
     sendFloatingToggleState();
     scheduleAutoMinimizeIfUnfocused(180);
   });
@@ -4735,11 +6219,6 @@ app.whenReady().then(() => {
   loadBridgeConfig();
   ensureUnifiedCacheLayout();
   cleanupPsCacheDirectory();
-  try {
-    cleanupByCachePolicy(cachePolicy, 'startup');
-  } catch (err) {
-    log('cache cleanup startup failed', { message: err.message });
-  }
   scheduleCachePolicyCleanup();
   log('app ready', {
     pid: process.pid,
@@ -4817,6 +6296,16 @@ app.whenReady().then(() => {
       enabled: !!floatingToggleEnabled,
       visible: isMainWindowShown(),
       status: normalizeFloatingToggleStatus(floatingToggleStatus),
+      runnerSource: normalizeFloatingToggleRunnerSource(floatingToggleRunnerSource),
+      runnerPhase: normalizeFloatingToggleRunnerPhase(floatingToggleRunnerPhase),
+      runnerLen: normalizeFloatingToggleRunnerLen(floatingToggleRunnerLen),
+      runnerColorTone: normalizeFloatingToggleRunnerColorTone(floatingToggleRunnerColorTone),
+      runnerVisible: normalizeFloatingToggleRunnerFlag(floatingToggleRunnerVisible, false),
+      runnerFrozen: normalizeFloatingToggleRunnerFlag(floatingToggleRunnerFrozen, false),
+      runnerFading: normalizeFloatingToggleRunnerFlag(floatingToggleRunnerFading, false),
+      runnerSpinDurationMs: normalizeFloatingToggleRunnerSpinDurationMs(
+        floatingToggleRunnerSpinDurationMs,
+      ),
       opacity: floatingToggleOpacity,
       quickButtonsVisible: isMainWindowShown() && hasEnabledFloatingQuickButtons()
     };
@@ -4831,9 +6320,50 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('shell:update-floating-toggle-status', (_evt, level) => {
-    floatingToggleStatus = normalizeFloatingToggleStatus(level);
+    const payload = level && typeof level === 'object' ? level : null;
+    floatingToggleStatus = normalizeFloatingToggleStatus(payload ? payload.status : level);
+    floatingToggleRunnerSource = normalizeFloatingToggleRunnerSource(
+      payload ? payload.runnerSource : 'none'
+    );
+    floatingToggleRunnerPhase = normalizeFloatingToggleRunnerPhase(
+      payload ? payload.runnerPhase : 'idle'
+    );
+    floatingToggleRunnerLen = normalizeFloatingToggleRunnerLen(
+      payload ? payload.runnerLen : 'soft-short'
+    );
+    floatingToggleRunnerColorTone = normalizeFloatingToggleRunnerColorTone(
+      payload ? payload.runnerColorTone : 'orange'
+    );
+    floatingToggleRunnerVisible = normalizeFloatingToggleRunnerFlag(
+      payload ? payload.runnerVisible : false,
+      false
+    );
+    floatingToggleRunnerFrozen = normalizeFloatingToggleRunnerFlag(
+      payload ? payload.runnerFrozen : false,
+      false
+    );
+    floatingToggleRunnerFading = normalizeFloatingToggleRunnerFlag(
+      payload ? payload.runnerFading : false,
+      false
+    );
+    floatingToggleRunnerSpinDurationMs = normalizeFloatingToggleRunnerSpinDurationMs(
+      payload ? payload.runnerSpinDurationMs : 2000
+    );
     sendFloatingToggleState();
-    return { ok: true, status: floatingToggleStatus };
+    return {
+      ok: true,
+      status: normalizeFloatingToggleStatus(floatingToggleStatus),
+      runnerSource: normalizeFloatingToggleRunnerSource(floatingToggleRunnerSource),
+      runnerPhase: normalizeFloatingToggleRunnerPhase(floatingToggleRunnerPhase),
+      runnerLen: normalizeFloatingToggleRunnerLen(floatingToggleRunnerLen),
+      runnerColorTone: normalizeFloatingToggleRunnerColorTone(floatingToggleRunnerColorTone),
+      runnerVisible: normalizeFloatingToggleRunnerFlag(floatingToggleRunnerVisible, false),
+      runnerFrozen: normalizeFloatingToggleRunnerFlag(floatingToggleRunnerFrozen, false),
+      runnerFading: normalizeFloatingToggleRunnerFlag(floatingToggleRunnerFading, false),
+      runnerSpinDurationMs: normalizeFloatingToggleRunnerSpinDurationMs(
+        floatingToggleRunnerSpinDurationMs
+      ),
+    };
   });
 
   ipcMain.handle('shell:set-floating-toggle-opacity', (_evt, value) => {
@@ -4849,11 +6379,6 @@ app.whenReady().then(() => {
     if (!win) return { ok: false };
     mainAlwaysOnTop = !!value;
     applyMainAlwaysOnTop();
-    if (mainAlwaysOnTop) {
-      scheduleAlwaysOnTopReapply(120);
-    } else {
-      clearAlwaysOnTopReapplyTimer();
-    }
     return { ok: true, alwaysOnTop: mainAlwaysOnTop };
   });
 
@@ -4954,6 +6479,31 @@ app.whenReady().then(() => {
       return { ok: true, items };
     } catch (err) {
       log('chat-image-cache-get-many failed', { message: err.message });
+      return { ok: false, message: err.message, items: [] };
+    }
+  });
+  ipcMain.handle('shell:api-image-store-put', (_evt, payload) => {
+    try {
+      const sourceItems = Array.isArray(payload?.items) ? payload.items : [];
+      const usageMeta =
+        payload?.usageMeta && typeof payload.usageMeta === 'object'
+          ? { ...payload.usageMeta }
+          : {};
+      const contextBase =
+        payload?.context && typeof payload.context === 'object'
+          ? { ...payload.context }
+          : {};
+      const usedCacheIds = new Set();
+      const items = persistApiInputImageList(sourceItems, {
+        usedCacheIds,
+        context: {
+          ...contextBase,
+          usageMeta
+        }
+      });
+      return { ok: true, items };
+    } catch (err) {
+      log('api-image-store-put failed', { message: err.message });
       return { ok: false, message: err.message, items: [] };
     }
   });
@@ -5181,7 +6731,7 @@ app.whenReady().then(() => {
       return { ok: false, message: err.message, files: [] };
     }
   });
-  ipcMain.handle('shell:ps-cache-put', (_evt, payload) => {
+  ipcMain.handle('shell:ps-cache-put', async (_evt, payload) => {
     try {
       prunePsImageCache();
       const ttlMs = sanitizePsCacheTtlMs(payload?.ttlMs);
@@ -5190,34 +6740,101 @@ app.whenReady().then(() => {
         : (payload?.item ? [payload.item] : []);
       const now = Date.now();
       const savedItems = [];
-      sourceItems.forEach((item, index) => {
-        const parsed = parseImageDataUrl(item?.dataUrl);
-        if (!parsed || !parsed.buffer || parsed.buffer.length <= 0) return;
-        const cacheId = makePsCacheId();
-        const ext = getExtByMimeType(item?.type || parsed.mime);
-        const fileName = `${cacheId}.${ext}`;
-        const filePath = path.join(ensurePsImageCacheDir(), fileName);
-        fs.writeFileSync(filePath, parsed.buffer);
-        const cachedAt = now + index;
-        const entry = {
-          cacheId,
-          filePath,
-          fileName,
-          name: String(item?.name || fileName),
-          originName: String(item?.originName || item?.name || fileName),
-          type: String(item?.type || parsed.mime || 'application/octet-stream'),
-          source: String(item?.source || 'ps'),
-          role: String(item?.role || ''),
-          slotIndex: Number.isFinite(item?.slotIndex) ? Number(item.slotIndex) : undefined,
-          clientRef: String(item?.clientRef || `idx-${index}`),
-          meta: item?.meta && typeof item.meta === 'object' ? item.meta : undefined,
-          cachedAt,
-          expiresAt: cachedAt + ttlMs,
-          byteLength: parsed.buffer.length
-        };
-        psImageCacheMap.set(cacheId, entry);
+      for (let index = 0; index < sourceItems.length; index += 1) {
+        const item = sourceItems[index];
+        const compressionOptions =
+          item?.compression && typeof item.compression === 'object'
+            ? item.compression
+            : null;
+        const sourceFilePath = String(item?.filePath || '').trim();
+        const parsed = sourceFilePath ? null : parseImageDataUrl(item?.dataUrl);
+        const sourceMimeType = String(
+          item?.type || parsed?.mime || getMimeTypeByExt(sourceFilePath) || 'application/octet-stream'
+        );
+        const occurredAt = Number.isFinite(Number(item?.capturedAt))
+          ? Number(item.capturedAt)
+          : now;
+        const sequenceIndex = Number.isFinite(Number(item?.sequenceIndex))
+          ? Math.max(1, Math.round(Number(item.sequenceIndex)))
+          : index + 1;
+        let cachedResult = null;
+        if (
+          compressionOptions?.strategy === 'electron-sharp'
+          && (
+            sourceFilePath
+            || (parsed && parsed.buffer && parsed.buffer.length > 0)
+          )
+        ) {
+          const sharpResult = await compressPsCaptureTempFileWithSharp({
+            inputFilePath: sourceFilePath,
+            inputBuffer: parsed?.buffer,
+            inputMimeType: sourceMimeType,
+            outputFormat: compressionOptions.format,
+            maxSide: compressionOptions.maxSide,
+            quality: compressionOptions.quality,
+            source: String(item?.source || 'local'),
+            occurredAt,
+            sequenceIndex,
+          });
+          const normalizedOutputExt = sharpResult.outputFormat === 'png' ? 'png' : 'jpg';
+          const normalizedDisplayName = replaceFileNameExtension(
+            item?.name || item?.originName || sharpResult.outputFileName,
+            normalizedOutputExt,
+          );
+          cachedResult = cacheExistingFileToPsImageCache({
+            filePath: sharpResult.outputFilePath,
+            mimeType: sharpResult.outputMimeType,
+            ttlMs,
+            name: normalizedDisplayName,
+            originName: normalizedDisplayName,
+            source: String(item?.source || 'local'),
+            role: String(item?.role || ''),
+            slotIndex: Number.isFinite(item?.slotIndex) ? Number(item.slotIndex) : undefined,
+            clientRef: String(item?.clientRef || `idx-${index}`),
+            meta: {
+              ...(item?.meta && typeof item.meta === 'object' ? item.meta : {}),
+              compressionStrategy: 'electron-sharp',
+              sharpOutputFormat: sharpResult.outputFormat,
+              sharpOutputQualityPercent: Number(sharpResult.outputQualityPercent) || null,
+              sharpPngCompressionLevel: Number(sharpResult.outputPngCompressionLevel) || null,
+              sharpInputByteLength: Number(sharpResult.inputByteLength) || 0,
+              sharpOutputByteLength: Number(sharpResult.outputByteLength) || 0,
+              sharpInputWidth: Number(sharpResult.inputWidth) || 0,
+              sharpInputHeight: Number(sharpResult.inputHeight) || 0,
+              sharpOutputWidth: Number(sharpResult.outputWidth) || 0,
+              sharpOutputHeight: Number(sharpResult.outputHeight) || 0,
+            },
+            occurredAt,
+            sequenceIndex,
+          });
+        } else {
+          if (!parsed || !parsed.buffer || parsed.buffer.length <= 0) continue;
+          cachedResult = cacheBufferToPsImageCache({
+            buffer: parsed.buffer,
+            mimeType: sourceMimeType,
+            ttlMs,
+            name: String(item?.name || ''),
+            originName: String(item?.originName || item?.name || ''),
+            source: String(item?.source || 'local'),
+            role: String(item?.role || ''),
+            slotIndex: Number.isFinite(item?.slotIndex) ? Number(item.slotIndex) : undefined,
+            clientRef: String(item?.clientRef || `idx-${index}`),
+            meta: item?.meta && typeof item.meta === 'object' ? item.meta : undefined,
+            occurredAt,
+            sequenceIndex,
+          });
+        }
+        const entry = cachedResult?.entry;
+        if (!entry) continue;
         savedItems.push({
+          assetId: entry.assetId,
           cacheId: entry.cacheId,
+          fileName: entry.fileName,
+          filePath: entry.filePath,
+          internalCacheId: entry.internalCacheId,
+          itemId: entry.itemId,
+          sourceRefKey: entry.sourceRefKey,
+          inputMethod: entry.inputMethod,
           name: entry.name,
           originName: entry.originName,
           type: entry.type,
@@ -5227,9 +6844,18 @@ app.whenReady().then(() => {
           clientRef: entry.clientRef,
           cachedAt: entry.cachedAt,
           expiresAt: entry.expiresAt,
-          byteLength: entry.byteLength
+          byteLength: entry.byteLength,
+          usageMeta: entry.usageMeta,
+          legacy: entry.legacy,
+          imageTraceId: entry.imageTraceId,
+          parentImageTraceIds: entry.parentImageTraceIds,
+          imageSourceKind: entry.imageSourceKind,
+          imageSourceMethod: entry.imageSourceMethod,
+          displayFileName: entry.displayFileName,
+          legacyIdConversionTag: entry.legacyIdConversionTag,
+          legacyIdConversionRemoveAfter: entry.legacyIdConversionRemoveAfter
         });
-      });
+      }
       prunePsImageCache();
       return { ok: true, ttlMs, items: savedItems };
     } catch (err) {
@@ -5251,7 +6877,14 @@ app.whenReady().then(() => {
       return {
         ok: true,
         item: {
+          assetId: entry.assetId,
           cacheId: entry.cacheId,
+          fileName: entry.fileName,
+          filePath: entry.filePath,
+          internalCacheId: entry.internalCacheId,
+          itemId: entry.itemId,
+          sourceRefKey: entry.sourceRefKey,
+          inputMethod: entry.inputMethod,
           name: entry.name,
           originName: entry.originName,
           type: entry.type,
@@ -5262,6 +6895,16 @@ app.whenReady().then(() => {
           cachedAt: entry.cachedAt,
           expiresAt: entry.expiresAt,
           byteLength: entry.byteLength,
+          meta: entry.meta,
+          usageMeta: entry.usageMeta,
+          legacy: entry.legacy,
+          imageTraceId: entry.imageTraceId,
+          parentImageTraceIds: entry.parentImageTraceIds,
+          imageSourceKind: entry.imageSourceKind,
+          imageSourceMethod: entry.imageSourceMethod,
+          displayFileName: entry.displayFileName,
+          legacyIdConversionTag: entry.legacyIdConversionTag,
+          legacyIdConversionRemoveAfter: entry.legacyIdConversionRemoveAfter,
           dataUrl: String(psCacheData.dataUrl || '')
         }
       };
@@ -5717,47 +7360,92 @@ app.whenReady().then(() => {
       if (captureByteLength > CAPTURE_PAYLOAD_HARD_LIMIT_BYTES) {
         throw new Error(`capture_payload_too_large:${captureByteLength}`);
       }
-      const shouldInline = captureByteLength > 0 && captureByteLength <= CAPTURE_INLINE_MAX_BYTES;
       let outputDataUrl = '';
       let outputPsCacheId = '';
       let outputPsCacheExpiresAt = undefined;
-      if (shouldInline) {
-        outputDataUrl = `data:${String(capture?.mimeType || 'image/png')};base64,${capture.buffer.toString('base64')}`;
-      } else {
-        const cachedCapture = cacheBufferToPsImageCache({
-          buffer: capture.buffer,
-          mimeType: String(capture?.mimeType || 'image/png'),
+      const captureFilePath = String(capture?.imagePath || '').trim();
+      let outputMimeType = String(capture?.mimeType || 'image/png');
+      let cacheEntryMeta = null;
+      let outputCacheEntry = null;
+      if (captureFilePath) {
+          const compressedCapture = await enqueuePsCaptureCompressionJob({
+            inputFilePath: captureFilePath,
+            outputFormat: requestedCaptureFormat === 'png' ? 'png' : 'jpg',
+            maxSide: Number.isFinite(requestedCaptureMaxSide) && requestedCaptureMaxSide > 0
+              ? Math.round(requestedCaptureMaxSide)
+              : 0,
+            quality: Number.isFinite(requestedCaptureQuality) && requestedCaptureQuality > 0
+              ? Math.max(0.01, Math.min(1, requestedCaptureQuality))
+              : 1,
+            displayFileName: resolved.fileName,
+            name: resolved.fileName,
+            originName: resolved.fileName,
           ttlMs: PS_CACHE_TTL_DEFAULT_MS,
-          name: resolved.fileName,
-          originName: resolved.fileName,
           source: resolved.source,
+          occurredAt: Number(capture?.capturedAt) || Date.now(),
+          sequenceIndex: 1,
           role: capture?.role ? String(capture.role) : '',
           slotIndex: Number.isFinite(capture?.slotIndex) ? Number(capture.slotIndex) : -1,
           clientRef: String(queueId || ''),
           meta: {
-            queueId: queueId,
+            queueId,
             actionType: queued.actionType,
             bridgeProtocolVersion: normalizedBridgeProtocolVersion,
             byteLength: captureByteLength,
-            ...(hasLegacyCaptureRelayTrace
-              ? {
-                  captureCommPath: normalizedLegacyCaptureCommPath || null,
-                  captureImagePath: normalizedLegacyCaptureImagePath || null
-                }
-              : {})
+            captureRelayMode: 'plugin-temp-file',
+            captureCommPath: normalizedLegacyCaptureCommPath || null,
+            captureImagePath: normalizedLegacyCaptureImagePath || null,
+            tempFileKind: String(capture?.captureMeta?.tempFileKind || ''),
+            tempFileCleanupPolicy: String(capture?.captureMeta?.tempFileCleanupPolicy || ''),
+            tempFileName: String(capture?.captureMeta?.tempFileName || ''),
           }
         });
-        outputPsCacheId = String(cachedCapture?.entry?.cacheId || '');
-        outputPsCacheExpiresAt = Number(cachedCapture?.entry?.expiresAt) || undefined;
+        outputPsCacheId = String(compressedCapture?.entry?.cacheId || '');
+        outputPsCacheExpiresAt = Number(compressedCapture?.entry?.expiresAt) || undefined;
+        outputMimeType = String(compressedCapture?.entry?.type || outputMimeType);
+        cacheEntryMeta = compressedCapture?.entry?.meta || null;
+        outputCacheEntry = compressedCapture?.entry || null;
+      } else {
+        throw new Error('capture_temp_file_required');
       }
+      const effectiveOutputFormat = outputMimeType.includes('png') ? 'png' : 'jpg';
+      const effectiveCaptureMeta = {
+        ...(capture?.captureMeta && typeof capture.captureMeta === 'object'
+          ? { ...capture.captureMeta }
+          : {}),
+        outputFormatActual: effectiveOutputFormat,
+        outputChannelCount: effectiveOutputFormat === 'png' ? 4 : 3,
+        outputPixelDepth: effectiveOutputFormat === 'png' ? 32 : 24,
+        alphaPreserved: effectiveOutputFormat === 'png',
+        encodeStrategy: 'electron.sharp',
+        fallbackReason: '',
+        primaryEncodeError: '',
+      };
       return {
         ok: true,
         canceled: false,
         files: [
           {
-            name: resolved.fileName,
-            originName: resolved.fileName,
-            type: String(capture?.mimeType || 'image/png'),
+            assetId: String(outputCacheEntry?.assetId || '').trim(),
+            fileName: String(outputCacheEntry?.fileName || ''),
+            filePath: String(outputCacheEntry?.filePath || ''),
+            cacheFileName: String(outputCacheEntry?.fileName || ''),
+            cacheFilePath: String(outputCacheEntry?.filePath || ''),
+            internalCacheId: String(outputCacheEntry?.internalCacheId || outputCacheEntry?.fileName || '').trim(),
+            itemId: String(outputCacheEntry?.itemId || outputCacheEntry?.internalCacheId || outputCacheEntry?.fileName || '').trim(),
+            sourceRefKey: String(outputCacheEntry?.sourceRefKey || '').trim(),
+            inputMethod: String(outputCacheEntry?.inputMethod || resolved.source || '').trim(),
+            usageMeta:
+              outputCacheEntry?.usageMeta && typeof outputCacheEntry.usageMeta === 'object'
+                ? { ...outputCacheEntry.usageMeta }
+                : undefined,
+            legacy:
+              outputCacheEntry?.legacy && typeof outputCacheEntry.legacy === 'object'
+                ? { ...outputCacheEntry.legacy }
+                : undefined,
+            name: String(outputCacheEntry?.name || resolved.fileName),
+            originName: String(outputCacheEntry?.originName || outputCacheEntry?.name || resolved.fileName),
+            type: outputMimeType,
             dataUrl: outputDataUrl,
             psCacheId: outputPsCacheId,
             psCacheExpiresAt: outputPsCacheExpiresAt,
@@ -5778,10 +7466,7 @@ app.whenReady().then(() => {
             bitsPerChannel: Number.isFinite(Number(capture?.bitsPerChannel))
               ? Number(capture.bitsPerChannel)
               : undefined,
-            captureMeta:
-              capture?.captureMeta && typeof capture.captureMeta === 'object'
-                ? { ...capture.captureMeta }
-                : undefined,
+            captureMeta: effectiveCaptureMeta,
             meta: {
               queueId,
               actionType: queued.actionType,
@@ -5792,12 +7477,11 @@ app.whenReady().then(() => {
               bitsPerChannel: Number.isFinite(Number(capture?.bitsPerChannel))
                 ? Number(capture.bitsPerChannel)
                 : null,
-              captureMeta:
-                capture?.captureMeta && typeof capture.captureMeta === 'object'
-                  ? { ...capture.captureMeta }
-                  : null,
+              compressedType: outputMimeType,
+              cacheEntryMeta,
+              captureMeta: effectiveCaptureMeta,
               captureByteLength: captureByteLength,
-              payloadMode: shouldInline ? 'inline' : 'ps-cache',
+              payloadMode: outputPsCacheId ? 'ps-cache' : 'inline',
               ...(hasLegacyCaptureRelayTrace
                 ? {
                     captureCommPath: normalizedLegacyCaptureCommPath || null,
@@ -5834,13 +7518,23 @@ app.whenReady().then(() => {
       }
       if (!serverProc) startServer({ port: bridgePort });
       await ensureBridgeRuntimeContract('import-image');
+      const returnIndexRaw = Number(payload?.returnIndex);
+      const returnIndex =
+        Number.isFinite(returnIndexRaw) && returnIndexRaw >= 0
+          ? Math.floor(returnIndexRaw)
+          : undefined;
       const queued = await enqueueBridgeCommand('import-image', {
         dataUrl,
+        autoGroup: payload?.autoGroup === true,
+        autoMask: payload?.autoMask === true,
         targetRect: normalizeTargetRect(payload?.targetRect),
         targetRectNorm: normalizeTargetRectNorm(payload?.targetRectNorm),
         targetCanvas: normalizeTargetCanvas(payload?.targetCanvas),
         targetDocumentId: normalizeTargetDocumentId(payload?.targetDocumentId),
         targetDocumentName: String(payload?.targetDocumentName || '').trim(),
+        returnFileName: String(payload?.returnFileName || '').trim(),
+        returnIndex,
+        returnTargetSignature: String(payload?.returnTargetSignature || '').trim(),
         layerType: normalizeImportLayerType(payload?.layerType),
         source: 'webui'
       });
@@ -5969,6 +7663,10 @@ app.whenReady().then(() => {
     return { ok: true, corrected, bounds: win.getBounds() };
   });
 
+  ipcMain.handle(SHELL_CHANNELS.appendPerfLog, (_evt, payload) => {
+    return appendPerfLog(payload);
+  });
+
 app.on('activate', () => {
     if (!win || win.isDestroyed()) {
       createWindow();
@@ -5980,6 +7678,7 @@ app.on('activate', () => {
     ensureMainWindowOnVisibleDisplay('activate');
     win.focus();
     applyMainAlwaysOnTop();
+    syncFloatingToggleOnMainWindowActive();
     sendFloatingToggleState();
   });
 });
@@ -5997,6 +7696,7 @@ app.on('second-instance', () => {
   ensureMainWindowOnVisibleDisplay('second-instance');
   win.focus();
   applyMainAlwaysOnTop();
+  syncFloatingToggleOnMainWindowActive();
   normalBounds = win.getBounds();
   if (floatingToggleEnabled) {
     setFloatingToggleEnabledState(true);
@@ -6046,11 +7746,8 @@ app.on('will-quit', () => {
     clearTimeout(blurMinimizeTimer);
     blurMinimizeTimer = null;
   }
-  if (alwaysOnTopReapplyTimer) {
-    clearTimeout(alwaysOnTopReapplyTimer);
-    alwaysOnTopReapplyTimer = null;
-  }
   clearPsImageCache();
+  clearPluginIntermediateCaptureFiles();
   stopServer();
   if (floatWin && !floatWin.isDestroyed()) {
     floatWin.close();

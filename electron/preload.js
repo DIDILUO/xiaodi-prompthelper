@@ -31,6 +31,7 @@ try {
     memorySample: 'shell:memory-sample',
     chatImageCacheGet: 'shell:chat-image-cache-get',
     chatImageCacheGetMany: 'shell:chat-image-cache-get-many',
+    apiImageStorePut: 'shell:api-image-store-put',
     serverStart: 'shell:server-start',
     serverStop: 'shell:server-stop',
     bridgePortGet: 'shell:bridge-port-get',
@@ -62,13 +63,15 @@ try {
     adjustWindowSize: 'shell:adjust-window-size',
     setWindowMinSize: 'shell:set-min-size',
     getWindowBounds: 'shell:get-window-bounds',
-    recenterMainWindow: 'shell:recenter-main-window'
+    recenterMainWindow: 'shell:recenter-main-window',
+    appendPerfLog: 'shell:append-perf-log'
   };
   SHELL_EVENT_CHANNELS = {
     resizing: 'shell:resizing',
     floatingToggleState: 'shell:floating-toggle-state',
     floatingQuickAction: 'shell:floating-quick-action',
-    globalUploadShortcutAction: 'shell:global-upload-shortcut-action'
+    globalUploadShortcutAction: 'shell:global-upload-shortcut-action',
+    cacheCleanupResult: 'shell:cache-cleanup-result'
   };
 }
 
@@ -94,6 +97,7 @@ contextBridge.exposeInMainWorld('shell', {
   memorySample: () => invokeShell('memorySample'),
   chatImageCacheGet: (cacheId) => invokeShell('chatImageCacheGet', cacheId),
   chatImageCacheGetMany: (payload) => invokeShell('chatImageCacheGetMany', payload),
+  apiImageStorePut: (payload) => invokeShell('apiImageStorePut', payload),
   serverStart: (payload) => invokeShell('serverStart', payload),
   serverStop: () => invokeShell('serverStop'),
   bridgePortGet: () => invokeShell('bridgePortGet'),
@@ -127,6 +131,7 @@ contextBridge.exposeInMainWorld('shell', {
   setWindowMinSize: (width, height) => invokeShell('setWindowMinSize', width, height),
   getWindowBounds: () => invokeShell('getWindowBounds'),
   recenterMainWindow: () => invokeShell('recenterMainWindow'),
+  appendPerfLog: (payload) => invokeShell('appendPerfLog', payload),
   onResizing: (handler) => {
     const wrapped = (_evt, payload) => handler(payload);
     ipcRenderer.on(SHELL_EVENT_CHANNELS.resizing, wrapped);
@@ -153,6 +158,13 @@ contextBridge.exposeInMainWorld('shell', {
     ipcRenderer.on(SHELL_EVENT_CHANNELS.globalUploadShortcutAction, wrapped);
     return () => {
       ipcRenderer.off(SHELL_EVENT_CHANNELS.globalUploadShortcutAction, wrapped);
+    };
+  },
+  onCacheCleanupResult: (handler) => {
+    const wrapped = (_evt, payload) => handler(payload);
+    ipcRenderer.on(SHELL_EVENT_CHANNELS.cacheCleanupResult, wrapped);
+    return () => {
+      ipcRenderer.off(SHELL_EVENT_CHANNELS.cacheCleanupResult, wrapped);
     };
   }
 });

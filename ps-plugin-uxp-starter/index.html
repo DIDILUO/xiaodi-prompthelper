@@ -3,33 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>小迪助词器 Ps 插件</title>
+    <title>&#23567;&#36842;&#21161;&#35789;&#22120; PS &#25554;&#20214;</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
       <header class="header">
         <div class="brand">
-          <img class="brand-logo" src="./assets/brand-logo.svg" alt="小迪助词器 Logo" />
-          <div class="title">小迪助词器 Ps 插件</div>
+          <img
+            class="brand-logo"
+            src="./assets/brand-logo.svg"
+            alt="&#23567;&#36842;&#21161;&#35789;&#22120; Logo"
+          />
+          <div class="brand-text">
+            <div class="brand-title-row">
+              <div class="title">&#23567;&#36842;&#21161;&#35789;&#22120; PS &#25554;&#20214;</div>
+              <div id="pluginBuildMeta" class="title-build-meta"></div>
+            </div>
+          </div>
         </div>
       </header>
 
       <section class="panel-card">
-        <div class="section-title">插件端口</div>
+        <div class="section-title">&#25554;&#20214;&#31471;&#21475;</div>
         <div class="inline-row">
           <input id="bridgePort" type="number" value="17325" />
-          <button id="applyPortBtn" type="button">保存</button>
+          <button id="applyPortBtn" type="button">&#20445;&#23384;</button>
         </div>
-        <div class="hint">用于连接软件端 bridge（默认 17325）。</div>
+        <div class="hint">
+          &#29992;&#20110;&#36830;&#25509;&#36719;&#20214;&#31471; bridge&#65292;&#40664;&#35748;&#31471;&#21475;&#20026; 17325&#12290;
+        </div>
       </section>
 
       <div class="divider" aria-hidden="true"></div>
 
       <section class="panel-card logs-card">
         <div class="status-line">
-          <div class="section-title">插件日志</div>
-          <button id="clearLogsBtn" type="button" class="btn-quiet">清空</button>
+          <div class="section-title">&#25554;&#20214;&#26085;&#24535;</div>
+          <div class="log-toolbar-actions">
+            <button id="copyLogsBtn" type="button" class="btn-quiet btn-quiet-compact">&#22797;&#21046;</button>
+            <button id="exportLogsBtn" type="button" class="btn-quiet btn-quiet-compact">&#23548;&#20986;</button>
+          </div>
         </div>
         <div id="logSinkHint" class="hint"></div>
         <pre id="pluginLogPanel" class="plugin-log-panel"></pre>

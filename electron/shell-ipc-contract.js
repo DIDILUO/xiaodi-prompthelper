@@ -28,8 +28,10 @@ const SHELL_IPC_CONTRACTS = Object.freeze({
   },
   updateFloatingToggleStatus: {
     channel: "shell:update-floating-toggle-status",
-    requestSchema: "string",
-    responseSchema: "ShellResponse<{ status?: string }>",
+    requestSchema:
+      "string | { status: string; runnerSource?: string; runnerPhase?: string; runnerLen?: string; runnerColorTone?: string; runnerVisible?: boolean; runnerFrozen?: boolean; runnerFading?: boolean; runnerSpinDurationMs?: number }",
+    responseSchema:
+      "ShellResponse<{ status?: string; runnerSource?: string; runnerPhase?: string; runnerLen?: string; runnerColorTone?: string; runnerVisible?: boolean; runnerFrozen?: boolean; runnerFading?: boolean; runnerSpinDurationMs?: number }>",
   },
   setFloatingToggleOpacity: {
     channel: "shell:set-floating-toggle-opacity",
@@ -94,6 +96,11 @@ const SHELL_IPC_CONTRACTS = Object.freeze({
   chatImageCacheGetMany: {
     channel: "shell:chat-image-cache-get-many",
     requestSchema: "{ cacheIds: string[] }",
+    responseSchema: "ShellResponse<{ items: object[] }>",
+  },
+  apiImageStorePut: {
+    channel: "shell:api-image-store-put",
+    requestSchema: "object",
     responseSchema: "ShellResponse<{ items: object[] }>",
   },
   serverStart: {
@@ -256,6 +263,11 @@ const SHELL_IPC_CONTRACTS = Object.freeze({
     requestSchema: "void",
     responseSchema: "ShellResponse<object>",
   },
+  appendPerfLog: {
+    channel: "shell:append-perf-log",
+    requestSchema: "string|object",
+    responseSchema: "ShellResponse<{ path?: string }>",
+  },
 });
 
 const SHELL_CHANNELS = Object.freeze(
@@ -270,6 +282,7 @@ const SHELL_EVENT_CHANNELS = Object.freeze({
   floatingToggleState: "shell:floating-toggle-state",
   floatingQuickAction: "shell:floating-quick-action",
   globalUploadShortcutAction: "shell:global-upload-shortcut-action",
+  cacheCleanupResult: "shell:cache-cleanup-result",
 });
 
 function normalizeShellPayloadObject(value) {

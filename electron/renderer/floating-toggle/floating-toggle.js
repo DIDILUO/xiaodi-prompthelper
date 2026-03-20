@@ -7,18 +7,28 @@
 (function initFloatingToggle() {
   const root = document.getElementById("root");
   const toggleButton = document.getElementById("toggle");
+  const toggleRunner = toggleButton?.querySelector(".toggle-runner") || null;
   const quickDivider = document.getElementById("quick-divider");
   const quickGroup = document.getElementById("quick-group");
+  const toggleSourceBadge = document.getElementById("toggle-source-badge");
+  const toggleSourceBadgeIcon = document.getElementById("toggle-source-badge-icon");
   const quickButtons = Array.from(document.querySelectorAll(".quick-btn"));
 
   if (!root || !toggleButton || !quickGroup || !quickDivider) return;
 
   const floatingStatusMetaByKey = {
-    warn: { color: "#f0b75b", zhName: "警告", enName: "Warn" },
-    ok: { color: "#32cc65", zhName: "可用", enName: "OK" },
-    connected: { color: "#3d77ff", zhName: "已连接", enName: "Connected" },
-    busy: { color: "#3d77ff", zhName: "处理中", enName: "Busy" },
-    error: { color: "#ff3d3d", zhName: "错误", enName: "Error" }
+    idle: { color: "#5e6674", tone: "idle", zhName: "待命", enName: "Idle" },
+    connected: { color: "#5e6674", tone: "idle", zhName: "已连接", enName: "Connected" },
+    busy: { color: "#3d77ff", tone: "running", zhName: "处理中", enName: "Busy" },
+    "task-running": { color: "#3d77ff", tone: "running", zhName: "任务进行中", enName: "Task Running" },
+    "chat-running": { color: "#3d77ff", tone: "running", zhName: "聊天进行中", enName: "Chat Running" },
+    ok: { color: "#32cc65", tone: "success", zhName: "可用", enName: "OK" },
+    "task-success": { color: "#32cc65", tone: "success", zhName: "任务成功", enName: "Task Success" },
+    "chat-success": { color: "#32cc65", tone: "success", zhName: "聊天成功", enName: "Chat Success" },
+    warn: { color: "#ff3d3d", tone: "failed", zhName: "警告", enName: "Warn" },
+    error: { color: "#ff3d3d", tone: "failed", zhName: "错误", enName: "Error" },
+    "task-failed": { color: "#ff3d3d", tone: "failed", zhName: "任务失败", enName: "Task Failed" },
+    "chat-failed": { color: "#ff3d3d", tone: "failed", zhName: "聊天失败", enName: "Chat Failed" }
   };
   const floatingQuickActionMetaByKey = {
     history: {
@@ -53,12 +63,26 @@
       iconPath: "./icons/global-restart.svg"
     }
   };
+  const floatingSourceIconByKey = {
+    run: "./icons/source-run.svg",
+    chat: "./icons/source-chat.svg",
+    mixed: "./icons/history.svg",
+    none: ""
+  };
 
   const state = {
     visible: true,
-    status: "connected",
+    status: "idle",
     opacity: 1,
-    quickButtonsVisible: true
+    quickButtonsVisible: true,
+    runnerSource: "none",
+    runnerPhase: "idle",
+    runnerLen: "soft-short",
+    runnerColorTone: "orange",
+    runnerVisible: false,
+    runnerFrozen: false,
+    runnerFading: false,
+    runnerSpinDurationMs: 2000
   };
   let enabledQuickActionSet = new Set(
     quickButtons
@@ -84,6 +108,51 @@
   };
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const normalizeRunnerSource = (rawSource) => {
+    const normalizedSource = String(rawSource || "").trim().toLowerCase();
+    return normalizedSource === "run"
+      || normalizedSource === "chat"
+      || normalizedSource === "mixed"
+      || normalizedSource === "none"
+      ? normalizedSource
+      : "none";
+  };
+  const normalizeRunnerPhase = (rawPhase) => {
+    const normalizedPhase = String(rawPhase || "").trim().toLowerCase();
+    return normalizedPhase === "running"
+      || normalizedPhase === "filling"
+      || normalizedPhase === "frozen"
+      || normalizedPhase === "shrinking"
+      || normalizedPhase === "fading"
+      || normalizedPhase === "idle"
+      ? normalizedPhase
+      : "idle";
+  };
+  const normalizeRunnerLen = (rawLen) => {
+    const normalizedLen = String(rawLen || "").trim().toLowerCase();
+    return normalizedLen === "full"
+      || normalizedLen === "sharp-short"
+      || normalizedLen === "sharp-medium"
+      || normalizedLen === "sharp-long"
+      || normalizedLen === "soft-short"
+      || normalizedLen === "soft-medium"
+      || normalizedLen === "soft-long"
+      ? normalizedLen
+      : "soft-short";
+  };
+  const normalizeRunnerColorTone = (rawTone) => {
+    const normalizedTone = String(rawTone || "").trim().toLowerCase();
+    return normalizedTone === "success" || normalizedTone === "error"
+      ? normalizedTone
+      : "orange";
+  };
+  const resolveRunnerSpinDurationMs = (rawDurationMs) => {
+    const normalizedDurationMs = Number(rawDurationMs);
+    if (!Number.isFinite(normalizedDurationMs) || normalizedDurationMs <= 0) {
+      return 2000;
+    }
+    return Math.max(600, Math.min(6000, Math.round(normalizedDurationMs)));
+  };
   const getVisibleQuickButtonCount = () =>
     quickButtons.reduce(
       (count, button) => (button && button.hidden ? count : count + 1),
@@ -153,13 +222,71 @@
       statusKeyRaw
     )
       ? statusKeyRaw
-      : "warn";
-    const statusMeta = floatingStatusMetaByKey[statusKey] || floatingStatusMetaByKey.warn;
+      : "idle";
+    const statusMeta = floatingStatusMetaByKey[statusKey] || floatingStatusMetaByKey.idle;
     const color = statusMeta.color;
+    const resolvedRunnerSource = normalizeRunnerSource(state.runnerSource);
+    const resolvedRunnerPhase = normalizeRunnerPhase(state.runnerPhase);
+    let resolvedRunnerLen = normalizeRunnerLen(state.runnerLen);
+    let resolvedRunnerColorTone = normalizeRunnerColorTone(state.runnerColorTone);
+    let resolvedRunnerVisible = !!state.runnerVisible;
+    let resolvedRunnerFrozen = !!state.runnerFrozen;
+    let resolvedRunnerFading = !!state.runnerFading;
+    const resolvedRunnerSpinDurationMs = resolveRunnerSpinDurationMs(
+      state.runnerSpinDurationMs,
+    );
     toggleButton.style.color = "#ffffff";
     toggleButton.style.setProperty("--toggle-status-color", color);
-    toggleButton.classList.remove("status-warn", "status-ok", "status-connected", "status-busy", "status-error");
+    Array.from(toggleButton.classList).forEach((className) => {
+      if (
+        className.startsWith("status-")
+        || className.startsWith("tone-")
+        || className.startsWith("source-")
+        || className === "show-source-badge"
+      ) {
+        toggleButton.classList.remove(className);
+      }
+    });
+    toggleRunner && Array.from(toggleRunner.classList).forEach((className) => {
+      if (
+        className.startsWith("len-")
+        || className.startsWith("color-")
+        || className === "is-visible"
+        || className === "is-frozen"
+        || className === "is-fading"
+      ) {
+        toggleRunner.classList.remove(className);
+      }
+    });
     toggleButton.classList.add(`status-${statusKey}`);
+    toggleButton.classList.add(`source-${resolvedRunnerSource}`);
+    if (toggleRunner) {
+      toggleRunner.style.setProperty(
+        "--toggle-runner-spin-duration",
+        `${resolvedRunnerSpinDurationMs}ms`,
+      );
+      toggleRunner.style.setProperty("--toggle-runner-fill-duration", "850ms");
+      toggleRunner.style.setProperty("--toggle-runner-fade-duration", "1500ms");
+      toggleRunner.classList.add(`len-${resolvedRunnerLen}`);
+      toggleRunner.classList.add(`color-${resolvedRunnerColorTone}`);
+      resolvedRunnerVisible && toggleRunner.classList.add("is-visible");
+      resolvedRunnerFrozen && toggleRunner.classList.add("is-frozen");
+      resolvedRunnerFading && toggleRunner.classList.add("is-fading");
+    }
+    if (
+      toggleSourceBadge &&
+      toggleSourceBadgeIcon &&
+      resolvedRunnerSource !== "none" &&
+      resolvedRunnerVisible &&
+      resolvedRunnerPhase !== "idle"
+    ) {
+      const badgeIconPath =
+        floatingSourceIconByKey[resolvedRunnerSource] || floatingSourceIconByKey.none;
+      if (badgeIconPath) {
+        toggleSourceBadgeIcon.setAttribute("src", badgeIconPath);
+        toggleButton.classList.add("show-source-badge");
+      }
+    }
     toggleButton.classList.toggle("is-collapsed", !state.visible);
     const opacity = clamp(Number(state.opacity) || cfg.opacityDefault, cfg.opacityMin, cfg.opacityMax);
     root.style.opacity = String(opacity);
@@ -179,6 +306,32 @@
     if (!payload || typeof payload !== "object") return;
     if (typeof payload.visible === "boolean") state.visible = !!payload.visible;
     if (typeof payload.status === "string") state.status = String(payload.status);
+    if (typeof payload.runnerSource === "string") {
+      state.runnerSource = normalizeRunnerSource(payload.runnerSource);
+    }
+    if (typeof payload.runnerPhase === "string") {
+      state.runnerPhase = normalizeRunnerPhase(payload.runnerPhase);
+    }
+    if (typeof payload.runnerLen === "string") {
+      state.runnerLen = normalizeRunnerLen(payload.runnerLen);
+    }
+    if (typeof payload.runnerColorTone === "string") {
+      state.runnerColorTone = normalizeRunnerColorTone(payload.runnerColorTone);
+    }
+    if (typeof payload.runnerVisible === "boolean") {
+      state.runnerVisible = !!payload.runnerVisible;
+    }
+    if (typeof payload.runnerFrozen === "boolean") {
+      state.runnerFrozen = !!payload.runnerFrozen;
+    }
+    if (typeof payload.runnerFading === "boolean") {
+      state.runnerFading = !!payload.runnerFading;
+    }
+    if (payload.runnerSpinDurationMs != null) {
+      state.runnerSpinDurationMs = resolveRunnerSpinDurationMs(
+        payload.runnerSpinDurationMs,
+      );
+    }
     if (typeof payload.opacity === "number") {
       state.opacity = clamp(Number(payload.opacity) || cfg.opacityDefault, cfg.opacityMin, cfg.opacityMax);
     }

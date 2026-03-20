@@ -165,6 +165,9 @@ async function main() {
     "preload.js",
     "shell-ipc-contract.js",
     "package.json",
+    path.join("node_modules", "sharp"),
+    path.join("node_modules", "@img"),
+    path.join("node_modules", "detect-libc"),
     "renderer",
     "server",
     "webui"

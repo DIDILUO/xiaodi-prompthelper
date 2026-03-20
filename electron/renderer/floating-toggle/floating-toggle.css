@@ -19,6 +19,8 @@
   --collapse-easing: linear;
   --color-bg-app: #1f1f1f;
   --color-bg-card: #292929;
+  --color-bg-layer: #2e2e2e;
+  --color-bg-border: #404040;
   --color-bg-field: #353535;
   --color-bg-field-hover: #3f3f3f;
   --surface-overlay-28: rgba(255, 255, 255, 0.28);
@@ -76,13 +78,13 @@ body {
 }
 
 #toggle {
-  --toggle-status-color: #f0b75b;
+  --toggle-status-color: #5e6674;
   width: calc(100% - (var(--outer-gap) * 2));
   height: var(--toggle-height);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-bg-border);
   border-radius: 10px;
   margin: var(--outer-gap);
-  background: var(--color-bg-card);
+  background: #111319;
   box-shadow: none;
   color: #ffffff;
   display: inline-flex;
@@ -96,19 +98,206 @@ body {
     opacity var(--collapse-duration) var(--collapse-easing),
     background-color var(--collapse-duration) var(--collapse-easing),
     border-color var(--collapse-duration) var(--collapse-easing),
-    box-shadow var(--collapse-duration) var(--collapse-easing);
+    box-shadow var(--collapse-duration) var(--collapse-easing),
+    transform var(--collapse-duration) var(--collapse-easing);
   -webkit-app-region: no-drag;
   position: relative;
   z-index: 3;
+  overflow: hidden;
+}
+
+.toggle-runner {
+  --toggle-runner-spin-duration: 2000ms;
+  --toggle-runner-fill-duration: 850ms;
+  --toggle-runner-fade-duration: 1500ms;
+  --toggle-comet-fade-pos: 55%;
+  --toggle-comet-tail-pos: 70%;
+  --toggle-comet-mid-pos: 85%;
+  --toggle-comet-c-tail: #9a3412;
+  --toggle-comet-c-mid: #ea580c;
+  --toggle-comet-c-head: #fb923c;
+  --toggle-runner-inner-bg: #111319;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+@property --toggle-comet-fade-pos {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 55%;
+}
+@property --toggle-comet-tail-pos {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 70%;
+}
+@property --toggle-comet-mid-pos {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 85%;
+}
+@property --toggle-comet-c-tail {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #9a3412;
+}
+@property --toggle-comet-c-mid {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ea580c;
+}
+@property --toggle-comet-c-head {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #fb923c;
+}
+
+.toggle-runner::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 300%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    transparent var(--toggle-comet-fade-pos),
+    var(--toggle-comet-c-tail) var(--toggle-comet-tail-pos),
+    var(--toggle-comet-c-mid) var(--toggle-comet-mid-pos),
+    var(--toggle-comet-c-head) 100%
+  );
+  opacity: 0;
+  z-index: 0;
+  transition:
+    opacity .3s ease,
+    --toggle-comet-fade-pos var(--toggle-runner-fill-duration) cubic-bezier(.4, 0, .2, 1),
+    --toggle-comet-tail-pos var(--toggle-runner-fill-duration) cubic-bezier(.4, 0, .2, 1),
+    --toggle-comet-mid-pos var(--toggle-runner-fill-duration) cubic-bezier(.4, 0, .2, 1),
+    --toggle-comet-c-tail .4s ease,
+    --toggle-comet-c-mid .4s ease,
+    --toggle-comet-c-head .4s ease;
+  animation: floatingToggleCometSpin var(--toggle-runner-spin-duration, 2000ms) linear infinite;
+}
+.toggle-runner::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: inherit;
+  background: var(--toggle-runner-inner-bg);
+  z-index: 1;
+}
+#toggle:hover .toggle-runner {
+  --toggle-runner-inner-bg: var(--color-bg-border);
+}
+#toggle:active .toggle-runner {
+  --toggle-runner-inner-bg: var(--color-bg-layer);
+}
+.toggle-runner.is-visible::before {
+  opacity: 1;
+}
+.toggle-runner.is-frozen::before {
+  animation-play-state: paused !important;
+}
+.toggle-runner.is-fading::before {
+  opacity: 0 !important;
+  transition: opacity var(--toggle-runner-fade-duration, 1500ms) ease !important;
+}
+.toggle-runner.len-full {
+  --toggle-comet-fade-pos: 0%;
+  --toggle-comet-tail-pos: 0%;
+  --toggle-comet-mid-pos: 50%;
+}
+.toggle-runner.len-sharp-short {
+  --toggle-comet-fade-pos: 55%;
+  --toggle-comet-tail-pos: 55%;
+  --toggle-comet-mid-pos: 75%;
+}
+.toggle-runner.len-sharp-medium {
+  --toggle-comet-fade-pos: 30%;
+  --toggle-comet-tail-pos: 30%;
+  --toggle-comet-mid-pos: 65%;
+}
+.toggle-runner.len-sharp-long {
+  --toggle-comet-fade-pos: 5%;
+  --toggle-comet-tail-pos: 5%;
+  --toggle-comet-mid-pos: 50%;
+}
+.toggle-runner.len-soft-short {
+  --toggle-comet-fade-pos: 55%;
+  --toggle-comet-tail-pos: 70%;
+  --toggle-comet-mid-pos: 85%;
+}
+.toggle-runner.len-soft-medium {
+  --toggle-comet-fade-pos: 30%;
+  --toggle-comet-tail-pos: 50%;
+  --toggle-comet-mid-pos: 75%;
+}
+.toggle-runner.len-soft-long {
+  --toggle-comet-fade-pos: 5%;
+  --toggle-comet-tail-pos: 30%;
+  --toggle-comet-mid-pos: 65%;
+}
+.toggle-runner.color-orange {
+  --toggle-comet-c-head: #fb923c;
+  --toggle-comet-c-mid: #ea580c;
+  --toggle-comet-c-tail: #9a3412;
+}
+.toggle-runner.color-success {
+  --toggle-comet-c-head: #22c55e;
+  --toggle-comet-c-mid: #22c55e;
+  --toggle-comet-c-tail: #22c55e;
+}
+.toggle-runner.color-error {
+  --toggle-comet-c-head: #ef4444;
+  --toggle-comet-c-mid: #ef4444;
+  --toggle-comet-c-tail: #ef4444;
+}
+
+#toggle-source-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: #0f1118;
+  border: 1px solid #ffffff3a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(.86);
+  transition:
+    opacity var(--collapse-duration) var(--collapse-easing),
+    transform var(--collapse-duration) var(--collapse-easing);
+  z-index: 2;
+}
+
+#toggle.show-source-badge #toggle-source-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+#toggle-source-badge-icon {
+  width: 7px;
+  height: 7px;
+  display: block;
 }
 
 #toggle:hover {
   filter: none;
-  background: var(--color-bg-field);
+  background: var(--color-bg-border);
 }
 
 #toggle:active {
-  background: var(--color-bg-field-hover);
+  background: var(--color-bg-layer);
 }
 
 .icon {
@@ -116,6 +305,8 @@ body {
   height: 20px;
   display: block;
   flex: 0 0 20px;
+  position: relative;
+  z-index: 2;
 }
 
 .icon-image {
@@ -149,26 +340,6 @@ body {
     fill var(--collapse-duration) var(--collapse-easing);
 }
 
-#toggle.status-ok {
-  --toggle-status-color: #32cc65;
-}
-
-#toggle.status-connected {
-  --toggle-status-color: #3d77ff;
-}
-
-#toggle.status-busy {
-  --toggle-status-color: #3d77ff;
-}
-
-#toggle.status-error {
-  --toggle-status-color: #ff3d3d;
-}
-
-#toggle.status-warn {
-  --toggle-status-color: #f0b75b;
-}
-
 #toggle.is-collapsed {
   border-color: transparent;
   box-shadow: inset 0 0 0 2px var(--toggle-status-color);
@@ -191,21 +362,12 @@ body {
   transform: rotate(-8deg);
 }
 
-#toggle.is-collapsed.status-busy .icon-terminal-mark,
-#toggle.is-collapsed.status-busy .icon-terminal-line {
-  animation: toggleBusyPulse 1.05s ease-in-out infinite;
-}
-
-@keyframes toggleBusyPulse {
-  0%,
-  100% {
-    transform: translateX(0);
-    opacity: 1;
+@keyframes floatingToggleCometSpin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
   }
-
-  50% {
-    transform: translateX(1.2px);
-    opacity: 0.8;
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "id": "com.xiaodi.prompthelper.psbridge",
-  "name": "小迪助手 - PS 桥接插件",
+  "name": "小迪助词器 - PS 桥接插件",
   "version": "0.1.1",
   "main": "index.html",
   "manifestVersion": 5,
@@ -12,6 +12,7 @@
     }
   },
   "requiredPermissions": {
+    "clipboard": "readAndWrite",
     "network": {
       "domains": [
         "http://127.0.0.1:17325",
@@ -48,28 +49,15 @@
           "width": 23,
           "height": 23,
           "path": "icons/xiaodi_D.png",
-          "scale": [
-            1,
-            2
-          ],
-          "theme": [
-            "darkest",
-            "dark",
-            "medium"
-          ]
+          "scale": [1, 2],
+          "theme": ["darkest", "dark", "medium"]
         },
         {
           "width": 23,
           "height": 23,
           "path": "icons/xiaodi_L.png",
-          "scale": [
-            1,
-            2
-          ],
-          "theme": [
-            "lightest",
-            "light"
-          ]
+          "scale": [1, 2],
+          "theme": ["lightest", "light"]
         }
       ]
     }
@@ -79,34 +67,17 @@
       "width": 23,
       "height": 23,
       "path": "icons/xiaodi_D.png",
-      "scale": [
-        1,
-        2
-      ],
-      "theme": [
-        "darkest",
-        "dark",
-        "medium"
-      ],
-      "species": [
-        "pluginList"
-      ]
+      "scale": [1, 2],
+      "theme": ["darkest", "dark", "medium"],
+      "species": ["pluginList"]
     },
     {
       "width": 48,
       "height": 48,
       "path": "icons/xiaodi_L.png",
-      "scale": [
-        1,
-        2
-      ],
-      "theme": [
-        "lightest",
-        "light"
-      ],
-      "species": [
-        "pluginList"
-      ]
+      "scale": [1, 2],
+      "theme": ["lightest", "light"],
+      "species": ["pluginList"]
     }
   ]
 }

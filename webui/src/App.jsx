@@ -1,13 +1,14 @@
 ﻿/*
- * @phb-version-tag: recovered-ce8k-r116
- * @phb-version: 0.0.1-recovered-r116
- * @phb-version-note: CE8K reverse-recovered baseline; applied explicit scrollbar-persistent class to chat and overlay scroll targets for always-on occupying scrollbar behavior.
- * @phb-updated-at: 2026-03-04
+ * @phb-version-tag: recovered-ce8k-r197
+ * @phb-version: 0.0.1-recovered-r197
+ * @phb-version-note: CE8K reverse-recovered baseline; narrowed mini-console lifecycle wording and switched busy dots to real inline text animation.
+ * @phb-updated-at: 2026-03-18
 */
 
 import React from "react";
 import { createPortal, flushSync } from "react-dom";
 import xiaodiIdentityPresetRaw from "./assets/presets/xiaodi-identity-preset.txt?raw";
+import APP_BUILD_META from "./app-build-meta";
 
 /* @section module-imports-and-prelude:start | scope=module | phase=S1-anchor */
 /* @section module-imports-and-prelude:end */
@@ -102,6 +103,9 @@ const storageKeyMap = {
   imageQuickPrompts: "ph.imageQuickPrompts",
   imageQuickPromptGroups: "ph.imageQuickPromptGroups",
   importLayerType: "ph.importLayerType",
+  importAutoGroupEnabled: "ph.importAutoGroupEnabled",
+  importAutoMaskEnabled: "ph.importAutoMaskEnabled",
+  autoExportEnabled: "ph.autoExportEnabled",
   uploadImageFormat: "ph.uploadImageFormat",
   uploadMaxSizePx: "ph.uploadMaxSizePx",
   uploadQualityPercent: "ph.uploadQualityPercent",
@@ -119,6 +123,7 @@ const storageKeyMap = {
   cacheRetentionChatDays: "ph.cacheRetentionChatDays",
   cacheRetentionImageDays: "ph.cacheRetentionImageDays",
   cacheRetentionOtherDays: "ph.cacheRetentionOtherDays",
+  runQueueTaskHistory: "ph.runQueueTaskHistory",
   chatSessionsSchemaVersion: "ph.chatSessionsSchemaVersion",
   chatInteractionMode: "ph.chatInteractionMode",
 };
@@ -591,6 +596,18 @@ const iconApiReconnect = new URL(
   "./assets/icons/api-reconnect.svg",
   import.meta.url,
 ).href;
+const iconBridgeConnected = new URL(
+  "./assets/icons/bridge-connected.svg",
+  import.meta.url,
+).href;
+const iconBridgeDisconnected = new URL(
+  "./assets/icons/bridge-disconnected.svg",
+  import.meta.url,
+).href;
+const iconBridgeReconnect = new URL(
+  "./assets/icons/bridge-reconnect.svg",
+  import.meta.url,
+).href;
 const iconHome = new URL("./assets/icons/home.svg", import.meta.url).href;
 const iconPreviewPlaceholder = new URL(
   "./assets/icons/preview-placeholder.svg",
@@ -790,9 +807,9 @@ const iconChatTitleChatPreset = new URL(
   "./assets/icons/chat-title-chat-preset.svg",
   import.meta.url,
 ).href;
-return { iconBrandLogo, iconSettings, iconApiConnectingPrimary, iconApiConnectingSecondary, iconApiReconnect, iconHome, iconPreviewPlaceholder, _iconChevronUp, iconConsolePanel, iconExportLogs, iconReconnect, iconConsole, iconChatHistory, iconGeminiBadge, iconCopy, iconJsonPromptCopy, iconEdited, iconNewInstruction, iconBatchManage, iconRerun, iconRunQueueRetry, iconRunQueueExtendTime, iconBranch, iconSend, iconRun, iconRunJsonEdited, iconRunUploadZone, iconUploadSelection, iconUploadPlus, iconUploadFullImage, iconUploadLocalImage, iconUploadSize, iconExportCanvas, iconManualReturn, iconDropdownArrow, iconDropdown, iconPinOn, iconPinOff, iconMinimize, iconAutoMinimize, iconStopRunTask, iconCloseDelete, iconAdd, iconPreviewOpen, iconPreviewClose, iconPreviewOn, iconPreviewOff, iconLogFilterList, iconLogFilter, iconTaskList, iconNewChat, iconMore, iconRename, iconPin, iconUnpin, iconFavoriteTag, iconFavoriteMenuOn, iconFavoriteMenuOff, iconCommonTag, iconCommonMenuOn, iconCommonMenuOff, iconFavoriteGroup, iconDelete, iconImage, _iconRasterize, _iconSmartObject, iconSaveDiskFile, iconSaveDisk, iconPortSave, _iconPreviewCenter, _iconPreviewFull, _iconPreviewThumb, iconPreviewImageWaiting, iconChatTitleIdentity, iconChatTitleChatPreset };
+return { iconBrandLogo, iconSettings, iconApiConnectingPrimary, iconApiConnectingSecondary, iconApiReconnect, iconBridgeConnected, iconBridgeDisconnected, iconBridgeReconnect, iconHome, iconPreviewPlaceholder, _iconChevronUp, iconConsolePanel, iconExportLogs, iconReconnect, iconConsole, iconChatHistory, iconGeminiBadge, iconCopy, iconJsonPromptCopy, iconEdited, iconNewInstruction, iconBatchManage, iconRerun, iconRunQueueRetry, iconRunQueueExtendTime, iconBranch, iconSend, iconRun, iconRunJsonEdited, iconRunUploadZone, iconUploadSelection, iconUploadPlus, iconUploadFullImage, iconUploadLocalImage, iconUploadSize, iconExportCanvas, iconManualReturn, iconDropdownArrow, iconDropdown, iconPinOn, iconPinOff, iconMinimize, iconAutoMinimize, iconStopRunTask, iconCloseDelete, iconAdd, iconPreviewOpen, iconPreviewClose, iconPreviewOn, iconPreviewOff, iconLogFilterList, iconLogFilter, iconTaskList, iconNewChat, iconMore, iconRename, iconPin, iconUnpin, iconFavoriteTag, iconFavoriteMenuOn, iconFavoriteMenuOff, iconCommonTag, iconCommonMenuOn, iconCommonMenuOff, iconFavoriteGroup, iconDelete, iconImage, _iconRasterize, _iconSmartObject, iconSaveDiskFile, iconSaveDisk, iconPortSave, _iconPreviewCenter, _iconPreviewFull, _iconPreviewThumb, iconPreviewImageWaiting, iconChatTitleIdentity, iconChatTitleChatPreset };
 })();
-const { _iconChevronUp, iconApiConnectingPrimary, iconApiConnectingSecondary, iconAutoMinimize, iconBranch, iconBrandLogo, iconChatHistory, iconChatTitleChatPreset, iconChatTitleIdentity, iconCloseDelete, iconConsole, iconCopy, iconJsonPromptCopy, iconDelete, iconDropdown, iconEdited, iconExportCanvas, iconExportLogs, iconGeminiBadge, iconHome, iconImage, iconLogFilter, iconLogFilterList, iconTaskList, iconManualReturn, iconMinimize, iconMore, iconNewChat, iconNewInstruction, iconBatchManage, iconPin, iconPinOff, iconPinOn, iconPortSave, iconPreviewImageWaiting, iconPreviewOff, iconPreviewOn, iconPreviewOpen, iconPreviewPlaceholder, iconReconnect, iconRename, iconRerun, iconRunQueueRetry, iconRunQueueExtendTime, iconRun, iconRunJsonEdited, iconRunUploadZone, iconSaveDisk, iconSend, iconSettings, iconStopRunTask, iconUnpin, iconFavoriteTag, iconFavoriteMenuOn, iconFavoriteMenuOff, iconCommonTag, iconCommonMenuOn, iconCommonMenuOff, iconFavoriteGroup, iconUploadFullImage, iconUploadLocalImage, iconUploadPlus, iconUploadSelection, iconUploadSize } = __module_iconAssets;
+const { _iconChevronUp, iconApiConnectingPrimary, iconApiConnectingSecondary, iconAutoMinimize, iconBranch, iconBrandLogo, iconBridgeConnected, iconBridgeDisconnected, iconBridgeReconnect, iconChatHistory, iconChatTitleChatPreset, iconChatTitleIdentity, iconCloseDelete, iconConsole, iconCopy, iconJsonPromptCopy, iconDelete, iconDropdown, iconEdited, iconExportCanvas, iconExportLogs, iconGeminiBadge, iconHome, iconImage, iconLogFilter, iconLogFilterList, iconTaskList, iconManualReturn, iconMinimize, iconMore, iconNewChat, iconNewInstruction, iconBatchManage, iconPin, iconPinOff, iconPinOn, iconPortSave, iconPreviewImageWaiting, iconPreviewOff, iconPreviewOn, iconPreviewOpen, iconPreviewPlaceholder, iconReconnect, iconRename, iconRerun, iconRunQueueRetry, iconRunQueueExtendTime, iconRun, iconRunJsonEdited, iconRunUploadZone, iconSaveDisk, iconSend, iconSettings, iconStopRunTask, iconUnpin, iconFavoriteTag, iconFavoriteMenuOn, iconFavoriteMenuOff, iconCommonTag, iconCommonMenuOn, iconCommonMenuOff, iconFavoriteGroup, iconUploadFullImage, iconUploadLocalImage, iconUploadPlus, iconUploadSelection, iconUploadSize } = __module_iconAssets;
 const iconModelLink = new URL("./assets/icons/link.svg", import.meta.url).href;
 const settingsWechatGroupQrPlaceholder = new URL(
   "./assets/images/wechat-group-qr-placeholder.svg",
@@ -1983,15 +2000,79 @@ function buildPendingUserImageForChatDraft(
       normalizedUserImageItem,
     ),
     normalizedUserImageWidth = Number(normalizedUserImageItem?.width),
-    normalizedUserImageHeight = Number(normalizedUserImageItem?.height);
+    normalizedUserImageHeight = Number(normalizedUserImageItem?.height),
+    normalizedDisplayName = resolveAssetRecordDisplayName(
+      normalizedUserImageItem,
+      "image",
+    ),
+    normalizedFilePath = resolveAssetRecordStoragePath(normalizedUserImageItem),
+    normalizedAssetId = String(normalizedUserImageItem?.assetId || "").trim(),
+    normalizedFileName = String(
+      normalizedUserImageItem?.fileName || normalizedDisplayName || "",
+    ).trim(),
+    normalizedInternalCacheId = String(
+      normalizedUserImageItem?.internalCacheId ||
+        normalizedUserImageItem?.itemId ||
+        normalizedFileName ||
+        normalizedUserImageItem?.psCacheId ||
+        normalizedUserImageItem?.cacheId ||
+        "",
+    ).trim(),
+    normalizedItemId = String(
+      normalizedUserImageItem?.itemId ||
+        normalizedInternalCacheId ||
+        normalizedFileName ||
+        "",
+    ).trim(),
+    normalizedSourceRefKey = String(
+      normalizedUserImageItem?.sourceRefKey ||
+        parseAssetIdentityFromFileName(normalizedFileName)?.sourceRefKey ||
+        "",
+    ).trim(),
+    normalizedInputMethod = String(
+      normalizedUserImageItem?.inputMethod ||
+        normalizedUserImageItem?.source ||
+        "",
+    ).trim(),
+    normalizedUsageMeta =
+      normalizedUserImageItem?.usageMeta &&
+      typeof normalizedUserImageItem.usageMeta === "object"
+        ? { ...normalizedUserImageItem.usageMeta }
+        : void 0,
+    normalizedLegacy =
+      normalizedUserImageItem?.legacy &&
+      typeof normalizedUserImageItem.legacy === "object"
+        ? { ...normalizedUserImageItem.legacy }
+        : void 0;
   return {
     id: normalizedUserImageItem.id || `img-${localMessageTimestamp}`,
+    assetId: normalizedAssetId,
     dataUrl: normalizedUserImageItem.dataUrl,
-    name: normalizedUserImageItem.name,
-    originName: normalizedUserImageItem.originName || normalizedUserImageItem.name,
+    name: normalizedDisplayName,
+    originName: normalizedDisplayName,
+    fileName: normalizedFileName,
+    filePath: normalizedFilePath,
+    cacheFileName: normalizedFileName,
+    internalCacheId: normalizedInternalCacheId,
+    itemId: normalizedItemId,
+    sourceRefKey: normalizedSourceRefKey,
+    inputMethod: normalizedInputMethod,
+    usageMeta: normalizedUsageMeta,
+    legacy: normalizedLegacy,
     source: normalizedUserImageItem.source,
     role: normalizedUserImageItem.role,
-    psCacheId: normalizedUserImageItem.psCacheId || "",
+    cacheId: String(
+      normalizedUserImageItem?.cacheId ||
+        normalizedLegacy?.cacheId ||
+        normalizedUserImageItem?.psCacheId ||
+        "",
+    ).trim(),
+    chatCacheId: String(normalizedUserImageItem?.chatCacheId || "").trim(),
+    psCacheId: String(
+      normalizedUserImageItem?.psCacheId ||
+        normalizedLegacy?.psCacheId ||
+        "",
+    ).trim(),
     psCacheExpiresAt: Number.isFinite(normalizedUserImageItem.psCacheExpiresAt)
       ? Number(normalizedUserImageItem.psCacheExpiresAt)
       : void 0,
@@ -2169,9 +2250,12 @@ function buildMessageBranchVariantSignature(sessionMessagesInput) {
           .map((imageItem) =>
             [
               String(imageItem?.id || "").trim(),
-              String(imageItem?.cacheId || imageItem?.psCacheId || "").trim(),
-              String(imageItem?.name || "").trim(),
-              String(imageItem?.originName || "").trim(),
+              String(buildImageRecordLookupKeys(imageItem)[0] || "").trim(),
+              String(imageItem?.assetId || "").trim(),
+              String(imageItem?.internalCacheId || "").trim(),
+              String(imageItem?.itemId || "").trim(),
+              String(imageItem?.sourceRefKey || "").trim(),
+              String(imageItem?.fileName || "").trim(),
               String(imageItem?.source || "").trim(),
               Number.isFinite(Number(imageItem?.targetDocumentId))
                 ? String(Number(imageItem.targetDocumentId))
@@ -2414,6 +2498,7 @@ function publishChatRequestDispatchState({
     phase: "发送",
     message: `${startLogText}；模型 ${normalizedChatConfig.model}，文本 ${trimmedUserText.length} 字，图片 ${normalizedUserImages.length} 张。`,
     startedAt: requestStartedAt,
+    emitHistory: false,
   });
   appendConsoleLogEntry(
     "info",
@@ -2468,10 +2553,12 @@ function getDataUrlByteSize(dataUrl) {
 
 function getCachedPreviewKey(previewItem, fallbackIndex = 0) {
   if (previewItem && typeof previewItem === "object") {
-    const cachedFilePath = String(previewItem.cacheFilePath || "").trim();
+    const cachedFilePath = resolveAssetRecordStoragePath(previewItem);
     if (cachedFilePath) return `file:${cachedFilePath}`;
-    const cachedFileName = String(previewItem.cacheFileName || "").trim();
+    const cachedFileName = resolveAssetRecordDisplayName(previewItem, "");
     if (cachedFileName) return `name:${cachedFileName}`;
+    const cachedLookupKey = buildImageRecordLookupKeys(previewItem)[0];
+    if (cachedLookupKey) return `asset:${cachedLookupKey}`;
     const cachedItemId = String(previewItem.id || "").trim();
     if (cachedItemId) return `id:${cachedItemId}`;
   }
@@ -2535,6 +2622,61 @@ function normalizeInstructionGroupNameList(groupNameListInput) {
       seenGroupNameSet.add(groupNameCandidate);
       return true;
     });
+}
+
+function buildInstructionCustomGroupOrderFromPrompts(
+  instructionPromptItemsInput = [],
+) {
+  const instructionPromptItems = Array.isArray(instructionPromptItemsInput)
+      ? instructionPromptItemsInput
+      : [],
+    seenInstructionGroupNameSet = new Set(),
+    orderedInstructionCustomGroupNames = [];
+  instructionPromptItems.forEach((instructionPromptItem) => {
+    const normalizedInstructionGroupName =
+      normalizeInstructionPresetGroupName(instructionPromptItem?.group);
+    if (
+      !normalizedInstructionGroupName ||
+      seenInstructionGroupNameSet.has(normalizedInstructionGroupName)
+    ) {
+      return;
+    }
+    seenInstructionGroupNameSet.add(normalizedInstructionGroupName);
+    orderedInstructionCustomGroupNames.push(normalizedInstructionGroupName);
+  });
+  return orderedInstructionCustomGroupNames;
+}
+
+function areInstructionGroupNameListsEqual(
+  leftInstructionGroupNameListInput,
+  rightInstructionGroupNameListInput,
+) {
+  const leftInstructionGroupNameList = Array.isArray(
+      leftInstructionGroupNameListInput,
+    )
+      ? leftInstructionGroupNameListInput
+      : [],
+    rightInstructionGroupNameList = Array.isArray(
+      rightInstructionGroupNameListInput,
+    )
+      ? rightInstructionGroupNameListInput
+      : [];
+  if (leftInstructionGroupNameList.length !== rightInstructionGroupNameList.length) {
+    return false;
+  }
+  for (
+    let instructionGroupIndex = 0;
+    instructionGroupIndex < leftInstructionGroupNameList.length;
+    instructionGroupIndex += 1
+  ) {
+    if (
+      String(leftInstructionGroupNameList[instructionGroupIndex] || "") !==
+      String(rightInstructionGroupNameList[instructionGroupIndex] || "")
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function normalizeApiBaseUrl(rawBaseUrl) {
@@ -2941,13 +3083,23 @@ function normalizeFloatingToggleStatusValue(rawStatusValue) {
   const normalizedStatusValue = String(rawStatusValue || "")
     .trim()
     .toLowerCase();
-  if (normalizedStatusValue === "error" || normalizedStatusValue === "warn")
-    return "warn";
-  if (normalizedStatusValue === "busy") return "busy";
-  if (normalizedStatusValue === "ok") return "ok";
-  if (normalizedStatusValue === "connected") return "connected";
+  if (normalizedStatusValue === "error") return "warn";
   if (normalizedStatusValue === "info") return "connected";
-  return "connected";
+  if (
+    normalizedStatusValue === "idle" ||
+    normalizedStatusValue === "connected" ||
+    normalizedStatusValue === "busy" ||
+    normalizedStatusValue === "warn" ||
+    normalizedStatusValue === "ok" ||
+    normalizedStatusValue === "task-running" ||
+    normalizedStatusValue === "task-success" ||
+    normalizedStatusValue === "task-failed" ||
+    normalizedStatusValue === "chat-running" ||
+    normalizedStatusValue === "chat-success" ||
+    normalizedStatusValue === "chat-failed"
+  )
+    return normalizedStatusValue;
+  return "idle";
 }
 
 function readFloatingToggleState(rawFloatingToggleState) {
@@ -2993,11 +3145,498 @@ function shouldApplyFloatingOpacity(
   return Math.abs(currentFloatingOpacity - nextFloatingOpacity) >= threshold;
 }
 
+function toResultToneByRunQueueStatus(runQueueStatusValue) {
+  const normalizedRunQueueStatus = String(runQueueStatusValue || "")
+    .trim()
+    .toLowerCase();
+  if (
+    normalizedRunQueueStatus === "failed" ||
+    normalizedRunQueueStatus === "aborted"
+  )
+    return "failed";
+  if (
+    normalizedRunQueueStatus === "success" ||
+    normalizedRunQueueStatus === "partial"
+  )
+    return "success";
+  return "";
+}
+
+function toResultToneByMiniStatusLevel(miniStatusLevel) {
+  const normalizedMiniStatusLevel = String(miniStatusLevel || "")
+    .trim()
+    .toLowerCase();
+  if (normalizedMiniStatusLevel === "error" || normalizedMiniStatusLevel === "warn")
+    return "failed";
+  if (normalizedMiniStatusLevel === "connected" || normalizedMiniStatusLevel === "ok")
+    return "success";
+  return "";
+}
+
+function resolveResultToneClassName(resultTone) {
+  const normalizedResultTone = String(resultTone || "")
+    .trim()
+    .toLowerCase();
+  if (normalizedResultTone === "success") return "is-success";
+  if (normalizedResultTone === "failed") return "is-failed";
+  return "is-idle";
+}
+
+function normalizeCometRunnerSource(rawSource) {
+  const normalizedSource = String(rawSource || "")
+    .trim()
+    .toLowerCase();
+  return normalizedSource === "run" ||
+    normalizedSource === "chat" ||
+    normalizedSource === "mixed" ||
+    normalizedSource === "none"
+    ? normalizedSource
+    : "none";
+}
+
+function normalizeCometRunnerPhase(rawPhase) {
+  const normalizedPhase = String(rawPhase || "")
+    .trim()
+    .toLowerCase();
+  return normalizedPhase === "running" ||
+    normalizedPhase === "filling" ||
+    normalizedPhase === "frozen" ||
+    normalizedPhase === "shrinking" ||
+    normalizedPhase === "fading" ||
+    normalizedPhase === "idle"
+    ? normalizedPhase
+    : "idle";
+}
+
+function normalizeCometRunnerColorTone(rawTone) {
+  const normalizedTone = String(rawTone || "")
+    .trim()
+    .toLowerCase();
+  if (normalizedTone === "success" || normalizedTone === "error") {
+    return normalizedTone;
+  }
+  return "orange";
+}
+
+function normalizeCometRunnerLen(rawLen) {
+  const normalizedLen = String(rawLen || "")
+    .trim()
+    .toLowerCase();
+  return normalizedLen === "full" ||
+    normalizedLen === "sharp-short" ||
+    normalizedLen === "sharp-medium" ||
+    normalizedLen === "sharp-long" ||
+    normalizedLen === "soft-short" ||
+    normalizedLen === "soft-medium" ||
+    normalizedLen === "soft-long"
+    ? normalizedLen
+    : "soft-short";
+}
+
+function resolveCometRunnerLenByTaskCount(taskCount = 0, mode = "soft") {
+  const normalizedMode = String(mode || "")
+      .trim()
+      .toLowerCase() === "sharp"
+    ? "sharp"
+    : "soft",
+    normalizedTaskCount = Math.max(0, Number(taskCount) || 0);
+  return normalizedTaskCount >= 3
+    ? `${normalizedMode}-long`
+    : normalizedTaskCount === 2
+      ? `${normalizedMode}-medium`
+      : `${normalizedMode}-short`;
+}
+
+function buildCometRunnerVisualState({
+  source = "none",
+  phase = "idle",
+  colorTone = "orange",
+  len = "soft-short",
+  visible = false,
+  frozen = false,
+  fading = false,
+  spinDurationMs = 2000,
+  updatedAtMs = Date.now(),
+} = {}) {
+  return {
+    source: normalizeCometRunnerSource(source),
+    phase: normalizeCometRunnerPhase(phase),
+    colorTone: normalizeCometRunnerColorTone(colorTone),
+    len: normalizeCometRunnerLen(len),
+    visible: !!visible,
+    frozen: !!frozen,
+    fading: !!fading,
+    spinDurationMs: Math.max(
+      600,
+      Math.min(6000, Math.round(Number(spinDurationMs) || 2000)),
+    ),
+    updatedAtMs: Math.max(0, Math.round(Number(updatedAtMs) || 0)),
+  };
+}
+
+function buildIdleCometRunnerVisualState(source = "none") {
+  return buildCometRunnerVisualState({
+    source,
+    phase: "idle",
+    colorTone: "orange",
+    len: "soft-short",
+    visible: false,
+    frozen: false,
+    fading: false,
+  });
+}
+
+function clearCometRunnerTimers(timerRef) {
+  if (!timerRef || typeof timerRef !== "object") return;
+  const timerBundle = timerRef.current;
+  if (!timerBundle || typeof timerBundle !== "object") return;
+  [
+    "fillTimer",
+    "freezeTimer",
+    "tailTimer",
+  ].forEach((timerKey) => {
+    const timerId = timerBundle[timerKey];
+    timerId &&
+      (clearTimeout(timerId),
+      (timerBundle[timerKey] = null));
+  });
+}
+
+function isCometRunnerCompletionPhase(runnerPhase) {
+  const normalizedRunnerPhase = normalizeCometRunnerPhase(runnerPhase);
+  return normalizedRunnerPhase === "filling" ||
+    normalizedRunnerPhase === "frozen" ||
+    normalizedRunnerPhase === "shrinking" ||
+    normalizedRunnerPhase === "fading";
+}
+
+function startCometRunnerRunningVisual({
+  source = "run",
+  taskCount = 1,
+  spinDurationMs = 2000,
+  setVisualState,
+  tokenRef,
+  timerRef,
+} = {}) {
+  if (typeof setVisualState !== "function") return;
+  timerRef && clearCometRunnerTimers(timerRef);
+  tokenRef &&
+    typeof tokenRef === "object" &&
+    (tokenRef.current = Math.max(0, Number(tokenRef.current) || 0) + 1);
+  setVisualState(
+    buildCometRunnerVisualState({
+      source,
+      phase: "running",
+      colorTone: "orange",
+      len: resolveCometRunnerLenByTaskCount(taskCount, "soft"),
+      visible: true,
+      frozen: false,
+      fading: false,
+      spinDurationMs,
+    }),
+  );
+}
+
+function startCometRunnerCompleteVisualFlow({
+  source = "run",
+  resultTone = "",
+  remainingTaskCount = 0,
+  spinDurationMs = 2000,
+  fillDurationMs = 850,
+  freezeDurationMs = 2000,
+  fadeDurationMs = 1500,
+  setVisualState,
+  tokenRef,
+  timerRef,
+} = {}) {
+  if (typeof setVisualState !== "function") return;
+  const normalizedTone = String(resultTone || "")
+      .trim()
+      .toLowerCase() === "success"
+    ? "success"
+    : "error",
+    normalizedFillDurationMs = Math.max(
+      120,
+      Math.round(Number(fillDurationMs) || 850),
+    ),
+    normalizedFreezeDurationMs = Math.max(
+      300,
+      Math.round(Number(freezeDurationMs) || 2000),
+    ),
+    normalizedFadeDurationMs = Math.max(
+      300,
+      Math.round(Number(fadeDurationMs) || 1500),
+    );
+  timerRef && clearCometRunnerTimers(timerRef);
+  if (!tokenRef || typeof tokenRef !== "object") {
+    setVisualState(
+      buildCometRunnerVisualState({
+        source,
+        phase: "idle",
+        colorTone: normalizedTone,
+        len: "soft-short",
+        visible: false,
+        frozen: false,
+        fading: false,
+        spinDurationMs,
+      }),
+    );
+    return;
+  }
+  tokenRef.current += 1;
+  const flowToken = tokenRef.current;
+  setVisualState(
+    buildCometRunnerVisualState({
+      source,
+      phase: "filling",
+      colorTone: normalizedTone,
+      len: "full",
+      visible: true,
+      frozen: false,
+      fading: false,
+      spinDurationMs,
+    }),
+  );
+  timerRef &&
+    (timerRef.current.fillTimer = setTimeout(() => {
+      if (tokenRef.current !== flowToken) return;
+      setVisualState(
+        buildCometRunnerVisualState({
+          source,
+          phase: "frozen",
+          colorTone: normalizedTone,
+          len: "full",
+          visible: true,
+          frozen: true,
+          fading: false,
+          spinDurationMs,
+        }),
+      );
+      timerRef.current.freezeTimer = setTimeout(() => {
+        if (tokenRef.current !== flowToken) return;
+        if (Math.max(0, Number(remainingTaskCount) || 0) <= 0) {
+          setVisualState(
+            buildCometRunnerVisualState({
+              source,
+              phase: "fading",
+              colorTone: normalizedTone,
+              len: "full",
+              visible: true,
+              frozen: true,
+              fading: true,
+              spinDurationMs,
+            }),
+          );
+          timerRef.current.tailTimer = setTimeout(() => {
+            if (tokenRef.current !== flowToken) return;
+            setVisualState(buildIdleCometRunnerVisualState(source));
+          }, normalizedFadeDurationMs + 40);
+          return;
+        }
+        setVisualState(
+          buildCometRunnerVisualState({
+            source,
+            phase: "shrinking",
+            colorTone: normalizedTone,
+            len: resolveCometRunnerLenByTaskCount(remainingTaskCount, "sharp"),
+            visible: true,
+            frozen: true,
+            fading: false,
+            spinDurationMs,
+          }),
+        );
+        timerRef.current.tailTimer = setTimeout(() => {
+          if (tokenRef.current !== flowToken) return;
+          setVisualState(
+            buildCometRunnerVisualState({
+              source,
+              phase: "running",
+              colorTone: "orange",
+              len: resolveCometRunnerLenByTaskCount(remainingTaskCount, "soft"),
+              visible: true,
+              frozen: false,
+              fading: false,
+              spinDurationMs,
+            }),
+          );
+        }, normalizedFillDurationMs);
+      }, normalizedFreezeDurationMs);
+    }, normalizedFillDurationMs));
+}
+
+function resolveCometRunnerRecentTone(visualState) {
+  const normalizedVisualState =
+      visualState && typeof visualState === "object" ? visualState : {},
+    runnerPhase = normalizeCometRunnerPhase(normalizedVisualState.phase),
+    runnerColorTone = normalizeCometRunnerColorTone(
+      normalizedVisualState.colorTone,
+    );
+  if (runnerPhase === "idle" || runnerPhase === "running") return "";
+  return runnerColorTone === "success"
+    ? "success"
+    : runnerColorTone === "error"
+      ? "failed"
+      : "";
+}
+
+function buildCometRunnerClassName(visualState) {
+  const normalizedVisualState =
+      visualState && typeof visualState === "object" ? visualState : {},
+    runnerClassNameList = [
+      `color-${normalizeCometRunnerColorTone(normalizedVisualState.colorTone)}`,
+      `len-${normalizeCometRunnerLen(normalizedVisualState.len)}`,
+    ];
+  normalizedVisualState.visible && runnerClassNameList.push("is-visible");
+  normalizedVisualState.frozen && runnerClassNameList.push("is-frozen");
+  normalizedVisualState.fading && runnerClassNameList.push("is-fading");
+  return runnerClassNameList.join(" ");
+}
+
+function resolveFloatingCometRunnerVisualState({
+  runQueueRunnerVisualState = null,
+  chatRunnerVisualState = null,
+  runQueueTaskCount = 0,
+  chatRequestInFlight = false,
+} = {}) {
+  const normalizedRunQueueRunnerVisualState = buildCometRunnerVisualState({
+      ...buildIdleCometRunnerVisualState("run"),
+      ...(runQueueRunnerVisualState || {}),
+      source: "run",
+    }),
+    normalizedChatRunnerVisualState = buildCometRunnerVisualState({
+      ...buildIdleCometRunnerVisualState("chat"),
+      ...(chatRunnerVisualState || {}),
+      source: "chat",
+    }),
+    runQueueRunning =
+      normalizedRunQueueRunnerVisualState.visible &&
+      normalizeCometRunnerPhase(normalizedRunQueueRunnerVisualState.phase) ===
+        "running",
+    chatRunning =
+      normalizedChatRunnerVisualState.visible &&
+      normalizeCometRunnerPhase(normalizedChatRunnerVisualState.phase) === "running";
+  if (runQueueRunning && chatRunning) {
+    return buildCometRunnerVisualState({
+      source: "mixed",
+      phase: "running",
+      colorTone: "orange",
+      len: resolveCometRunnerLenByTaskCount(
+        Math.max(
+          1,
+          Math.max(0, Number(runQueueTaskCount) || 0) +
+            (chatRequestInFlight ? 1 : 0),
+        ),
+        "soft",
+      ),
+      visible: true,
+      frozen: false,
+      fading: false,
+      spinDurationMs: Math.max(
+        Number(normalizedRunQueueRunnerVisualState.spinDurationMs) || 2000,
+        Number(normalizedChatRunnerVisualState.spinDurationMs) || 2000,
+      ),
+      updatedAtMs: Math.max(
+        Number(normalizedRunQueueRunnerVisualState.updatedAtMs) || 0,
+        Number(normalizedChatRunnerVisualState.updatedAtMs) || 0,
+      ),
+    });
+  }
+  const activeRunnerCandidateList = [
+    normalizedRunQueueRunnerVisualState,
+    normalizedChatRunnerVisualState,
+  ].filter(
+    (runnerVisualState) =>
+      runnerVisualState.visible &&
+      normalizeCometRunnerPhase(runnerVisualState.phase) !== "idle",
+  );
+  if (!activeRunnerCandidateList.length) {
+    return buildIdleCometRunnerVisualState("none");
+  }
+  const sortedRunnerCandidateList = activeRunnerCandidateList.sort(
+    (leftRunnerVisualState, rightRunnerVisualState) =>
+      (Number(rightRunnerVisualState.updatedAtMs) || 0) -
+      (Number(leftRunnerVisualState.updatedAtMs) || 0),
+  );
+  return buildCometRunnerVisualState(sortedRunnerCandidateList[0]);
+}
+
+function buildCometRunnerStateSignature(visualState) {
+  const normalizedVisualState =
+    visualState && typeof visualState === "object"
+      ? visualState
+      : buildIdleCometRunnerVisualState("none");
+  return [
+    normalizeCometRunnerSource(normalizedVisualState.source),
+    normalizeCometRunnerPhase(normalizedVisualState.phase),
+    normalizeCometRunnerColorTone(normalizedVisualState.colorTone),
+    normalizeCometRunnerLen(normalizedVisualState.len),
+    normalizedVisualState.visible ? "1" : "0",
+    normalizedVisualState.frozen ? "1" : "0",
+    normalizedVisualState.fading ? "1" : "0",
+    String(Math.max(0, Number(normalizedVisualState.spinDurationMs) || 0)),
+  ].join("|");
+}
+
+function resolveStatusHoldRemainingMs(statusHoldUntilMs, nowMs) {
+  return Math.max(0, Number(statusHoldUntilMs) - Number(nowMs));
+}
+
+function shouldClearStatusHold(statusHoldUntilMs, nowMs) {
+  return resolveStatusHoldRemainingMs(statusHoldUntilMs, nowMs) <= 0;
+}
+
+function resolveFloatingRunnerVisualState({
+  runQueueRunnerVisualState = null,
+  chatRunnerVisualState = null,
+  runQueueTaskCount = 0,
+  chatRequestInFlight = false,
+} = {}) {
+  return resolveFloatingCometRunnerVisualState({
+    runQueueRunnerVisualState,
+    chatRunnerVisualState,
+    runQueueTaskCount,
+    chatRequestInFlight,
+  });
+}
+
+function resolveFloatingToggleStatusFromMiniLevel(miniStatusLevel = "warn") {
+  const normalizedMiniStatusLevel =
+    normalizeFloatingToggleStatusValue(miniStatusLevel);
+  if (normalizedMiniStatusLevel === "warn") return "warn";
+  if (normalizedMiniStatusLevel === "busy") return "chat-running";
+  if (normalizedMiniStatusLevel === "ok") return "chat-success";
+  if (normalizedMiniStatusLevel === "task-running") return "task-running";
+  if (normalizedMiniStatusLevel === "task-success") return "task-success";
+  if (normalizedMiniStatusLevel === "task-failed") return "task-failed";
+  if (normalizedMiniStatusLevel === "chat-running") return "chat-running";
+  if (normalizedMiniStatusLevel === "chat-success") return "chat-success";
+  if (normalizedMiniStatusLevel === "chat-failed") return "chat-failed";
+  if (normalizedMiniStatusLevel === "connected") return "idle";
+  if (normalizedMiniStatusLevel === "idle") return "idle";
+  return "idle";
+}
+
 function resolveFloatingToggleStatusLevel({
   pluginBridgeStatus,
   pluginStatusObserved = false,
   miniStatusLevel = "warn",
+  runQueueRunning = false,
+  runQueueRecentTone = "",
+  chatRunning = false,
+  chatRecentTone = "",
 }) {
+  const normalizedRunQueueRecentTone = String(runQueueRecentTone || "")
+      .trim()
+      .toLowerCase(),
+    normalizedChatRecentTone = String(chatRecentTone || "")
+      .trim()
+      .toLowerCase();
+  if (runQueueRunning) return "task-running";
+  if (chatRunning) return "chat-running";
+  if (normalizedRunQueueRecentTone === "success") return "task-success";
+  if (normalizedRunQueueRecentTone === "failed") return "task-failed";
+  if (normalizedChatRecentTone === "success") return "chat-success";
+  if (normalizedChatRecentTone === "failed") return "chat-failed";
   const normalizedPluginBridgeStatus =
       pluginBridgeStatus && typeof pluginBridgeStatus === "object"
         ? pluginBridgeStatus
@@ -3005,11 +3644,11 @@ function resolveFloatingToggleStatusLevel({
     pluginConnected = !!normalizedPluginBridgeStatus.psConnected,
     bridgeReachable = !!normalizedPluginBridgeStatus.ok;
   if (pluginStatusObserved) {
-    if (pluginConnected) return "connected";
-    if (bridgeReachable) return "busy";
-    return "warn";
+    if (!bridgeReachable) return "warn";
+    if (!pluginConnected) return "busy";
+    return "idle";
   }
-  return normalizeFloatingToggleStatusValue(miniStatusLevel);
+  return resolveFloatingToggleStatusFromMiniLevel(miniStatusLevel);
 }
 
 function encodeSecret(rawValue) {
@@ -3159,6 +3798,16 @@ const CONST_PRESET_SUMMARY_MAX_LENGTH = 96;
 const CONST_INSTRUCTION_GROUP_NAME_MAX_LENGTH = 16;
 const CONST_INSTRUCTION_FAVORITES_GROUP = "收藏";
 const CONST_INSTRUCTION_DEFAULT_GROUP = "预设";
+const CONST_INSTRUCTION_TAG_DRAG_REORDER_TICK_MS = 90;
+const CONST_INSTRUCTION_GROUP_DRAG_HOLD_MS = 180;
+const CONST_INSTRUCTION_GROUP_DRAG_MOVE_THRESHOLD_PX = 6;
+const CONST_INSTRUCTION_GROUP_DRAG_INSERT_HYSTERESIS_PX = 10;
+const CONST_INSTRUCTION_GROUP_DRAG_SETTLE_MS = 320;
+const CONST_INSTRUCTION_GROUP_DRAG_REORDER_TICK_MS =
+  CONST_INSTRUCTION_TAG_DRAG_REORDER_TICK_MS;
+const CONST_INSTRUCTION_GROUP_DRAG_REORDER_COMMIT_LOCK_MS = 140;
+const CONST_INSTRUCTION_GROUP_DRAG_EXPAND_DELAY_MS = 90;
+const CONST_INSTRUCTION_GROUP_DRAG_EXPAND_ANIMATION_MS = 240;
 function parseBridgePort(rawPortValue) {
   const parsedPort = Number(rawPortValue);
   if (!Number.isFinite(parsedPort)) return null;
@@ -3181,7 +3830,13 @@ function normalizeSessionImageDataUrl(dataUrlInput) {
 }
 
 function isPsCacheIdText(cacheIdInput = "") {
-  return /^pscache_/i.test(String(cacheIdInput || "").trim());
+  const normalizedCacheId = String(cacheIdInput || "").trim();
+  return (
+    /^pscache_/i.test(normalizedCacheId) ||
+    /^(psselect_upload|pscanvas_upload|upload_input|run_result|return_export)(_|$)/i.test(
+      normalizedCacheId,
+    )
+  );
 }
 
 function deriveCacheIdFromPathLike(pathLikeInput = "") {
@@ -3204,6 +3859,10 @@ function deriveCacheIdFromPathLike(pathLikeInput = "") {
 function resolveSessionImageCacheIds(rawImageItem) {
   const normalizedRawCacheId = String(rawImageItem?.cacheId || "").trim();
   const normalizedRawPsCacheId = String(rawImageItem?.psCacheId || "").trim();
+  const normalizedRawInternalCacheId = String(
+    rawImageItem?.internalCacheId || "",
+  ).trim();
+  const normalizedRawItemId = String(rawImageItem?.itemId || "").trim();
   const normalizedFileDerivedCacheId = deriveCacheIdFromPathLike(
     rawImageItem?.cacheFileName ||
       rawImageItem?.fileName ||
@@ -3215,6 +3874,13 @@ function resolveSessionImageCacheIds(rawImageItem) {
   let normalizedChatCacheId = "";
   if (normalizedRawCacheId && !isPsCacheIdText(normalizedRawCacheId)) {
     normalizedChatCacheId = normalizedRawCacheId;
+  } else if (
+    normalizedRawInternalCacheId &&
+    !isPsCacheIdText(normalizedRawInternalCacheId)
+  ) {
+    normalizedChatCacheId = normalizedRawInternalCacheId;
+  } else if (normalizedRawItemId && !isPsCacheIdText(normalizedRawItemId)) {
+    normalizedChatCacheId = normalizedRawItemId;
   } else if (
     normalizedFileDerivedCacheId &&
     !isPsCacheIdText(normalizedFileDerivedCacheId)
@@ -3231,11 +3897,129 @@ function resolveSessionImageCacheIds(rawImageItem) {
 
   const normalizedPsCacheId =
     normalizedRawPsCacheId ||
+    (isPsCacheIdText(normalizedRawInternalCacheId)
+      ? normalizedRawInternalCacheId
+      : "") ||
+    (isPsCacheIdText(normalizedRawItemId) ? normalizedRawItemId : "") ||
+    (isPsCacheIdText(normalizedFileDerivedCacheId)
+      ? normalizedFileDerivedCacheId
+      : "") ||
     (isPsCacheIdText(normalizedRawCacheId) ? normalizedRawCacheId : "");
   return {
     chatCacheId: String(normalizedChatCacheId || "").trim(),
     psCacheId: String(normalizedPsCacheId || "").trim(),
     fileDerivedCacheId: String(normalizedFileDerivedCacheId || "").trim(),
+  };
+}
+
+function buildImageRecordLookupKeys(imageRecordInput = {}) {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === "object"
+      ? imageRecordInput
+      : {};
+  const stableLookupKeys = Array.from(
+    new Set(
+      [
+        imageRecord.assetId,
+        imageRecord.internalCacheId,
+        imageRecord.itemId,
+        imageRecord.cacheId,
+        imageRecord.psCacheId,
+        imageRecord.chatCacheId,
+        imageRecord.fileName,
+      ]
+        .map((item) => String(item || "").trim())
+        .filter(Boolean),
+    ),
+  );
+  if (stableLookupKeys.length) return stableLookupKeys;
+  return Array.from(
+    new Set(
+      [imageRecord.cacheFileName, imageRecord.originName]
+        .map((item) => extractImageFileLeafName(item))
+        .filter(Boolean),
+    ),
+  );
+}
+
+function resolveAssetRecordDisplayName(
+  imageRecordInput,
+  fallbackLabel = "image",
+) {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === "object"
+      ? imageRecordInput
+      : {};
+  const displayNameCandidates = [
+    imageRecord.fileName,
+    imageRecord.displayFileName,
+    imageRecord.internalCacheId,
+    imageRecord.itemId,
+    imageRecord.cacheFileName,
+    imageRecord.originName,
+    imageRecord.name,
+  ];
+  for (const displayNameCandidate of displayNameCandidates) {
+    const normalizedDisplayName = extractImageFileLeafName(
+      displayNameCandidate,
+    );
+    if (normalizedDisplayName) return normalizedDisplayName;
+  }
+  return toSafeText(fallbackLabel, "image");
+}
+
+function resolveAssetRecordStoragePath(imageRecordInput) {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === "object"
+      ? imageRecordInput
+      : {};
+  const storagePathCandidates = [imageRecord.filePath, imageRecord.cacheFilePath];
+  for (const storagePathCandidate of storagePathCandidates) {
+    const normalizedStoragePath = String(storagePathCandidate || "").trim();
+    if (normalizedStoragePath) return normalizedStoragePath;
+  }
+  return "";
+}
+
+function hasResolvableImageRecord(imageRecordInput) {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === "object"
+      ? imageRecordInput
+      : null;
+  if (!imageRecord) return false;
+  const normalizedDataUrl = String(imageRecord?.dataUrl || "").trim();
+  if (normalizedDataUrl) return true;
+  if (resolveAssetRecordStoragePath(imageRecord)) return true;
+  return buildImageRecordLookupKeys(imageRecord).length > 0;
+}
+
+function buildAssetViewerOpenPayload(
+  imageRecordInput,
+  fallbackLabel = "image",
+) {
+  const imageRecord =
+      imageRecordInput && typeof imageRecordInput === "object"
+        ? imageRecordInput
+        : {},
+    resolvedDisplayName = resolveAssetRecordDisplayName(
+      imageRecord,
+      fallbackLabel,
+    ),
+    resolvedStoragePath = resolveAssetRecordStoragePath(imageRecord),
+    widthValue = Number(imageRecord.width),
+    heightValue = Number(imageRecord.height);
+  return {
+    cacheFilePath: resolvedStoragePath,
+    cacheFileName: resolvedDisplayName,
+    name: resolvedDisplayName,
+    width:
+      Number.isFinite(widthValue) && widthValue > 0
+        ? Math.round(widthValue)
+        : 0,
+    height:
+      Number.isFinite(heightValue) && heightValue > 0
+        ? Math.round(heightValue)
+        : 0,
   };
 }
 
@@ -3253,7 +4037,6 @@ function normalizeSessionMessageImageItem(
   const normalizedCacheId = String(
     normalizedChatCacheId || normalizedPsCacheId || "",
   ).trim();
-  if (!normalizedCacheId && !normalizedDataUrl) return null;
 
   const normalizedImportMetaTask = normalizeImportTargetMeta(rawImageItem);
   const normalizedImageMeta =
@@ -3278,18 +4061,20 @@ function normalizeSessionMessageImageItem(
   const normalizedBridgeProtocolVersion = Number(
     rawImageItem.bridgeProtocolVersion,
   );
-
-  return {
+  const normalizedDisplayName = resolveAssetRecordDisplayName(
+    rawImageItem,
+    "image",
+  );
+  const baseImageRecord = {
     ...rawImageItem,
     id: String(rawImageItem.id || fallbackImageId || ""),
-    name: String(rawImageItem.name || rawImageItem.originName || "image"),
-    originName: String(
-      rawImageItem.originName || rawImageItem.name || "image",
-    ),
+    name: normalizedDisplayName,
+    originName: normalizedDisplayName,
     type: String(rawImageItem.type || "image/*"),
     source: normalizeImageSource(rawImageItem.source),
     role: String(rawImageItem.role || fallbackRole || ""),
     psCacheId: normalizedPsCacheId,
+    chatCacheId: normalizedChatCacheId,
     cacheId: normalizedCacheId,
     dataUrl: normalizedDataUrl,
     width:
@@ -3313,7 +4098,76 @@ function normalizeSessionMessageImageItem(
       normalizedBridgeProtocolVersion > 0
         ? Math.floor(normalizedBridgeProtocolVersion)
         : void 0,
+    fileName: String(
+      rawImageItem.fileName ||
+        rawImageItem.cacheFileName ||
+        extractImageFileLeafName(
+          rawImageItem.filePath || rawImageItem.cacheFilePath || "",
+        ) ||
+        "",
+    ).trim(),
+    filePath: String(rawImageItem.filePath || rawImageItem.cacheFilePath || "").trim(),
+    cacheFileName: String(rawImageItem.cacheFileName || "").trim(),
+    cacheFilePath: String(rawImageItem.cacheFilePath || "").trim(),
+    assetId: String(rawImageItem.assetId || "").trim(),
+    internalCacheId: String(rawImageItem.internalCacheId || "").trim(),
+    itemId: String(rawImageItem.itemId || "").trim(),
+    sourceRefKey: String(rawImageItem.sourceRefKey || "").trim(),
+    inputMethod: String(rawImageItem.inputMethod || "").trim(),
+    usageMeta:
+      rawImageItem.usageMeta && typeof rawImageItem.usageMeta === "object"
+        ? { ...rawImageItem.usageMeta }
+        : void 0,
+    legacy:
+      rawImageItem.legacy && typeof rawImageItem.legacy === "object"
+        ? { ...rawImageItem.legacy }
+        : void 0,
   };
+  const assetImageRecord = normalizeLegacyImageRecordToAssetRecord(
+    baseImageRecord,
+    {
+      prefix: "chat",
+      fileName:
+        baseImageRecord.fileName ||
+        baseImageRecord.cacheFileName ||
+        baseImageRecord.name,
+      filePath: baseImageRecord.filePath || baseImageRecord.cacheFilePath,
+      inputMethod:
+        baseImageRecord.inputMethod ||
+        baseImageRecord.source ||
+        "chat-cache",
+      sourceRefKey: baseImageRecord.sourceRefKey || "",
+      usageMeta: {
+        ownerType: "chat-message",
+        ...(baseImageRecord.usageMeta && typeof baseImageRecord.usageMeta === "object"
+          ? baseImageRecord.usageMeta
+          : {}),
+      },
+    },
+  );
+
+  const normalizedImageRecord = {
+    ...baseImageRecord,
+    assetId: assetImageRecord.assetId,
+    fileName: assetImageRecord.fileName,
+    filePath: assetImageRecord.filePath,
+    internalCacheId: assetImageRecord.internalCacheId,
+    itemId: assetImageRecord.itemId,
+    sourceRefKey: assetImageRecord.sourceRefKey,
+    inputMethod: assetImageRecord.inputMethod,
+    usageMeta: assetImageRecord.usageMeta,
+    legacy: assetImageRecord.legacy,
+    imageTraceId: assetImageRecord.imageTraceId,
+    parentImageTraceIds: assetImageRecord.parentImageTraceIds,
+    imageSourceKind: assetImageRecord.imageSourceKind,
+    imageSourceMethod: assetImageRecord.imageSourceMethod,
+    displayFileName: assetImageRecord.displayFileName,
+    legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
+    legacyIdConversionRemoveAfter:
+      assetImageRecord.legacyIdConversionRemoveAfter,
+  };
+  if (!hasResolvableImageRecord(normalizedImageRecord)) return null;
+  return normalizedImageRecord;
 }
 
 function migrateChatSessionListSchema(sessionListInput = []) {
@@ -3368,10 +4222,10 @@ function migrateChatSessionListSchema(sessionListInput = []) {
               const previousImageItem = messageItem.images[imageIndex] || {};
               const nextImageItem = normalizedMessageImages[imageIndex] || {};
               const previousCacheId = String(
-                previousImageItem.psCacheId || previousImageItem.cacheId || "",
+                buildImageRecordLookupKeys(previousImageItem)[0] || "",
               ).trim();
               const nextCacheId = String(
-                nextImageItem.psCacheId || nextImageItem.cacheId || "",
+                buildImageRecordLookupKeys(nextImageItem)[0] || "",
               ).trim();
               const previousDataUrl = normalizeSessionImageDataUrl(
                 previousImageItem.dataUrl,
@@ -3534,17 +4388,10 @@ function stripCachedImageDataFromSessions(
   const normalizedSessionList = Array.isArray(sessionListInput) ? sessionListInput : [];
   if (!normalizedActiveSessionId || !normalizedSessionList.length) return normalizedSessionList;
 
-  let hasAnySessionImagesStripped = false;
-  const nextChatSessionsAfterStrip = normalizedSessionList.map((sessionItem) => {
-    if (
-      sessionItem.id === normalizedActiveSessionId ||
-      !Array.isArray(sessionItem?.messages) ||
-      !sessionItem.messages.length
-    )
-      return sessionItem;
-
-    let hasSessionMessageChangedByStrip = false;
-    const nextSessionMessages = sessionItem.messages.map((messageItem) => {
+  const stripMessageListInlineImageData = (messageListInput) => {
+    const sourceMessageList = Array.isArray(messageListInput) ? messageListInput : [];
+    let hasMessageListChangedByStrip = false;
+    const nextMessageList = sourceMessageList.map((messageItem) => {
       if (!Array.isArray(messageItem?.images) || !messageItem.images.length) return messageItem;
 
       let hasMessageImagesStripped = false;
@@ -3554,7 +4401,9 @@ function stripCachedImageDataFromSessions(
         const hasInlineImageDataUrl = String(messageImageItem.dataUrl || "")
             .trim()
             .startsWith("data:image/"),
-          normalizedMessageImageCacheId = String(messageImageItem.cacheId || "").trim();
+          normalizedMessageImageCacheId = String(
+            buildImageRecordLookupKeys(messageImageItem)[0] || "",
+          ).trim();
         if (!hasInlineImageDataUrl || !normalizedMessageImageCacheId) return messageImageItem;
 
         hasMessageImagesStripped = true;
@@ -3565,19 +4414,82 @@ function stripCachedImageDataFromSessions(
       });
       if (!hasMessageImagesStripped) return messageItem;
 
-      hasSessionMessageChangedByStrip = true;
+      hasMessageListChangedByStrip = true;
       return {
         ...messageItem,
         images: nextMessageImages,
       };
     });
-    if (!hasSessionMessageChangedByStrip) return sessionItem;
+    return {
+      messages: nextMessageList,
+      changed: hasMessageListChangedByStrip,
+    };
+  };
+
+  let hasAnySessionImagesStripped = false;
+  const nextChatSessionsAfterStrip = normalizedSessionList.map((sessionItem) => {
+    if (sessionItem.id === normalizedActiveSessionId) return sessionItem;
+
+    const strippedSessionMessagesResult = stripMessageListInlineImageData(
+      sessionItem.messages,
+    );
+    let hasBranchStateChangedByStrip = false;
+    let nextMessageBranchState = sessionItem?.messageBranchState;
+    const branchEntries = Array.isArray(sessionItem?.messageBranchState?.entries)
+      ? sessionItem.messageBranchState.entries
+      : [];
+    if (branchEntries.length) {
+      const nextBranchEntries = branchEntries.map((branchEntry) => {
+        const sourceVariants = Array.isArray(branchEntry?.variants)
+          ? branchEntry.variants
+          : [];
+        if (!sourceVariants.length) return branchEntry;
+
+        let hasBranchEntryChangedByStrip = false;
+        const nextVariants = sourceVariants.map((variantItem) => {
+          const strippedVariantMessagesResult = stripMessageListInlineImageData(
+            variantItem?.messages,
+          );
+          if (!strippedVariantMessagesResult.changed) return variantItem;
+          hasBranchEntryChangedByStrip = true;
+          return {
+            ...variantItem,
+            messages: strippedVariantMessagesResult.messages,
+            updatedAt: Date.now(),
+          };
+        });
+        if (!hasBranchEntryChangedByStrip) return branchEntry;
+        hasBranchStateChangedByStrip = true;
+        return {
+          ...branchEntry,
+          variants: nextVariants,
+        };
+      });
+      if (hasBranchStateChangedByStrip) {
+        nextMessageBranchState = {
+          ...(sessionItem?.messageBranchState &&
+          typeof sessionItem.messageBranchState === "object"
+            ? sessionItem.messageBranchState
+            : {}),
+          entries: nextBranchEntries,
+        };
+      }
+    }
+    if (
+      !strippedSessionMessagesResult.changed &&
+      !hasBranchStateChangedByStrip
+    )
+      return sessionItem;
 
     hasAnySessionImagesStripped = true;
-    return {
+    const nextSessionItem = {
       ...sessionItem,
-      messages: nextSessionMessages,
+      messages: strippedSessionMessagesResult.messages,
     };
+    if (hasBranchStateChangedByStrip) {
+      nextSessionItem.messageBranchState = nextMessageBranchState;
+    }
+    return nextSessionItem;
   });
   return hasAnySessionImagesStripped ? nextChatSessionsAfterStrip : normalizedSessionList;
 }
@@ -3586,28 +4498,42 @@ function collectSessionHydrationCacheIds(
   sessionItem,
   batchLimit = 12,
 ) {
-  if (
-    !sessionItem ||
-    !Array.isArray(sessionItem.messages) ||
-    !sessionItem.messages.length
-  )
-    return [];
+  if (!sessionItem) return [];
+
+  const collectCacheIdsFromMessageList = (messageListInput, outputCacheIdList) => {
+    const sourceMessageList = Array.isArray(messageListInput) ? messageListInput : [];
+    const outputList = Array.isArray(outputCacheIdList) ? outputCacheIdList : [];
+    sourceMessageList.forEach((sessionMessageItem) => {
+      Array.isArray(sessionMessageItem?.images) &&
+        sessionMessageItem.images.forEach((sessionMessageImage) => {
+          const normalizedLookupKeys = buildImageRecordLookupKeys(
+              sessionMessageImage,
+            ),
+            normalizedHydrationCacheId = String(
+              normalizedLookupKeys[0] || "",
+            ).trim(),
+            normalizedUploadRegionDataUrl = String(
+              sessionMessageImage?.dataUrl || "",
+            ).trim();
+          if (normalizedHydrationCacheId && !normalizedUploadRegionDataUrl)
+            outputList.push(normalizedHydrationCacheId);
+        });
+    });
+  };
 
   const cacheIdCandidates = [];
-  sessionItem.messages.forEach((sessionMessageItem) => {
-    Array.isArray(sessionMessageItem?.images) &&
-      sessionMessageItem.images.forEach((sessionMessageImage) => {
-        const normalizedHydrationCacheId = String(
-            sessionMessageImage?.cacheId ||
-              sessionMessageImage?.psCacheId ||
-              "",
-          ).trim(),
-          normalizedUploadRegionDataUrl = String(
-            sessionMessageImage?.dataUrl || "",
-          ).trim();
-        if (normalizedHydrationCacheId && !normalizedUploadRegionDataUrl)
-          cacheIdCandidates.push(normalizedHydrationCacheId);
-      });
+  collectCacheIdsFromMessageList(sessionItem.messages, cacheIdCandidates);
+  const branchEntries = Array.isArray(sessionItem?.messageBranchState?.entries)
+    ? sessionItem.messageBranchState.entries
+    : [];
+  branchEntries.forEach((branchEntry) => {
+    const variants = Array.isArray(branchEntry?.variants) ? branchEntry.variants : [];
+    variants.forEach((variantItem) =>
+      collectCacheIdsFromMessageList(
+        variantItem?.messages,
+        cacheIdCandidates,
+      ),
+    );
   });
 
   const uniqueCacheIds = Array.from(new Set(cacheIdCandidates.filter(Boolean)));
@@ -3617,20 +4543,16 @@ function collectSessionHydrationCacheIds(
 
 function buildImageCacheRecordById(cacheRecordsInput) {
   const cacheRecords = Array.isArray(cacheRecordsInput) ? cacheRecordsInput : [];
-  return new Map(
-    cacheRecords
-      .map((cacheRecordItem) => [
-        String(cacheRecordItem?.cacheId || "").trim(),
-        cacheRecordItem,
-      ])
-      .filter(
-        ([cacheIdFromTuple, cacheRecordPayload]) =>
-          cacheIdFromTuple &&
-          String(cacheRecordPayload?.dataUrl || "").startsWith(
-            "data:image/",
-          ),
-      ),
-  );
+  const cacheRecordMap = new Map();
+  cacheRecords.forEach((cacheRecordItem) => {
+    const normalizedDataUrl = String(cacheRecordItem?.dataUrl || "").trim();
+    if (!normalizedDataUrl.startsWith("data:image/")) return;
+    buildImageRecordLookupKeys(cacheRecordItem).forEach((lookupKey) => {
+      if (!lookupKey || cacheRecordMap.has(lookupKey)) return;
+      cacheRecordMap.set(lookupKey, cacheRecordItem);
+    });
+  });
+  return cacheRecordMap;
 }
 
 async function fetchSessionImageCacheRecords(
@@ -3679,23 +4601,19 @@ function hydrateSessionImagesFromCacheRecords(
   if (!normalizedTargetSessionId || !(cacheRecordById instanceof Map) || !cacheRecordById.size)
     return normalizedSessionList;
 
-  let hasAnySessionImagesHydrated = false;
-  const nextChatSessionsAfterHydration = normalizedSessionList.map((sessionItem) => {
-    if (
-      sessionItem.id !== normalizedTargetSessionId ||
-      !Array.isArray(sessionItem.messages) ||
-      !sessionItem.messages.length
-    )
-      return sessionItem;
-
-    let hasSessionMessageChangedByHydration = false;
-    const nextSessionMessages = sessionItem.messages.map((messageItem) => {
+  const hydrateMessageListFromCacheRecords = (messageListInput) => {
+    const sourceMessageList = Array.isArray(messageListInput) ? messageListInput : [];
+    let hasMessageListHydrated = false;
+    const nextMessageList = sourceMessageList.map((messageItem) => {
       if (!Array.isArray(messageItem?.images) || !messageItem.images.length) return messageItem;
 
       let hasMessageImagesHydrated = false;
       const nextMessageImages = messageItem.images.map((messageImageItem) => {
+        const normalizedLookupKeys = buildImageRecordLookupKeys(messageImageItem);
         const normalizedHydrationImageCacheId = String(
-          messageImageItem?.cacheId || messageImageItem?.psCacheId || "",
+          normalizedLookupKeys.find((lookupKey) => cacheRecordById.has(lookupKey)) ||
+            normalizedLookupKeys[0] ||
+            "",
         ).trim();
         const existingHydrationImageDataUrl = String(messageImageItem?.dataUrl || "").trim();
         if (!normalizedHydrationImageCacheId || existingHydrationImageDataUrl)
@@ -3704,12 +4622,101 @@ function hydrateSessionImagesFromCacheRecords(
         const uploadRegionPreviewData = cacheRecordById.get(normalizedHydrationImageCacheId);
         const normalizedCacheDataUrl = String(uploadRegionPreviewData?.dataUrl || "").trim();
         if (!normalizedCacheDataUrl.startsWith("data:image/")) return messageImageItem;
+        const shouldPreferChatCachePhysicalRecord =
+          String(uploadRegionPreviewData?.usageMeta?.ownerType || "").trim() ===
+            "chat-image-cache" ||
+          (!isPsCacheIdText(
+            String(
+              uploadRegionPreviewData?.cacheId ||
+                uploadRegionPreviewData?.internalCacheId ||
+                "",
+            ).trim(),
+          ) &&
+            !!String(
+              uploadRegionPreviewData?.cacheFilePath ||
+                uploadRegionPreviewData?.filePath ||
+                "",
+            ).trim());
 
         hasMessageImagesHydrated = true;
-        return {
+        return normalizeSessionMessageImageItem({
           ...messageImageItem,
-          cacheId: String(messageImageItem?.cacheId || normalizedHydrationImageCacheId),
-          psCacheId: String(messageImageItem?.psCacheId || ""),
+          assetId: String(
+            messageImageItem?.assetId || uploadRegionPreviewData?.assetId || "",
+          ).trim(),
+          cacheId: String(
+              messageImageItem?.cacheId ||
+              uploadRegionPreviewData?.cacheId ||
+              "",
+          ).trim(),
+          psCacheId: String(
+              messageImageItem?.psCacheId ||
+              uploadRegionPreviewData?.psCacheId ||
+              "",
+          ).trim(),
+          fileName: String(
+            messageImageItem?.fileName ||
+              uploadRegionPreviewData?.fileName ||
+              "",
+          ).trim(),
+          filePath: String(
+            (shouldPreferChatCachePhysicalRecord
+              ? uploadRegionPreviewData?.cacheFilePath ||
+                uploadRegionPreviewData?.filePath ||
+                ""
+              : messageImageItem?.filePath) ||
+              uploadRegionPreviewData?.filePath ||
+              "",
+          ).trim(),
+          cacheFileName: String(
+            uploadRegionPreviewData?.cacheFileName ||
+              messageImageItem?.cacheFileName ||
+              uploadRegionPreviewData?.fileName ||
+              "",
+          ).trim(),
+          cacheFilePath: String(
+            uploadRegionPreviewData?.cacheFilePath ||
+              uploadRegionPreviewData?.filePath ||
+              messageImageItem?.cacheFilePath ||
+              "",
+          ).trim(),
+          internalCacheId: String(
+            messageImageItem?.internalCacheId ||
+              uploadRegionPreviewData?.internalCacheId ||
+              uploadRegionPreviewData?.fileName ||
+              "",
+          ).trim(),
+          itemId: String(
+            messageImageItem?.itemId ||
+              uploadRegionPreviewData?.itemId ||
+              uploadRegionPreviewData?.internalCacheId ||
+              uploadRegionPreviewData?.fileName ||
+              "",
+          ).trim(),
+          sourceRefKey: String(
+            messageImageItem?.sourceRefKey ||
+              uploadRegionPreviewData?.sourceRefKey ||
+              parseAssetIdentityFromFileName(
+                uploadRegionPreviewData?.fileName || "",
+              )?.sourceRefKey ||
+              "",
+          ).trim(),
+          inputMethod: String(
+            messageImageItem?.inputMethod ||
+              uploadRegionPreviewData?.inputMethod ||
+              messageImageItem?.source ||
+              "",
+          ).trim(),
+          usageMeta:
+            messageImageItem?.usageMeta &&
+            typeof messageImageItem.usageMeta === "object"
+              ? { ...messageImageItem.usageMeta }
+              : uploadRegionPreviewData?.usageMeta,
+          legacy:
+            messageImageItem?.legacy &&
+            typeof messageImageItem.legacy === "object"
+              ? { ...messageImageItem.legacy }
+              : uploadRegionPreviewData?.legacy,
           dataUrl: normalizedCacheDataUrl,
           type: String(
             messageImageItem?.type ||
@@ -3717,23 +4724,86 @@ function hydrateSessionImagesFromCacheRecords(
               messageImageItem?.cacheMimeType ||
               "",
           ),
-        };
+        }, String(messageItem?.role || ""), String(messageImageItem?.id || ""));
       });
       if (!hasMessageImagesHydrated) return messageItem;
 
-      hasSessionMessageChangedByHydration = true;
+      hasMessageListHydrated = true;
       return {
         ...messageItem,
         images: nextMessageImages,
       };
     });
-    if (!hasSessionMessageChangedByHydration) return sessionItem;
+    return {
+      messages: nextMessageList,
+      changed: hasMessageListHydrated,
+    };
+  };
+
+  let hasAnySessionImagesHydrated = false;
+  const nextChatSessionsAfterHydration = normalizedSessionList.map((sessionItem) => {
+    if (sessionItem.id !== normalizedTargetSessionId) return sessionItem;
+
+    const hydratedSessionMessagesResult = hydrateMessageListFromCacheRecords(
+      sessionItem.messages,
+    );
+    let hasBranchStateChangedByHydration = false;
+    let nextMessageBranchState = sessionItem?.messageBranchState;
+    const branchEntries = Array.isArray(sessionItem?.messageBranchState?.entries)
+      ? sessionItem.messageBranchState.entries
+      : [];
+    if (branchEntries.length) {
+      const nextBranchEntries = branchEntries.map((branchEntry) => {
+        const sourceVariants = Array.isArray(branchEntry?.variants)
+          ? branchEntry.variants
+          : [];
+        if (!sourceVariants.length) return branchEntry;
+
+        let hasBranchEntryChangedByHydration = false;
+        const nextVariants = sourceVariants.map((variantItem) => {
+          const hydratedVariantMessagesResult = hydrateMessageListFromCacheRecords(
+            variantItem?.messages,
+          );
+          if (!hydratedVariantMessagesResult.changed) return variantItem;
+          hasBranchEntryChangedByHydration = true;
+          return {
+            ...variantItem,
+            messages: hydratedVariantMessagesResult.messages,
+            updatedAt: Date.now(),
+          };
+        });
+        if (!hasBranchEntryChangedByHydration) return branchEntry;
+        hasBranchStateChangedByHydration = true;
+        return {
+          ...branchEntry,
+          variants: nextVariants,
+        };
+      });
+      if (hasBranchStateChangedByHydration) {
+        nextMessageBranchState = {
+          ...(sessionItem?.messageBranchState &&
+          typeof sessionItem.messageBranchState === "object"
+            ? sessionItem.messageBranchState
+            : {}),
+          entries: nextBranchEntries,
+        };
+      }
+    }
+    if (
+      !hydratedSessionMessagesResult.changed &&
+      !hasBranchStateChangedByHydration
+    )
+      return sessionItem;
 
     hasAnySessionImagesHydrated = true;
-    return {
+    const nextSessionItem = {
       ...sessionItem,
-      messages: nextSessionMessages,
+      messages: hydratedSessionMessagesResult.messages,
     };
+    if (hasBranchStateChangedByHydration) {
+      nextSessionItem.messageBranchState = nextMessageBranchState;
+    }
+    return nextSessionItem;
   });
   return hasAnySessionImagesHydrated ? nextChatSessionsAfterHydration : normalizedSessionList;
 }
@@ -4835,6 +5905,15 @@ function applyPresetPatchById(
   );
 }
 
+function removePresetById(presetItemsInput, targetPresetIdInput) {
+  const presetItems = Array.isArray(presetItemsInput) ? presetItemsInput : [];
+  const targetPresetId = String(targetPresetIdInput || "").trim();
+  if (!targetPresetId || !presetItems.length) return presetItems;
+  return presetItems.filter(
+    (presetItem) => String(presetItem?.id || "").trim() !== targetPresetId,
+  );
+}
+
 function buildPresetCreationState({
   existingPresetItemsInput,
   titlePrefix = "预设",
@@ -5091,16 +6170,361 @@ function formatFileTimestamp(timestampValue) {
   return `${dateObject.getFullYear()}${padTwoDigits(dateObject.getMonth() + 1)}${padTwoDigits(dateObject.getDate())}-${padTwoDigits(dateObject.getHours())}${padTwoDigits(dateObject.getMinutes())}${padTwoDigits(dateObject.getSeconds())}`;
 }
 
+const LEGACY_IMAGE_ID_CONVERSION_REMOVE_AFTER = "2026-05-18";
+
+function normalizeTraceTextPart(value, fallback = "") {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || String(fallback || "").trim().toLowerCase();
+}
+
+function formatImageTraceTimestamp(timestampValue) {
+  const normalizedTimestamp = Number.isFinite(timestampValue)
+    ? Number(timestampValue)
+    : Date.now();
+  const dateObject = new Date(normalizedTimestamp);
+  const padTwoDigits = (numberValue) => String(numberValue).padStart(2, "0");
+  return `${dateObject.getFullYear()}${padTwoDigits(dateObject.getMonth() + 1)}${padTwoDigits(dateObject.getDate())}T${padTwoDigits(dateObject.getHours())}${padTwoDigits(dateObject.getMinutes())}${padTwoDigits(dateObject.getSeconds())}`;
+}
+
+function normalizeParentImageTraceIds(parentImageTraceIdsInput) {
+  const parentImageTraceIds = Array.isArray(parentImageTraceIdsInput)
+    ? parentImageTraceIdsInput
+    : [];
+  return Array.from(
+    new Set(
+      parentImageTraceIds
+        .map((item) => String(item || "").trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function normalizeImageSourceKindValue(sourceKindInput) {
+  const normalizedValue = normalizeTraceTextPart(sourceKindInput);
+  return normalizedValue || "unknown";
+}
+
+function normalizeImageSourceMethodValue(sourceMethodInput) {
+  const normalizedValue = normalizeTraceTextPart(sourceMethodInput);
+  return normalizedValue || "unknown";
+}
+
+function buildImageTraceId({
+  prefix = "image",
+  sourceKind = "",
+  sourceMethod = "",
+  occurredAt = Date.now(),
+  parentImageTraceIds = [],
+} = {}) {
+  const normalizedPrefix = normalizeTraceTextPart(prefix, "image"),
+    normalizedSourceKind = normalizeImageSourceKindValue(sourceKind),
+    normalizedSourceMethod = normalizeImageSourceMethodValue(sourceMethod),
+    normalizedParentImageTraceIds = normalizeParentImageTraceIds(
+      parentImageTraceIds,
+    ),
+    parentSignature = normalizedParentImageTraceIds.length
+      ? normalizedParentImageTraceIds.join("-")
+      : "";
+  return [
+    normalizedPrefix,
+    normalizedSourceKind,
+    normalizedSourceMethod,
+    parentSignature,
+    formatImageTraceTimestamp(occurredAt),
+  ]
+    .filter(Boolean)
+    .join("-");
+}
+
+function resolveLegacyImageDisplayFileName(imageRecord = {}, options = {}) {
+  const fileNameCandidates = [
+    options.displayFileName,
+    imageRecord.displayFileName,
+    imageRecord.originName,
+    imageRecord.name,
+    imageRecord.fileName,
+    imageRecord.cacheFileName,
+  ];
+  for (const fileNameCandidate of fileNameCandidates) {
+    const normalizedFileName = String(fileNameCandidate || "").trim();
+    if (normalizedFileName) return normalizedFileName;
+  }
+  const imageExtension = detectImageExtension(
+    imageRecord.fileName || imageRecord.name,
+    imageRecord.type || imageRecord.mimeType,
+  );
+  return `${buildImageTraceId({
+    prefix: options.prefix || "image",
+    sourceKind:
+      options.imageSourceKind ||
+      imageRecord.imageSourceKind ||
+      imageRecord.source ||
+      "unknown",
+    sourceMethod:
+      options.imageSourceMethod ||
+      imageRecord.imageSourceMethod ||
+      imageRecord.role ||
+      "unknown",
+    occurredAt:
+      options.occurredAt ||
+      imageRecord.capturedAt ||
+      imageRecord.cachedAt ||
+      Date.now(),
+    parentImageTraceIds:
+      options.parentImageTraceIds || imageRecord.parentImageTraceIds || [],
+  })}.${imageExtension}`;
+}
+
+function normalizeLegacyImageRecordToTraceImage(imageRecordInput, options = {}) {
+  const imageRecord =
+      imageRecordInput && typeof imageRecordInput === "object"
+        ? imageRecordInput
+        : {},
+    normalizedParentImageTraceIds = normalizeParentImageTraceIds(
+      options.parentImageTraceIds || imageRecord.parentImageTraceIds,
+    ),
+    normalizedSourceKind = normalizeImageSourceKindValue(
+      options.imageSourceKind ||
+        imageRecord.imageSourceKind ||
+        imageRecord.source,
+    ),
+    normalizedSourceMethod = normalizeImageSourceMethodValue(
+      options.imageSourceMethod ||
+        imageRecord.imageSourceMethod ||
+        imageRecord.role,
+    ),
+    imageTraceId = String(
+      imageRecord.imageTraceId ||
+        options.imageTraceId ||
+        buildImageTraceId({
+          prefix: options.prefix || "image",
+          sourceKind: normalizedSourceKind,
+          sourceMethod: normalizedSourceMethod,
+          occurredAt:
+            options.occurredAt ||
+            imageRecord.capturedAt ||
+            imageRecord.cachedAt ||
+            Date.now(),
+          parentImageTraceIds: normalizedParentImageTraceIds,
+        }),
+    ).trim();
+  return {
+    ...imageRecord,
+    imageTraceId,
+    parentImageTraceIds: normalizedParentImageTraceIds,
+    imageSourceKind: normalizedSourceKind,
+    imageSourceMethod: normalizedSourceMethod,
+    displayFileName: resolveLegacyImageDisplayFileName(imageRecord, {
+      ...options,
+      imageSourceKind: normalizedSourceKind,
+      imageSourceMethod: normalizedSourceMethod,
+      parentImageTraceIds: normalizedParentImageTraceIds,
+      prefix: options.prefix || "image",
+    }),
+    legacyIdConversionTag: "legacy-image-id-conversion-remove-after-2026-05-18",
+    legacyIdConversionRemoveAfter: LEGACY_IMAGE_ID_CONVERSION_REMOVE_AFTER,
+  };
+}
+
+function extractImageFileLeafName(fileNameInput) {
+  const normalizedFileName = String(fileNameInput || "").trim();
+  if (!normalizedFileName) return "";
+  return normalizedFileName.split(/[\\/]/).filter(Boolean).pop() || "";
+}
+
+function pickLegacyImageReferenceSnapshot(imageRecord = {}) {
+  const legacyFieldMap = {
+    cacheId: imageRecord.cacheId,
+    psCacheId: imageRecord.psCacheId,
+    chatCacheId: imageRecord.chatCacheId,
+    cacheFileName: imageRecord.cacheFileName,
+    cacheFilePath: imageRecord.cacheFilePath,
+    originName: imageRecord.originName,
+    oldFileName: imageRecord.oldFileName,
+  };
+  return Object.entries(legacyFieldMap).reduce(
+    (legacyRecord, [fieldName, fieldValue]) => {
+      const normalizedFieldValue = String(fieldValue || "").trim();
+      if (normalizedFieldValue) legacyRecord[fieldName] = normalizedFieldValue;
+      return legacyRecord;
+    },
+    {},
+  );
+}
+
+function normalizeImageInputMethodValue(inputMethodInput, fallback = "unknown") {
+  const normalizedValue = normalizeTraceTextPart(inputMethodInput);
+  return normalizedValue || normalizeTraceTextPart(fallback, "unknown");
+}
+
+function resolveAssetRecordFileName(imageRecord = {}, options = {}) {
+  const fileNameCandidates = [
+    options.fileName,
+    imageRecord.fileName,
+    imageRecord.cacheFileName,
+    imageRecord.displayFileName,
+    imageRecord.originName,
+    imageRecord.name,
+    imageRecord.assetId,
+    imageRecord.itemId,
+    imageRecord.internalCacheId,
+  ];
+  for (const fileNameCandidate of fileNameCandidates) {
+    const normalizedFileName = extractImageFileLeafName(fileNameCandidate);
+    if (normalizedFileName) return normalizedFileName;
+  }
+  const imageExtension = detectImageExtension(
+    imageRecord.fileName || imageRecord.name,
+    imageRecord.type || imageRecord.mimeType,
+  );
+  return `${buildImageTraceId({
+    prefix: options.prefix || "image",
+    sourceKind:
+      options.imageSourceKind ||
+      imageRecord.imageSourceKind ||
+      imageRecord.source ||
+      "unknown",
+    sourceMethod:
+      options.imageSourceMethod ||
+      imageRecord.imageSourceMethod ||
+      imageRecord.role ||
+      "unknown",
+    occurredAt:
+      options.occurredAt ||
+      imageRecord.capturedAt ||
+      imageRecord.cachedAt ||
+      imageRecord.createdAt ||
+      Date.now(),
+    parentImageTraceIds:
+      options.parentImageTraceIds || imageRecord.parentImageTraceIds || [],
+  })}.${imageExtension}`;
+}
+
+function parseAssetIdentityFromFileName(fileNameInput = "") {
+  const normalizedLeafName = extractImageFileLeafName(fileNameInput);
+  if (!normalizedLeafName) return null;
+  const extensionMatch = String(normalizedLeafName || "").match(/\.[^.\\/]+$/);
+  const extensionLength = extensionMatch?.[0]?.length || 0;
+  const fileStem = String(
+    normalizedLeafName.slice(0, Math.max(0, normalizedLeafName.length - extensionLength)) || "",
+  ).trim();
+  if (!fileStem) return null;
+  const stemParts = fileStem
+    .split("_")
+    .map((part) => String(part || "").trim())
+    .filter(Boolean);
+  if (stemParts.length < 4) {
+    return { fileStem, stemParts, sourceRefKey: "" };
+  }
+  const sequenceToken = stemParts[stemParts.length - 1];
+  const timestampToken = stemParts[stemParts.length - 2];
+  const looksLikeTimestamp = /^\d{8}T\d{9}$/.test(timestampToken);
+  const looksLikeSequence = /^(?:ps|up|rt|it)\d{2}$|^r\d+$/.test(sequenceToken);
+  if (!looksLikeTimestamp || !looksLikeSequence) {
+    return { fileStem, stemParts, sourceRefKey: "" };
+  }
+  const isTempIdentity = stemParts[1] === "temp";
+  return {
+    fileStem,
+    stemParts,
+    sourceToken: stemParts[0] || "",
+    usageToken: isTempIdentity ? "temp" : stemParts[1] || "",
+    tempKind: isTempIdentity ? stemParts.slice(2, -2).join("_") || "" : "",
+    timestampToken,
+    sequenceToken,
+    sourceRefKey: `${timestampToken}_${sequenceToken}`,
+  };
+}
+
+function normalizeLegacyImageRecordToAssetRecord(imageRecordInput, options = {}) {
+  const imageRecord =
+      imageRecordInput && typeof imageRecordInput === "object"
+        ? imageRecordInput
+        : {},
+    traceImageRecord = normalizeLegacyImageRecordToTraceImage(
+      imageRecord,
+      options,
+    ),
+    resolvedFileName = resolveAssetRecordFileName(traceImageRecord, options),
+    parsedAssetIdentity = parseAssetIdentityFromFileName(resolvedFileName),
+    resolvedFilePath = String(
+      options.filePath ||
+        imageRecord.filePath ||
+        imageRecord.cacheFilePath ||
+        "",
+    ).trim(),
+    normalizedInputMethod = normalizeImageInputMethodValue(
+      options.inputMethod ||
+        imageRecord.inputMethod ||
+        traceImageRecord.imageSourceMethod ||
+        imageRecord.source ||
+        "unknown",
+    ),
+    normalizedAssetId = String(
+      options.assetId ||
+        imageRecord.assetId ||
+        imageRecord.itemId ||
+        imageRecord.internalCacheId ||
+        resolvedFileName ||
+        traceImageRecord.imageTraceId,
+    ).trim(),
+    normalizedInternalCacheId = String(
+      options.internalCacheId ||
+        imageRecord.internalCacheId ||
+        resolvedFileName ||
+        normalizedAssetId,
+    ).trim(),
+    normalizedItemId = String(
+      options.itemId ||
+        imageRecord.itemId ||
+        normalizedInternalCacheId ||
+        normalizedAssetId,
+    ).trim(),
+    normalizedSourceRefKey = String(
+      options.sourceRefKey ||
+        imageRecord.sourceRefKey ||
+        parsedAssetIdentity?.sourceRefKey ||
+        traceImageRecord.imageTraceId ||
+        normalizedAssetId,
+    ).trim(),
+    normalizedUsageMeta = {
+      ...(imageRecord.usageMeta && typeof imageRecord.usageMeta === "object"
+        ? imageRecord.usageMeta
+        : {}),
+      ...(options.usageMeta && typeof options.usageMeta === "object"
+        ? options.usageMeta
+        : {}),
+    },
+    normalizedLegacySnapshot = {
+      ...(imageRecord.legacy && typeof imageRecord.legacy === "object"
+        ? imageRecord.legacy
+        : {}),
+      ...pickLegacyImageReferenceSnapshot(imageRecord),
+    };
+  return {
+    ...traceImageRecord,
+    assetId: normalizedAssetId,
+    fileName: resolvedFileName,
+    filePath: resolvedFilePath,
+    internalCacheId: normalizedInternalCacheId,
+    itemId: normalizedItemId,
+    sourceRefKey: normalizedSourceRefKey,
+    inputMethod: normalizedInputMethod,
+    usageMeta: normalizedUsageMeta,
+    displayFileName: resolvedFileName || traceImageRecord.displayFileName,
+    legacy: normalizedLegacySnapshot,
+  };
+}
+
 function normalizeUploadedImages(uploadedImagesInput, options = {}) {
   const uploadedImages = Array.isArray(uploadedImagesInput) ? uploadedImagesInput : [];
   const withImageModel = options.withImageModel !== false;
   return uploadedImages
-    .filter(
-      (imageItem) =>
-        imageItem &&
-        typeof imageItem.dataUrl === "string" &&
-        imageItem.dataUrl.startsWith("data:image/"),
-    )
+    .filter((imageItem) => hasResolvableImageRecord(imageItem))
     .sort((leftImageItem, rightImageItem) => {
       const leftSlotIndex = Number.isFinite(leftImageItem?.slotIndex)
         ? leftImageItem.slotIndex
@@ -5118,17 +6542,65 @@ function normalizeUploadedImages(uploadedImagesInput, options = {}) {
         imageItem.role || resolveImageRoleBySlot(resolvedSlotIndex, withImageModel),
       );
       const imageSource = normalizeImageSource(imageItem.source);
-      const imageTimestamp = formatFileTimestamp(imageItem.capturedAt);
-      const imageExtension = detectImageExtension(imageItem.name, imageItem.type);
-      const normalizedImageName = `${imageRole}_${imageTimestamp}_${imageSource}_${imageIndex + 1}.${imageExtension}`;
-      return {
+      const normalizedLegacyImageRecord = {
         ...imageItem,
         slotIndex: resolvedSlotIndex,
         role: imageRole,
         source: imageSource,
-        name: normalizedImageName,
-        originName:
-          imageItem.originName || imageItem.name || normalizedImageName,
+        inputMethod: imageSource,
+        fileName: String(
+          imageItem.fileName || imageItem.cacheFileName || "",
+        ).trim(),
+        name: String(
+          imageItem.name || imageItem.originName || imageItem.fileName || "",
+        ).trim(),
+        originName: String(
+          imageItem.originName || imageItem.name || imageItem.fileName || "",
+        ).trim(),
+      };
+      const assetImageRecord = normalizeLegacyImageRecordToAssetRecord(
+        normalizedLegacyImageRecord,
+        {
+          prefix: "upload",
+          imageSourceKind: "upload",
+          imageSourceMethod: imageSource,
+          occurredAt: imageItem.capturedAt,
+          inputMethod: imageSource,
+          usageMeta: {
+            ownerType: "upload",
+            ownerScope: "uploaded-images",
+          },
+        },
+      );
+      const normalizedDisplayName = resolveAssetRecordDisplayName(
+        assetImageRecord,
+        String(
+          normalizedLegacyImageRecord.name ||
+            normalizedLegacyImageRecord.fileName ||
+            "image",
+        ).trim() || "image",
+      );
+      return {
+        ...normalizedLegacyImageRecord,
+        name: normalizedDisplayName,
+        originName: normalizedDisplayName,
+        assetId: assetImageRecord.assetId,
+        fileName: assetImageRecord.fileName,
+        filePath: assetImageRecord.filePath,
+        internalCacheId: assetImageRecord.internalCacheId,
+        itemId: assetImageRecord.itemId,
+        sourceRefKey: assetImageRecord.sourceRefKey,
+        inputMethod: assetImageRecord.inputMethod,
+        usageMeta: assetImageRecord.usageMeta,
+        legacy: assetImageRecord.legacy,
+        imageTraceId: assetImageRecord.imageTraceId,
+        parentImageTraceIds: assetImageRecord.parentImageTraceIds,
+        imageSourceKind: assetImageRecord.imageSourceKind,
+        imageSourceMethod: assetImageRecord.imageSourceMethod,
+        displayFileName: assetImageRecord.displayFileName,
+        legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
+        legacyIdConversionRemoveAfter:
+          assetImageRecord.legacyIdConversionRemoveAfter,
       };
     });
 }
@@ -5152,6 +6624,20 @@ function buildComparableTargetRectSignature(targetRectInput) {
   return `${x},${y},${width},${height}`;
 }
 
+function buildComparableTargetRectNormSignature(targetRectNormInput) {
+  const targetRectNorm =
+    targetRectNormInput && typeof targetRectNormInput === "object"
+      ? targetRectNormInput
+      : null;
+  if (!targetRectNorm) return "";
+  const left = formatComparableNumber(Number(targetRectNorm.left)),
+    top = formatComparableNumber(Number(targetRectNorm.top)),
+    width = formatComparableNumber(Number(targetRectNorm.width)),
+    height = formatComparableNumber(Number(targetRectNorm.height));
+  if (!left && !top && !width && !height) return "";
+  return `${left},${top},${width},${height}`;
+}
+
 function buildUploadedImageComparisonToken(imageItem) {
   if (!imageItem || typeof imageItem !== "object") return "";
   const dataUrl = String(imageItem.dataUrl || "").trim(),
@@ -5167,7 +6653,7 @@ function buildUploadedImageComparisonToken(imageItem) {
     height = Number.isFinite(Number(imageItem.height))
       ? Math.max(0, Math.round(Number(imageItem.height)))
       : 0,
-    cacheId = String(imageItem.psCacheId || imageItem.cacheId || "").trim(),
+    primaryLookupKey = String(buildImageRecordLookupKeys(imageItem)[0] || "").trim(),
     targetRectSignature = buildComparableTargetRectSignature(imageItem.targetRect);
   let dataUrlSignature = "";
   if (/^data:image\//i.test(dataUrl)) {
@@ -5183,7 +6669,7 @@ function buildUploadedImageComparisonToken(imageItem) {
     mimeType,
     width,
     height,
-    cacheId || "-",
+    primaryLookupKey || "-",
     targetRectSignature || "-",
     dataUrlSignature || "-",
   ].join("|");
@@ -5482,17 +6968,28 @@ async function readFileAsDataUrl(imageFile) {
 function normalizeImageItems(imageItemsInput) {
   return Array.from(imageItemsInput || [])
     .filter(
-      (imageItemCandidate) =>
-        imageItemCandidate &&
-        ((
-          typeof imageItemCandidate.dataUrl === "string" &&
-          imageItemCandidate.dataUrl.startsWith("data:image/")
-        ) || (
-          typeof imageItemCandidate.psCacheId === "string" &&
-          !!String(imageItemCandidate.psCacheId || "").trim()
-        )),
+      (imageItemCandidate) => {
+        if (!imageItemCandidate) return false;
+        const normalizedDataUrl = String(imageItemCandidate?.dataUrl || "").trim();
+        if (normalizedDataUrl.startsWith("data:image/")) return true;
+        return [
+          imageItemCandidate?.assetId,
+          imageItemCandidate?.internalCacheId,
+          imageItemCandidate?.itemId,
+          imageItemCandidate?.fileName,
+          imageItemCandidate?.filePath,
+          imageItemCandidate?.cacheFilePath,
+          imageItemCandidate?.psCacheId,
+          imageItemCandidate?.cacheId,
+          imageItemCandidate?.chatCacheId,
+        ].some((lookupValue) => !!String(lookupValue || "").trim());
+      },
     )
     .map((rawImageItem) => {
+      const rawLegacyImageSnapshot =
+        rawImageItem?.legacy && typeof rawImageItem.legacy === "object"
+          ? rawImageItem.legacy
+          : {};
       const normalizedImportMetaTask = normalizeImportTargetMeta(rawImageItem);
       const rawImageWidth = Number(rawImageItem?.width);
       const rawImageHeight = Number(rawImageItem?.height);
@@ -5535,15 +7032,17 @@ function normalizeImageItems(imageItemsInput) {
         rawCaptureMeta && Object.keys(rawCaptureMeta).length
           ? rawCaptureMeta
           : void 0;
+      const normalizedDisplayName = resolveAssetRecordDisplayName(
+        rawImageItem,
+        "image",
+      );
 
-      return {
+      const baseImageRecord = {
         id:
           rawImageItem.id ||
           `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: String(rawImageItem.name || "image"),
-        originName: String(
-          rawImageItem.originName || rawImageItem.name || "image",
-        ),
+        name: normalizedDisplayName,
+        originName: normalizedDisplayName,
         type: String(rawImageItem.type || "image/*"),
         source: normalizeImageSource(rawImageItem.source),
         capturedAt: Number.isFinite(rawImageItem.capturedAt)
@@ -5552,8 +7051,11 @@ function normalizeImageItems(imageItemsInput) {
         slotIndex: Number.isFinite(rawImageItem.slotIndex)
           ? rawImageItem.slotIndex
           : void 0,
-        psCacheId:
-          typeof rawImageItem.psCacheId === "string" ? rawImageItem.psCacheId : "",
+        psCacheId: String(
+          rawImageItem.psCacheId ||
+            rawLegacyImageSnapshot.psCacheId ||
+            "",
+        ).trim(),
         psCacheExpiresAt: Number.isFinite(rawImageItem.psCacheExpiresAt)
           ? Number(rawImageItem.psCacheExpiresAt)
           : void 0,
@@ -5574,6 +7076,84 @@ function normalizeImageItems(imageItemsInput) {
         captureMeta: normalizedCaptureMeta,
         meta: normalizedImageMeta,
         dataUrl: String(rawImageItem.dataUrl || ""),
+        fileName: String(
+          rawImageItem.fileName ||
+            rawImageItem.internalCacheId ||
+            rawImageItem.itemId ||
+            rawImageItem.cacheFileName ||
+            "",
+        ).trim(),
+        filePath: String(
+          rawImageItem.filePath || rawImageItem.cacheFilePath || "",
+        ).trim(),
+        cacheFileName: String(
+          rawImageItem.cacheFileName || rawLegacyImageSnapshot.cacheFileName || "",
+        ).trim(),
+        cacheFilePath: String(
+          rawImageItem.cacheFilePath || rawLegacyImageSnapshot.cacheFilePath || "",
+        ).trim(),
+        cacheId: String(
+          rawImageItem.cacheId || rawLegacyImageSnapshot.cacheId || "",
+        ).trim(),
+        chatCacheId: String(
+          rawImageItem.chatCacheId || rawLegacyImageSnapshot.chatCacheId || "",
+        ).trim(),
+        assetId: String(rawImageItem.assetId || "").trim(),
+        internalCacheId: String(rawImageItem.internalCacheId || "").trim(),
+        itemId: String(rawImageItem.itemId || "").trim(),
+        sourceRefKey: String(rawImageItem.sourceRefKey || "").trim(),
+        inputMethod: String(rawImageItem.inputMethod || "").trim(),
+        usageMeta:
+          rawImageItem.usageMeta && typeof rawImageItem.usageMeta === "object"
+            ? { ...rawImageItem.usageMeta }
+            : void 0,
+        legacy:
+          rawImageItem.legacy && typeof rawImageItem.legacy === "object"
+            ? { ...rawImageItem.legacy }
+            : void 0,
+      };
+      const assetImageRecord = normalizeLegacyImageRecordToAssetRecord(
+        baseImageRecord,
+        {
+          prefix: "image",
+          fileName:
+            baseImageRecord.fileName ||
+            baseImageRecord.cacheFileName ||
+            baseImageRecord.name,
+          filePath: baseImageRecord.filePath || baseImageRecord.cacheFilePath,
+          inputMethod: baseImageRecord.inputMethod || baseImageRecord.source,
+          sourceRefKey: baseImageRecord.sourceRefKey || "",
+          usageMeta: baseImageRecord.usageMeta,
+        },
+      );
+
+      return {
+        ...baseImageRecord,
+        assetId: assetImageRecord.assetId,
+        fileName: assetImageRecord.fileName,
+        filePath: assetImageRecord.filePath,
+        internalCacheId: assetImageRecord.internalCacheId,
+        itemId: assetImageRecord.itemId,
+        sourceRefKey: assetImageRecord.sourceRefKey,
+        inputMethod: assetImageRecord.inputMethod,
+        usageMeta: assetImageRecord.usageMeta,
+        legacy: assetImageRecord.legacy,
+        imageTraceId: assetImageRecord.imageTraceId,
+        parentImageTraceIds: assetImageRecord.parentImageTraceIds,
+        imageSourceKind: assetImageRecord.imageSourceKind,
+        imageSourceMethod: assetImageRecord.imageSourceMethod,
+        displayFileName: assetImageRecord.displayFileName,
+        legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
+        legacyIdConversionRemoveAfter:
+          assetImageRecord.legacyIdConversionRemoveAfter,
+        cacheFileName:
+          assetImageRecord.fileName || baseImageRecord.cacheFileName || "",
+        cacheFilePath:
+          assetImageRecord.filePath || baseImageRecord.cacheFilePath || "",
+        cacheId:
+          baseImageRecord.cacheId ||
+          String(assetImageRecord.legacy?.cacheId || "").trim() ||
+          "",
       };
     });
 }
@@ -5688,6 +7268,7 @@ function buildUploadBridgeStartNoticePlan(
       domain: "取图桥接",
       phase: "发送",
       message: buildUploadSlotActionSendMessage(actionLabel, slotIndex),
+      emitHistory: false,
     },
     miniStatus: {
       title: "取图处理中",
@@ -5787,57 +7368,18 @@ function buildUploadBridgeFailureNoticePlan(errorText = "") {
   };
 }
 
-function buildUploadImageProcessConfigs({
-  minSidePx,
-  maxSidePx,
-  defaultSidePx,
-  defaultFormat,
-  defaultQualityPercent,
-  recompressMaxSidePx,
-  recompressMaxQuality,
-} = {}) {
-  const commonImageProcessConfig = {
-    minSidePx,
-    maxSidePx,
-    defaultSidePx,
-    defaultFormat,
-    defaultQualityPercent,
-  };
-  return {
-    compressLimits: {
-      ...commonImageProcessConfig,
-    },
-    recompressConfig: {
-      ...commonImageProcessConfig,
-      recompressMaxSidePx,
-      recompressMaxQuality,
-    },
-  };
-}
-
 function buildUploadBridgeProcessOptions({
   uploadAction = "",
   slotIndex = -1,
   psCachePut = null,
   psCachePutTtlMs,
-  compressOptions = {},
-  imageProcessConfigs = {},
   onIgnoredError = null,
 } = {}) {
-  const normalizedImageProcessConfigs =
-    imageProcessConfigs && typeof imageProcessConfigs === "object"
-      ? imageProcessConfigs
-      : {};
   return {
     uploadAction,
     slotIndex: Number.isFinite(slotIndex) ? Number(slotIndex) : -1,
     psCachePut,
     psCachePutTtlMs,
-    compressOptions:
-      compressOptions && typeof compressOptions === "object"
-        ? compressOptions
-        : {},
-    ...normalizedImageProcessConfigs,
     onIgnoredError:
       typeof onIgnoredError === "function" ? onIgnoredError : null,
   };
@@ -5859,16 +7401,152 @@ function buildCaptureResultSummaryTextForNotice(captureImages = []) {
       firstImage?.captureMeta?.documentMode ||
       "",
   ).trim();
-  const bitsPerChannelRaw = Number(
+  const documentBitsPerChannelRaw = Number(
     firstImage?.bitsPerChannel ||
       firstImage?.captureMeta?.bitsPerChannel,
+  );
+  const componentSizeRaw = Number(firstImage?.captureMeta?.componentSize);
+  const outputChannelCountRaw = Number(
+    firstImage?.captureMeta?.outputChannelCount,
+  );
+  const outputPixelDepthRaw = Number(
+    firstImage?.captureMeta?.outputPixelDepth,
   );
   const colorProfile = String(
     firstImage?.captureMeta?.colorProfile || "",
   ).trim();
+  const sourceBounds = firstImage?.captureMeta?.sourceBounds || null;
+  const sourceWidth = Math.max(
+    0,
+    Math.round(
+      Number(sourceBounds?.width) ||
+        (Number(sourceBounds?.right) || 0) - (Number(sourceBounds?.left) || 0),
+    ),
+  );
+  const sourceHeight = Math.max(
+    0,
+    Math.round(
+      Number(sourceBounds?.height) ||
+        (Number(sourceBounds?.bottom) || 0) - (Number(sourceBounds?.top) || 0),
+    ),
+  );
+  const targetSize = firstImage?.captureMeta?.targetSize || null;
+  const targetWidth = Math.max(
+    0,
+    Math.round(Number(targetSize?.width) || width || 0),
+  );
+  const targetHeight = Math.max(
+    0,
+    Math.round(Number(targetSize?.height) || height || 0),
+  );
+  const captureWasDownscaled =
+    sourceWidth > 0 &&
+    sourceHeight > 0 &&
+    targetWidth > 0 &&
+    targetHeight > 0 &&
+    (targetWidth < sourceWidth || targetHeight < sourceHeight);
+  const requestedFormat = String(
+    firstImage?.captureMeta?.outputFormatRequested || "",
+  )
+    .trim()
+    .toLowerCase();
+  const compressionMeta =
+    firstImage?.meta?.cacheEntryMeta &&
+    typeof firstImage.meta.cacheEntryMeta === "object"
+      ? firstImage.meta.cacheEntryMeta
+      : null;
+  const actualFormatFromCompression = String(
+    compressionMeta?.sharpOutputFormat || "",
+  )
+    .trim()
+    .toLowerCase();
+  const actualFormatFromMeta = String(
+    firstImage?.captureMeta?.outputFormatActual || "",
+  )
+    .trim()
+    .toLowerCase();
+  const actualMimeType = String(firstImage?.type || "").trim().toLowerCase();
+  const actualFormat =
+    actualFormatFromCompression ||
+    (actualMimeType.includes("png")
+      ? "png"
+      : actualMimeType.includes("jpeg") || actualMimeType.includes("jpg")
+        ? "jpg"
+        : "") ||
+    actualFormatFromMeta;
+  const encodeStrategy = String(
+    compressionMeta?.compressionStrategy === "electron-sharp"
+      ? "electron.sharp"
+      : firstImage?.captureMeta?.encodeStrategy || "",
+  ).trim();
+  const fallbackReason = String(
+    compressionMeta?.compressionStrategy === "electron-sharp"
+      ? ""
+      : firstImage?.captureMeta?.fallbackReason || "",
+  ).trim();
+  const primaryEncodeError = String(
+    compressionMeta?.compressionStrategy === "electron-sharp"
+      ? ""
+      : firstImage?.captureMeta?.primaryEncodeError || "",
+  ).trim();
+  const requestedQualityRaw = Number(
+    firstImage?.captureMeta?.outputQualityRequested,
+  );
+  const sharpQualityPercentRaw = Number(compressionMeta?.sharpOutputQualityPercent);
+  const actualQualityPercent = compressionMeta?.compressionStrategy === "electron-sharp"
+    ? Number.isFinite(sharpQualityPercentRaw) && sharpQualityPercentRaw > 0
+      ? Math.max(
+          1,
+          Math.min(100, Math.round(sharpQualityPercentRaw)),
+        )
+      : 0
+    : Number.isFinite(Number(firstImage?.captureMeta?.outputQualityActual))
+      ? Math.max(
+          1,
+          Math.min(100, Math.round(Number(firstImage?.captureMeta?.outputQualityActual) * 100)),
+        )
+      : 0;
+  const resolvedOutputChannelCount = Number.isFinite(outputChannelCountRaw)
+    ? Math.max(1, Math.round(outputChannelCountRaw))
+    : actualFormat === "png"
+      ? 4
+      : actualFormat === "jpg"
+        ? 3
+        : 0;
+  const resolvedOutputPixelDepth = Number.isFinite(outputPixelDepthRaw)
+    ? Math.max(1, Math.round(outputPixelDepthRaw))
+    : Number.isFinite(componentSizeRaw) && resolvedOutputChannelCount > 0
+      ? Math.max(1, Math.round(componentSizeRaw)) * resolvedOutputChannelCount
+      : 0;
+  const encodeSourceLabel =
+    compressionMeta?.compressionStrategy === "electron-sharp"
+      ? "Electron/Sharp"
+      : encodeStrategy === "plugin.temp-lossless-png"
+        ? "插件临时无损PNG"
+        : encodeStrategy === "imaging.encodeImageData"
+          ? "PS Imaging"
+          : encodeStrategy === "custom-png-fallback"
+            ? "插件兜底PNG"
+            : encodeStrategy
+              ? `插件:${encodeStrategy}`
+              : "";
+  const requestedQualityPercent = Number.isFinite(requestedQualityRaw)
+    ? Math.max(1, Math.min(100, Math.round(requestedQualityRaw * 100)))
+    : 0;
 
   const summaryParts = [];
-  if (Number.isFinite(width) && Number.isFinite(height)) {
+  if (captureWasDownscaled) {
+    summaryParts.push(
+      `取图:${sourceWidth}x${sourceHeight}→${targetWidth}x${targetHeight}`,
+    );
+  } else if (
+    sourceWidth > 0 &&
+    sourceHeight > 0 &&
+    targetWidth > 0 &&
+    targetHeight > 0
+  ) {
+    summaryParts.push(`取图:${targetWidth}x${targetHeight}`);
+  } else if (Number.isFinite(width) && Number.isFinite(height)) {
     summaryParts.push(`${Math.round(width)}x${Math.round(height)}`);
   }
   if (documentName) {
@@ -5876,13 +7554,51 @@ function buildCaptureResultSummaryTextForNotice(captureImages = []) {
   }
   if (documentMode) {
     summaryParts.push(
-      Number.isFinite(bitsPerChannelRaw)
-        ? `模式:${documentMode}/${Math.max(1, Math.round(bitsPerChannelRaw))}bit`
-        : `模式:${documentMode}`,
+      Number.isFinite(documentBitsPerChannelRaw)
+        ? `文档:${documentMode}/${Math.max(1, Math.round(documentBitsPerChannelRaw))}bit`
+        : `文档:${documentMode}`,
+    );
+  }
+  if (actualFormat) {
+    summaryParts.push(
+      resolvedOutputPixelDepth > 0
+        ? `输出:${actualFormat.toUpperCase()}/${resolvedOutputPixelDepth}位`
+        : `输出:${actualFormat.toUpperCase()}`,
     );
   }
   if (colorProfile) {
     summaryParts.push(`色彩:${colorProfile}`);
+  }
+  if (requestedFormat === "jpg" && actualFormat === "png") {
+    summaryParts.push("JPG抓图失败，已退为PNG格式抓图");
+  } else if (requestedFormat && actualFormat && requestedFormat !== actualFormat) {
+    summaryParts.push(
+      `格式:${requestedFormat.toUpperCase()}→${actualFormat.toUpperCase()}`,
+    );
+  }
+  if (requestedFormat === "jpg" || actualFormat === "jpg") {
+    if (
+      requestedQualityPercent > 0 &&
+      actualQualityPercent > 0 &&
+      requestedQualityPercent !== actualQualityPercent
+    ) {
+      summaryParts.push(
+        `质量:请求${requestedQualityPercent}%/实际${actualQualityPercent}%`,
+      );
+    } else if (actualQualityPercent > 0) {
+      summaryParts.push(`质量:${actualQualityPercent}%`);
+    } else if (requestedQualityPercent > 0) {
+      summaryParts.push(`质量:请求${requestedQualityPercent}%（实际未校验）`);
+    }
+  }
+  if (encodeSourceLabel) {
+    summaryParts.push(`链路:${encodeSourceLabel}`);
+  }
+  if (requestedFormat === "jpg" && primaryEncodeError) {
+    summaryParts.push(`JPG失败:${primaryEncodeError}`);
+  }
+  if (fallbackReason) {
+    summaryParts.push(`回退:${fallbackReason}`);
   }
   return summaryParts.join(" | ");
 }
@@ -6274,7 +7990,7 @@ function removeImageItemAtSlot(
     !!targetImageItem &&
     !!(
       String(targetImageItem?.dataUrl || "").trim() ||
-      String(targetImageItem?.psCacheId || targetImageItem?.cacheId || "").trim()
+      buildImageRecordLookupKeys(targetImageItem)[0]
     );
   if (
     !Number.isInteger(slotIndex) ||
@@ -6921,6 +8637,92 @@ function createIdleInstructionTagDragDebugState() {
   };
 }
 
+function createIdleInstructionTagDragPerfSampleState() {
+  return {
+    sessionId: 0,
+    startedAt: 0,
+    tickCount: 0,
+    tickCostMsTotal: 0,
+    overlaySyncCount: 0,
+    pointerMoveIntervalSamples: 0,
+    pointerMoveIntervalTotalMs: 0,
+    pointerMoveIntervalMaxMs: 0,
+    pointerMoveGapOver16Count: 0,
+    pointerMoveGapOver33Count: 0,
+    pointerMoveGapOver50Count: 0,
+    pointerMoveHandlerSamples: 0,
+    pointerMoveHandlerCostMsTotal: 0,
+    pointerMoveHandlerCostMaxMs: 0,
+    rafSamples: 0,
+    rafDeltaTotalMs: 0,
+    rafDeltaMaxMs: 0,
+    rafGapOver16Count: 0,
+    rafGapOver33Count: 0,
+    rafGapOver50Count: 0,
+    eventLoopLagSamples: 0,
+    eventLoopLagTotalMs: 0,
+    eventLoopLagMaxMs: 0,
+    eventLoopLagOver16Count: 0,
+    eventLoopLagOver33Count: 0,
+    eventLoopLagOver50Count: 0,
+    longTaskCount: 0,
+    longTaskTotalMs: 0,
+    longTaskMaxMs: 0,
+    overlayLagSamples: 0,
+    overlayLagTotalPx: 0,
+    overlayLagMaxPx: 0,
+    gapVisualScheduleCount: 0,
+    gapVisualCommitCount: 0,
+    gapVisualCostMsTotal: 0,
+  };
+}
+
+function createIdleInstructionTagDragPerfMonitorState() {
+  return {
+    active: false,
+    sessionId: 0,
+    rafId: 0,
+    eventLoopIntervalId: 0,
+    eventLoopLastAt: 0,
+    rafLastAt: 0,
+    longTaskSerial: 0,
+    lastPointerGapLogAt: 0,
+    lastRafGapLogAt: 0,
+    lastEventLoopLagLogAt: 0,
+    longTaskObserver: null,
+    longTaskSupported: false,
+  };
+}
+
+function resolveInstructionTagDragPerfEnabled() {
+  return false;
+}
+
+function buildInstructionGroupSegmentAvailabilityMap(
+  instructionPromptsInput = [],
+) {
+  const nextInstructionGroupSegmentAvailabilityMap = /* @__PURE__ */ new Map(),
+    normalizedInstructionPrompts = Array.isArray(instructionPromptsInput)
+      ? instructionPromptsInput
+      : [];
+  normalizedInstructionPrompts.forEach((instructionPromptItem) => {
+    let normalizedInstructionGroupName =
+      normalizeInstructionPresetGroupName(instructionPromptItem?.group) ||
+      CONST_INSTRUCTION_DEFAULT_GROUP;
+    normalizedInstructionGroupName === CONST_INSTRUCTION_FAVORITES_GROUP &&
+      (normalizedInstructionGroupName = CONST_INSTRUCTION_DEFAULT_GROUP);
+    const isCommonInInstructionGroup = resolveInstructionPromptCommonInGroup(
+      instructionPromptItem,
+      normalizedInstructionGroupName,
+    );
+    nextInstructionGroupSegmentAvailabilityMap.set(
+      `${normalizedInstructionGroupName}|${isCommonInInstructionGroup ? "common" : "normal"}`,
+      true,
+    );
+  });
+  return nextInstructionGroupSegmentAvailabilityMap;
+}
+
 function buildInstructionTagDropTargetKey(instructionTagDropTargetInput = null) {
   const normalizedInstructionGroupName = String(
       instructionTagDropTargetInput?.groupName || "",
@@ -6967,6 +8769,35 @@ function isPointInsideInstructionTagDropZone(
   );
 }
 
+function resolveInstructionTagInsertAfterByBoundaries(
+  pointerClientXInput,
+  instructionTagDropZoneInput,
+) {
+  const normalizedPointerClientX = Number(pointerClientXInput),
+    beforeZoneBoundary = Number(instructionTagDropZoneInput?.beforeZoneBoundary),
+    afterZoneBoundary = Number(instructionTagDropZoneInput?.afterZoneBoundary),
+    centerBoundary = Number(instructionTagDropZoneInput?.centerBoundary);
+  if (!Number.isFinite(normalizedPointerClientX)) {
+    return instructionTagDropZoneInput?.insertAfter !== false;
+  }
+  if (
+    Number.isFinite(beforeZoneBoundary) &&
+    normalizedPointerClientX <= beforeZoneBoundary
+  ) {
+    return false;
+  }
+  if (
+    Number.isFinite(afterZoneBoundary) &&
+    normalizedPointerClientX >= afterZoneBoundary
+  ) {
+    return true;
+  }
+  if (Number.isFinite(centerBoundary)) {
+    return normalizedPointerClientX >= centerBoundary;
+  }
+  return instructionTagDropZoneInput?.insertAfter !== false;
+}
+
 function resolveInstructionTagOverlayVisualCoordinate(
   currentVisualCoordinateInput,
   desiredVisualCoordinateInput,
@@ -6975,6 +8806,9 @@ function resolveInstructionTagOverlayVisualCoordinate(
   const desiredVisualCoordinate = Number(desiredVisualCoordinateInput);
   if (!Number.isFinite(desiredVisualCoordinate)) {
     return NaN;
+  }
+  if (shouldAccelerateFollow) {
+    return desiredVisualCoordinate;
   }
   const currentVisualCoordinate = Number(currentVisualCoordinateInput);
   if (!Number.isFinite(currentVisualCoordinate)) {
@@ -6988,7 +8822,7 @@ function resolveInstructionTagOverlayVisualCoordinate(
   if (coordinateDistance >= 18) {
     return desiredVisualCoordinate;
   }
-  let followRatio = shouldAccelerateFollow ? 0.72 : 0.58;
+  let followRatio = 0.58;
   coordinateDistance >= 12
     ? (followRatio = Math.max(followRatio, 0.82))
     : coordinateDistance >= 7 &&
@@ -7012,11 +8846,13 @@ function createIdleInstructionTagPointerDragState() {
     segmentType: "normal",
     sourceGroupName: "",
     sourceAnchorKey: "",
+    pointerCaptureEl: null,
     snapshotPrompts: null,
     startClientX: 0,
     startClientY: 0,
     pointerClientX: NaN,
     pointerClientY: NaN,
+    lastPointerMoveAt: 0,
     visualClientX: NaN,
     visualClientY: NaN,
     lastTickAt: 0,
@@ -7028,12 +8864,17 @@ function createIdleInstructionTagPointerDragState() {
     sourceTop: NaN,
     sourceRight: NaN,
     sourceBottom: NaN,
+    overlayWidth: NaN,
+    overlayHeight: NaN,
     lastDropEvalClientX: NaN,
     lastDropEvalClientY: NaN,
-    lastDropEvalAt: 0,
     nextGroupRectRefreshAt: 0,
     hoveredGroupNameAtPointer: "",
     activeGapZoneKey: "",
+    activeGapZone: null,
+    anchorRectCache: null,
+    anchorRectCacheAt: 0,
+    groupSegmentAvailabilityMap: null,
     previewDropTarget: createIdleInstructionTagDropTarget(),
     dropTarget: createIdleInstructionTagDropTarget(),
   };
@@ -7445,6 +9286,7 @@ function bindUploadPointerDragWindowEvents(
     handlePointerMove,
     handlePointerUpOrCancel,
     handleWindowBlur,
+    pointerMovePassive = false,
   } = {},
 ) {
   const normalizedWindowObject =
@@ -7458,7 +9300,7 @@ function bindUploadPointerDragWindowEvents(
   if (typeof handlePointerMove === "function") {
     normalizedWindowObject.addEventListener("pointermove", handlePointerMove, {
       capture: true,
-      passive: false,
+      passive: !!pointerMovePassive,
     });
   }
   if (typeof handlePointerUpOrCancel === "function") {
@@ -7555,7 +9397,7 @@ function canStartUploadPointerDrag(
     Number.isInteger(slotIndex) &&
     slotIndex >= 0 &&
     Number(pointerButton ?? 0) === 0 &&
-    !!normalizedItems[slotIndex]?.dataUrl
+    hasResolvableImageRecord(normalizedItems[slotIndex])
   );
 }
 
@@ -7839,7 +9681,16 @@ async function cacheImagesToPsBridge(
           source: imageCacheItem.source,
           role: imageCacheItem.role,
           slotIndex: imageCacheItem.slotIndex,
+          filePath: String(imageCacheItem.filePath || "").trim(),
           dataUrl: imageCacheItem.dataUrl,
+          capturedAt: Number.isFinite(Number(imageCacheItem.capturedAt))
+            ? Number(imageCacheItem.capturedAt)
+            : Date.now(),
+          sequenceIndex: imageCacheIndex + 1,
+          compression:
+            cacheOptions.compression && typeof cacheOptions.compression === "object"
+              ? { ...cacheOptions.compression }
+              : void 0,
           meta: {
             action: String(cacheOptions.action || ""),
             slotIndex: Number.isFinite(cacheOptions.slotIndex)
@@ -7867,14 +9718,96 @@ async function cacheImagesToPsBridge(
       const cacheClientRef = String(
           imageCacheItem.id || `ps-img-${imageCacheIndex + 1}`,
         ),
-        cachedMappedItem = cacheResultByClientRef.get(cacheClientRef);
+        cachedMappedItem = cacheResultByClientRef.get(cacheClientRef),
+        cachedMappedItemLegacy =
+          cachedMappedItem?.legacy && typeof cachedMappedItem.legacy === "object"
+            ? cachedMappedItem.legacy
+            : {};
       return cachedMappedItem
         ? {
             ...imageCacheItem,
-            psCacheId: String(cachedMappedItem.cacheId || ""),
+            assetId: String(
+              cachedMappedItem.assetId ||
+                imageCacheItem.assetId ||
+                "",
+            ).trim(),
+            cacheId: String(
+                cachedMappedItem.cacheId ||
+                cachedMappedItemLegacy.cacheId ||
+                imageCacheItem.cacheId ||
+                "",
+            ).trim(),
+            psCacheId: String(
+              cachedMappedItem.psCacheId ||
+                cachedMappedItemLegacy.psCacheId ||
+                imageCacheItem.psCacheId ||
+                "",
+            ).trim(),
             psCacheExpiresAt: Number.isFinite(cachedMappedItem.expiresAt)
               ? Number(cachedMappedItem.expiresAt)
               : void 0,
+            fileName: String(
+              cachedMappedItem.fileName ||
+                imageCacheItem.fileName ||
+                imageCacheItem.cacheFileName ||
+                "",
+            ).trim(),
+            filePath: String(
+              cachedMappedItem.filePath ||
+                imageCacheItem.filePath ||
+                imageCacheItem.cacheFilePath ||
+                "",
+            ).trim(),
+            cacheFileName: String(
+              cachedMappedItem.fileName ||
+                imageCacheItem.cacheFileName ||
+                imageCacheItem.fileName ||
+                "",
+            ).trim(),
+            cacheFilePath: String(
+              cachedMappedItem.filePath ||
+                imageCacheItem.cacheFilePath ||
+                imageCacheItem.filePath ||
+                "",
+            ).trim(),
+            internalCacheId: String(
+              cachedMappedItem.internalCacheId ||
+                cachedMappedItem.itemId ||
+                imageCacheItem.internalCacheId ||
+                cachedMappedItem.fileName ||
+                "",
+            ).trim(),
+            itemId: String(
+              cachedMappedItem.itemId ||
+                imageCacheItem.itemId ||
+                cachedMappedItem.internalCacheId ||
+                cachedMappedItem.fileName ||
+                "",
+            ).trim(),
+            sourceRefKey: String(
+              cachedMappedItem.sourceRefKey ||
+                imageCacheItem.sourceRefKey ||
+                parseAssetIdentityFromFileName(
+                  cachedMappedItem.fileName || imageCacheItem.fileName || "",
+                )?.sourceRefKey ||
+                "",
+            ).trim(),
+            inputMethod: String(
+              cachedMappedItem.inputMethod ||
+                imageCacheItem.inputMethod ||
+                imageCacheItem.source ||
+                "",
+            ).trim(),
+            usageMeta:
+              cachedMappedItem.usageMeta &&
+              typeof cachedMappedItem.usageMeta === "object"
+                ? { ...cachedMappedItem.usageMeta }
+                : imageCacheItem.usageMeta,
+            legacy:
+              cachedMappedItem.legacy &&
+              typeof cachedMappedItem.legacy === "object"
+                ? { ...cachedMappedItem.legacy }
+                : imageCacheItem.legacy,
           }
         : imageCacheItem;
     });
@@ -7898,10 +9831,6 @@ async function processImageFileListWithCompressionAndPsCache(
     processOptions.compressOptions && typeof processOptions.compressOptions === "object"
       ? processOptions.compressOptions
       : {};
-  const compressLimits =
-    processOptions.compressLimits && typeof processOptions.compressLimits === "object"
-      ? processOptions.compressLimits
-      : {};
   const cacheOptions =
     processOptions.cacheOptions && typeof processOptions.cacheOptions === "object"
       ? processOptions.cacheOptions
@@ -7913,48 +9842,54 @@ async function processImageFileListWithCompressionAndPsCache(
     typeof processOptions.onIgnoredError === "function"
       ? processOptions.onIgnoredError
       : null;
+  const batchCapturedAt = Date.now();
 
   const normalizedImages = [];
   for (let fileIndex = 0; fileIndex < imageFileList.length; fileIndex += 1) {
     const imageFile = imageFileList[fileIndex];
-    let imageDataUrl = await readFileAsDataUrl(imageFile);
-    if (!imageDataUrl.startsWith("data:image/")) continue;
+    const normalizedSourceFilePath = String(
+      imageFile?.filePath || imageFile?.path || "",
+    ).trim();
+    let imageDataUrl = "";
+    if (!normalizedSourceFilePath) {
+      imageDataUrl = await readFileAsDataUrl(imageFile);
+      if (!imageDataUrl.startsWith("data:image/")) continue;
+    }
 
     const normalizedImageItem = normalizeImageItems([
       {
         id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: imageFile.name,
-        originName: imageFile.name,
-        type: imageFile.type,
+        name: imageFile.name || imageFile?.originName || "",
+        originName: imageFile.name || imageFile?.originName || "",
+        type: imageFile.type || "",
         source: imageSource,
-        capturedAt: Date.now(),
+        capturedAt: batchCapturedAt,
+        filePath: normalizedSourceFilePath,
         dataUrl: imageDataUrl,
       },
     ])[0];
     imageDataUrl = "";
     if (!normalizedImageItem) continue;
-
-    const compressedImageDataUrl = await compressImageDataUrl(
-      normalizedImageItem.dataUrl,
-      normalizedImageItem.type,
-      compressOptions,
-      compressLimits,
-    );
-    if (!String(compressedImageDataUrl).startsWith("data:image/")) continue;
-    normalizedImages.push({
-      ...normalizedImageItem,
-      dataUrl: compressedImageDataUrl,
-    });
+    normalizedImages.push(normalizedImageItem);
   }
 
   const psCachedImages = await cacheImagesToPsBridge(
     normalizedImages,
     processOptions.psCachePut,
-    cacheOptions,
+    {
+      ...cacheOptions,
+      compression: {
+        strategy: "electron-sharp",
+        format: compressOptions.format,
+        quality: compressOptions.quality,
+        maxSide: compressOptions.maxSide,
+      },
+    },
     processOptions.psCachePutTtlMs,
     onIgnoredError,
   );
-  // Keep upload quality/size exactly as configured in the first compression pass.
+  // Upload images now follow the same Electron/sharp single compression chain
+  // as the PS capture path. No browser-side compression remains in this flow.
   return psCachedImages;
 }
 
@@ -7990,8 +9925,6 @@ async function runImageFileProcessingPipeline(
         psCachePutTtlMs: processOptions.psCachePutTtlMs,
         cacheOptions: processOptions.cacheOptions,
         compressOptions: processOptions.compressOptions,
-        compressLimits: processOptions.compressLimits,
-        recompressConfig: processOptions.recompressConfig,
         onIgnoredError: processOptions.onIgnoredError,
       },
     );
@@ -8088,113 +10021,459 @@ async function processBridgeCapturedImagesForUpload(
 
   const uploadAction = String(processOptions.uploadAction || "").trim().toLowerCase();
   const imageSource = uploadAction === "select" ? "ps-select" : "ps-full";
-  const compressOptions =
-    processOptions.compressOptions && typeof processOptions.compressOptions === "object"
-      ? processOptions.compressOptions
-      : {};
-  const compressLimits =
-    processOptions.compressLimits && typeof processOptions.compressLimits === "object"
-      ? processOptions.compressLimits
-      : {};
   const onIgnoredError =
     typeof processOptions.onIgnoredError === "function"
       ? processOptions.onIgnoredError
       : null;
 
-  const resolveBridgeImageDataUrlForUpload = async (bridgeImageItem) => {
+  const resolveBridgeImageRecordForUpload = async (bridgeImageItem) => {
     const inlineDataUrl = String(bridgeImageItem?.dataUrl || "").trim();
-    if (inlineDataUrl.startsWith("data:image/")) return inlineDataUrl;
-    const psCacheId = String(bridgeImageItem?.psCacheId || "").trim();
-    if (!psCacheId) return "";
-    const readPsCache = window.shell?.psCacheGet;
-    if (typeof readPsCache !== "function") return "";
-    try {
-      const cacheReadResult = await readPsCache(psCacheId);
-      const cachedDataUrl = String(
-        cacheReadResult?.item?.dataUrl || "",
-      ).trim();
-      return /^data:image\//i.test(cachedDataUrl) ? cachedDataUrl : "";
-    } catch (cacheReadError) {
-      if (onIgnoredError) onIgnoredError(cacheReadError);
-      return "";
+    const resolvedInlineDisplayName = resolveAssetRecordDisplayName(
+      bridgeImageItem,
+      "image",
+    );
+    if (inlineDataUrl.startsWith("data:image/")) {
+      return {
+        dataUrl: inlineDataUrl,
+        type: bridgeImageItem?.type,
+        name: String(bridgeImageItem?.name || resolvedInlineDisplayName).trim(),
+        originName: String(
+          bridgeImageItem?.originName || resolvedInlineDisplayName,
+        ).trim(),
+        fileName: resolveAssetRecordDisplayName(bridgeImageItem, ""),
+      };
     }
+    const psCacheLookupKeys = buildImageRecordLookupKeys(bridgeImageItem);
+    if (!psCacheLookupKeys.length) return null;
+    const readPsCache = window.shell?.psCacheGet;
+    if (typeof readPsCache !== "function") return null;
+    for (const psCacheLookupKey of psCacheLookupKeys) {
+      try {
+        const cacheReadResult = await readPsCache(psCacheLookupKey);
+        const cachedItem =
+          cacheReadResult?.item && typeof cacheReadResult.item === "object"
+            ? cacheReadResult.item
+            : null;
+        if (cachedItem && hasResolvableImageRecord(cachedItem)) return cachedItem;
+      } catch (cacheReadError) {
+        if (onIgnoredError) onIgnoredError(cacheReadError);
+      }
+    }
+    return null;
   };
 
-  const normalizedCapturedImages = [];
+  const normalizedCapturedImagePlans = [];
   for (let imageIndex = 0; imageIndex < normalizedBridgeImages.length; imageIndex += 1) {
     const bridgeImageItem = normalizedBridgeImages[imageIndex];
-    const bridgeImageSourceDataUrl = await resolveBridgeImageDataUrlForUpload(
+    const cachedPsImageItem = await resolveBridgeImageRecordForUpload(
       bridgeImageItem,
     );
-    if (!/^data:image\//i.test(bridgeImageSourceDataUrl)) {
+    const resolvedBridgeImageRecord =
+      cachedPsImageItem && typeof cachedPsImageItem === "object"
+        ? cachedPsImageItem
+        : bridgeImageItem;
+    const bridgeImageSourceDataUrl = String(
+      resolvedBridgeImageRecord?.dataUrl || "",
+    ).trim();
+    if (
+      !/^data:image\//i.test(bridgeImageSourceDataUrl) &&
+      !hasResolvableImageRecord(resolvedBridgeImageRecord)
+    ) {
       throw new Error("bridge_image_data_missing");
     }
-    const captureMeta =
-      bridgeImageItem?.captureMeta && typeof bridgeImageItem.captureMeta === "object"
-        ? bridgeImageItem.captureMeta
-        : null;
-    const requestedFormat = normalizeUploadImageFormat(
-      compressOptions?.format,
-      "jpg",
+    const resolvedBridgeImageType =
+      String(
+      bridgeImageSourceDataUrl.match(/^data:([^;,]+)/i)?.[1] ||
+          resolvedBridgeImageRecord?.type ||
+          bridgeImageItem.type ||
+          "image/png",
+      ).trim() || "image/png";
+    const resolvedBridgeDisplayName = resolveAssetRecordDisplayName(
+      resolvedBridgeImageRecord,
+      "image",
     );
-    const capturedFormat = normalizeUploadImageFormat(
-      captureMeta?.outputFormatActual || captureMeta?.outputFormatRequested,
-      "",
-    );
-    const requestedMaxSide = Number(compressOptions?.maxSide);
-    const capturedMaxSide = Number(
-      captureMeta?.outputMaxSideActual || captureMeta?.outputMaxSideRequested,
-    );
-    const requestedQuality = Number(compressOptions?.quality);
-    const capturedQuality = Number(
-      captureMeta?.outputQualityActual || captureMeta?.outputQualityRequested,
-    );
-    const isFormatAligned = !!capturedFormat && capturedFormat === requestedFormat;
-    const isSideAligned =
-      !Number.isFinite(requestedMaxSide) ||
-      requestedMaxSide <= 0 ||
-      (Number.isFinite(capturedMaxSide) &&
-        Math.abs(Math.round(capturedMaxSide) - Math.round(requestedMaxSide)) <= 2);
-    const isQualityAligned =
-      requestedFormat === "png" ||
-      !Number.isFinite(requestedQuality) ||
-      requestedQuality <= 0 ||
-      (Number.isFinite(capturedQuality) &&
-        Math.abs(capturedQuality - requestedQuality) <= 0.01);
-    const shouldBypassRecompress =
-      isFormatAligned && isSideAligned && isQualityAligned;
-
-    const compressedDataUrl = shouldBypassRecompress
-      ? bridgeImageSourceDataUrl
-      : await compressImageDataUrl(
-          bridgeImageSourceDataUrl,
-          bridgeImageItem.type,
-          compressOptions,
-          compressLimits,
-        );
-    normalizedCapturedImages.push({
-      ...bridgeImageItem,
-      source: imageSource,
-      capturedAt: Date.now(),
-      dataUrl: compressedDataUrl,
+    const resolvedBridgeImageName = String(
+      resolvedBridgeDisplayName ||
+        resolvedBridgeImageRecord?.name ||
+        bridgeImageItem?.name ||
+        "image",
+    ).trim() || "image";
+    const resolvedBridgeImageOriginName = String(
+      resolvedBridgeDisplayName ||
+        resolvedBridgeImageRecord?.originName ||
+        resolvedBridgeImageRecord?.name ||
+        bridgeImageItem?.originName ||
+        bridgeImageItem?.name ||
+        "image",
+    ).trim() || resolvedBridgeImageName;
+    const resolvedBridgeImageFileName = String(
+      resolvedBridgeImageRecord?.fileName ||
+        resolvedBridgeImageRecord?.displayFileName ||
+        bridgeImageItem?.fileName ||
+        bridgeImageItem?.cacheFileName ||
+        "",
+    ).trim();
+    normalizedCapturedImagePlans.push({
+      requiresCachePut: /^data:image\//i.test(bridgeImageSourceDataUrl),
+      item: {
+        ...bridgeImageItem,
+        assetId: String(
+          resolvedBridgeImageRecord?.assetId || bridgeImageItem?.assetId || "",
+        ).trim(),
+        name: resolvedBridgeImageName,
+        originName: resolvedBridgeImageOriginName,
+        fileName: resolvedBridgeImageFileName || bridgeImageItem?.fileName || "",
+        cacheFileName:
+          resolvedBridgeImageFileName || bridgeImageItem?.cacheFileName || "",
+        filePath: String(
+          resolvedBridgeImageRecord?.filePath || bridgeImageItem?.filePath || "",
+        ).trim(),
+        cacheFilePath:
+          String(
+            resolvedBridgeImageRecord?.filePath ||
+              bridgeImageItem?.cacheFilePath ||
+              bridgeImageItem?.filePath ||
+              "",
+          ).trim(),
+        internalCacheId: String(
+          resolvedBridgeImageRecord?.internalCacheId ||
+            bridgeImageItem?.internalCacheId ||
+            resolvedBridgeImageFileName ||
+            "",
+        ).trim(),
+        itemId: String(
+          resolvedBridgeImageRecord?.itemId ||
+            bridgeImageItem?.itemId ||
+            resolvedBridgeImageFileName ||
+            "",
+        ).trim(),
+        sourceRefKey: String(
+          resolvedBridgeImageRecord?.sourceRefKey ||
+            bridgeImageItem?.sourceRefKey ||
+            parseAssetIdentityFromFileName(
+              resolvedBridgeImageFileName || bridgeImageItem?.fileName || "",
+            )?.sourceRefKey ||
+            "",
+        ).trim(),
+        inputMethod: String(
+          resolvedBridgeImageRecord?.inputMethod ||
+            bridgeImageItem?.inputMethod ||
+            imageSource,
+        ).trim(),
+        usageMeta:
+          resolvedBridgeImageRecord?.usageMeta &&
+          typeof resolvedBridgeImageRecord.usageMeta === "object"
+            ? { ...resolvedBridgeImageRecord.usageMeta }
+            : bridgeImageItem?.usageMeta &&
+                typeof bridgeImageItem.usageMeta === "object"
+              ? { ...bridgeImageItem.usageMeta }
+              : void 0,
+        legacy:
+          resolvedBridgeImageRecord?.legacy &&
+          typeof resolvedBridgeImageRecord.legacy === "object"
+            ? { ...resolvedBridgeImageRecord.legacy }
+            : bridgeImageItem?.legacy &&
+                typeof bridgeImageItem.legacy === "object"
+              ? { ...bridgeImageItem.legacy }
+              : void 0,
+        type: resolvedBridgeImageType,
+        source: imageSource,
+        capturedAt: Date.now(),
+        dataUrl: bridgeImageSourceDataUrl,
+      },
     });
   }
 
-  const cachedBridgeImages = await cacheImagesToPsBridge(
-    normalizedCapturedImages,
-    processOptions.psCachePut,
-    {
-      action: uploadAction,
-      slotIndex: Number.isFinite(processOptions.slotIndex)
-        ? Number(processOptions.slotIndex)
-        : -1,
-    },
-    processOptions.psCachePutTtlMs,
-    onIgnoredError,
-  );
+  const bridgeImagesRequiringCachePut = normalizedCapturedImagePlans
+    .filter((capturePlan) => capturePlan?.requiresCachePut)
+    .map((capturePlan) => capturePlan.item);
+  const cachedBridgeImages = bridgeImagesRequiringCachePut.length
+    ? await cacheImagesToPsBridge(
+        bridgeImagesRequiringCachePut,
+        processOptions.psCachePut,
+        {
+          action: uploadAction,
+          slotIndex: Number.isFinite(processOptions.slotIndex)
+            ? Number(processOptions.slotIndex)
+            : -1,
+        },
+        processOptions.psCachePutTtlMs,
+        onIgnoredError,
+      )
+    : [];
+  let cachedBridgeImageIndex = 0;
+  const finalBridgeImages = normalizedCapturedImagePlans
+    .map((capturePlan) => {
+      if (!capturePlan?.requiresCachePut) return capturePlan?.item || null;
+      const cachedBridgeImageItem = cachedBridgeImages[cachedBridgeImageIndex];
+      cachedBridgeImageIndex += 1;
+      return cachedBridgeImageItem || capturePlan?.item || null;
+    })
+    .filter(Boolean);
 
-  // Keep bridge-captured image quality/size from capture/compress settings.
-  return cachedBridgeImages;
+  // Bridge-captured images now keep the final quality/size as produced by the
+  // active PS capture compression chain (currently Electron/Sharp).
+  return finalBridgeImages;
+}
+
+function buildApiUsedImageStoreClientRef(imageItem, imageIndex = 0) {
+  return (
+    String(
+      imageItem?.clientRef ||
+        imageItem?.id ||
+        imageItem?.assetId ||
+        imageItem?.internalCacheId ||
+        imageItem?.itemId ||
+        buildImageRecordLookupKeys(imageItem)[0] ||
+        `api-image-${imageIndex + 1}`,
+    ).trim() || `api-image-${imageIndex + 1}`
+  );
+}
+
+function mergePersistedApiUsedImageRecord(sourceImageItem, storedImageItem) {
+  const sourceImage =
+    sourceImageItem && typeof sourceImageItem === "object" ? sourceImageItem : null;
+  if (!sourceImage) return null;
+  const storedImage =
+      storedImageItem && typeof storedImageItem === "object" ? storedImageItem : {},
+    mergedUsageMeta = {
+      ...(sourceImage?.usageMeta && typeof sourceImage.usageMeta === "object"
+        ? sourceImage.usageMeta
+        : {}),
+      ...(storedImage?.usageMeta && typeof storedImage.usageMeta === "object"
+        ? storedImage.usageMeta
+        : {}),
+      apiStored: true,
+    },
+    mergedImageRecord = {
+      ...sourceImage,
+      ...storedImage,
+      id: String(
+        sourceImage?.id || storedImage?.id || buildApiUsedImageStoreClientRef(sourceImage),
+      ).trim(),
+      dataUrl: "",
+      fileName: String(
+        storedImage?.fileName ||
+          sourceImage?.fileName ||
+          sourceImage?.cacheFileName ||
+          resolveAssetRecordDisplayName(sourceImage, "image"),
+      ).trim(),
+      filePath: String(
+        storedImage?.filePath ||
+          storedImage?.cacheFilePath ||
+          sourceImage?.filePath ||
+          sourceImage?.cacheFilePath ||
+          "",
+      ).trim(),
+      cacheFileName: String(
+        storedImage?.cacheFileName ||
+          storedImage?.fileName ||
+          sourceImage?.cacheFileName ||
+          sourceImage?.fileName ||
+          "",
+      ).trim(),
+      cacheFilePath: String(
+        storedImage?.cacheFilePath ||
+          storedImage?.filePath ||
+          sourceImage?.cacheFilePath ||
+          sourceImage?.filePath ||
+          "",
+      ).trim(),
+      cacheId: String(
+        storedImage?.cacheId ||
+          storedImage?.chatCacheId ||
+          sourceImage?.cacheId ||
+          sourceImage?.chatCacheId ||
+          "",
+      ).trim(),
+      chatCacheId: String(
+        storedImage?.chatCacheId ||
+          storedImage?.cacheId ||
+          sourceImage?.chatCacheId ||
+          sourceImage?.cacheId ||
+          "",
+      ).trim(),
+      psCacheId: "",
+      psCacheExpiresAt: void 0,
+      inputMethod: String(
+        storedImage?.inputMethod ||
+          sourceImage?.inputMethod ||
+          sourceImage?.source ||
+          "",
+      ).trim(),
+      usageMeta: mergedUsageMeta,
+      legacy:
+        storedImage?.legacy && typeof storedImage.legacy === "object"
+          ? { ...storedImage.legacy }
+          : sourceImage?.legacy && typeof sourceImage.legacy === "object"
+            ? { ...sourceImage.legacy }
+            : void 0,
+    };
+  const assetImageRecord = normalizeLegacyImageRecordToAssetRecord(
+    mergedImageRecord,
+    {
+      prefix:
+        String(
+          sourceImage?.imageSourceKind || sourceImage?.source || "upload",
+        ).trim() || "upload",
+      assetId: String(
+        sourceImage?.assetId ||
+          storedImage?.assetId ||
+          sourceImage?.internalCacheId ||
+          sourceImage?.itemId ||
+          sourceImage?.sourceRefKey ||
+          "",
+      ).trim(),
+      internalCacheId: String(
+        sourceImage?.internalCacheId ||
+          storedImage?.internalCacheId ||
+          sourceImage?.assetId ||
+          sourceImage?.itemId ||
+          sourceImage?.sourceRefKey ||
+          "",
+      ).trim(),
+      itemId: String(
+        sourceImage?.itemId ||
+          storedImage?.itemId ||
+          sourceImage?.internalCacheId ||
+          sourceImage?.assetId ||
+          sourceImage?.sourceRefKey ||
+          "",
+      ).trim(),
+      sourceRefKey: String(
+        sourceImage?.sourceRefKey ||
+          storedImage?.sourceRefKey ||
+          parseAssetIdentityFromFileName(
+            mergedImageRecord.fileName || mergedImageRecord.cacheFileName || "",
+          )?.sourceRefKey ||
+          "",
+      ).trim(),
+      fileName:
+        mergedImageRecord.fileName ||
+        mergedImageRecord.cacheFileName ||
+        resolveAssetRecordDisplayName(sourceImage, "image"),
+      filePath:
+        mergedImageRecord.filePath || mergedImageRecord.cacheFilePath || "",
+      inputMethod:
+        mergedImageRecord.inputMethod ||
+        sourceImage?.source ||
+        "upload",
+      usageMeta: mergedUsageMeta,
+    },
+  );
+  return {
+    ...mergedImageRecord,
+    assetId: assetImageRecord.assetId,
+    fileName: assetImageRecord.fileName,
+    filePath: assetImageRecord.filePath,
+    internalCacheId: assetImageRecord.internalCacheId,
+    itemId: assetImageRecord.itemId,
+    sourceRefKey: assetImageRecord.sourceRefKey,
+    inputMethod: assetImageRecord.inputMethod,
+    usageMeta: assetImageRecord.usageMeta,
+    legacy: assetImageRecord.legacy,
+    imageTraceId: assetImageRecord.imageTraceId,
+    parentImageTraceIds: assetImageRecord.parentImageTraceIds,
+    imageSourceKind: assetImageRecord.imageSourceKind,
+    imageSourceMethod: assetImageRecord.imageSourceMethod,
+    displayFileName: assetImageRecord.displayFileName,
+    legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
+    legacyIdConversionRemoveAfter:
+      assetImageRecord.legacyIdConversionRemoveAfter,
+  };
+}
+
+function restoreRuntimeDataUrlOnPersistedApiImages(
+  sourceImagesInput,
+  persistedImagesInput,
+) {
+  const sourceImages = Array.isArray(sourceImagesInput) ? sourceImagesInput : [],
+    persistedImages = Array.isArray(persistedImagesInput)
+      ? persistedImagesInput
+      : [];
+  const sourceByClientRef = new Map(
+    sourceImages.map((sourceImageItem, imageIndex) => [
+      buildApiUsedImageStoreClientRef(sourceImageItem, imageIndex),
+      sourceImageItem,
+    ]),
+  );
+  return persistedImages.map((persistedImageItem, imageIndex) => {
+    const clientRef = buildApiUsedImageStoreClientRef(
+        persistedImageItem,
+        imageIndex,
+      ),
+      sourceImageItem = sourceByClientRef.get(clientRef),
+      sourceDataUrl = String(sourceImageItem?.dataUrl || "").trim();
+    return sourceDataUrl.startsWith("data:image/")
+      ? {
+          ...persistedImageItem,
+          dataUrl: sourceDataUrl,
+        }
+      : persistedImageItem;
+  });
+}
+
+async function persistApiUsedImageList(
+  sourceImagesInput,
+  persistBridgeHandler,
+  options = {},
+) {
+  const sourceImages = Array.isArray(sourceImagesInput) ? sourceImagesInput : [];
+  if (!sourceImages.length) return [];
+  if (typeof persistBridgeHandler !== "function") {
+    throw new Error("api_image_store_unavailable");
+  }
+  const sourceImagesWithClientRef = sourceImages.map((sourceImageItem, imageIndex) => ({
+      ...(sourceImageItem && typeof sourceImageItem === "object"
+        ? sourceImageItem
+        : {}),
+      clientRef: buildApiUsedImageStoreClientRef(sourceImageItem, imageIndex),
+    })),
+    persistPayload = {
+      items: sourceImagesWithClientRef.map((sourceImageItem) => ({
+        ...sourceImageItem,
+      })),
+      usageMeta:
+        options?.usageMeta && typeof options.usageMeta === "object"
+          ? { ...options.usageMeta }
+          : {},
+      context:
+        options?.context && typeof options.context === "object"
+          ? { ...options.context }
+          : {},
+    };
+  let persistResult = null;
+  try {
+    persistResult = await persistBridgeHandler(persistPayload);
+  } catch (persistError) {
+    throw new Error(
+      String(persistError?.message || persistError || "api_image_store_failed"),
+    );
+  }
+  if (!persistResult?.ok) {
+    throw new Error(
+      String(persistResult?.message || "api_image_store_failed"),
+    );
+  }
+  const persistedByClientRef = new Map(
+    (Array.isArray(persistResult?.items) ? persistResult.items : [])
+      .map((persistedImageItem, imageIndex) => [
+        buildApiUsedImageStoreClientRef(persistedImageItem, imageIndex),
+        persistedImageItem,
+      ])
+      .filter(([clientRef]) => !!clientRef),
+  );
+  return sourceImagesWithClientRef.map((sourceImageItem, imageIndex) => {
+    const clientRef = buildApiUsedImageStoreClientRef(
+        sourceImageItem,
+        imageIndex,
+      ),
+      persistedImageItem = persistedByClientRef.get(clientRef);
+    if (!persistedImageItem) {
+      throw new Error(`api_image_store_incomplete:${clientRef}`);
+    }
+    return mergePersistedApiUsedImageRecord(sourceImageItem, persistedImageItem);
+  });
 }
 
 async function createThumbnailDataUrl(
@@ -8235,95 +10514,6 @@ async function createThumbnailDataUrl(
 
   canvasContext.drawImage(loadedImage, 0, 0, targetWidth, targetHeight);
   return canvasElement.toDataURL("image/jpeg", targetJpegQuality);
-}
-
-async function compressImageDataUrl(
-  sourceDataUrl,
-  sourceMimeType,
-  compressOptions = {},
-  limits = {},
-) {
-  const sourceImageDataUrl = String(sourceDataUrl || "");
-  if (!sourceImageDataUrl.startsWith("data:image/")) return sourceImageDataUrl;
-
-  const minSidePx = Math.max(1, Number(limits.minSidePx) || 512);
-  const maxSidePx = Math.max(minSidePx, Number(limits.maxSidePx) || 8192);
-  const defaultSidePx = Math.max(
-    minSidePx,
-    Math.min(maxSidePx, Number(limits.defaultSidePx) || 2048),
-  );
-  const defaultFormat = String(limits.defaultFormat || "jpg").trim() || "jpg";
-  const defaultQualityPercent = Math.max(
-    1,
-    Math.min(100, Number(limits.defaultQualityPercent) || 100),
-  );
-
-  const maxSideLimit = Math.max(
-    minSidePx,
-    Math.min(maxSidePx, Number(compressOptions.maxSide) || defaultSidePx),
-  );
-  const normalizedOutputFormat = normalizeUploadImageFormat(
-    compressOptions.format,
-    defaultFormat,
-  );
-  const outputQualityScale =
-    normalizedOutputFormat === "png"
-      ? 1
-      : Math.max(
-          0.01,
-          Math.min(
-            1,
-            Number(compressOptions.quality) || defaultQualityPercent / 100,
-          ),
-        );
-
-  const loadedImageElement = await new Promise((resolveImage, rejectImage) => {
-    const imageElement = new Image();
-    imageElement.onload = () => resolveImage(imageElement);
-    imageElement.onerror = () => rejectImage(new Error("image-load-failed"));
-    imageElement.src = sourceImageDataUrl;
-  });
-
-  const loadedImageWidth = Number(loadedImageElement.width) || 0;
-  const loadedImageHeight = Number(loadedImageElement.height) || 0;
-  if (!loadedImageWidth || !loadedImageHeight) return sourceImageDataUrl;
-
-  const imageLongSide = Math.max(loadedImageWidth, loadedImageHeight);
-  const resizeScale = imageLongSide > maxSideLimit ? maxSideLimit / imageLongSide : 1;
-  const outputWidth = Math.max(1, Math.round(loadedImageWidth * resizeScale));
-  const outputHeight = Math.max(1, Math.round(loadedImageHeight * resizeScale));
-  const normalizedSourceMimeType = String(
-    sourceMimeType || sourceImageDataUrl.match(/^data:([^;,]+)/i)?.[1] || "image/jpeg",
-  ).toLowerCase();
-  const outputMimeType = normalizedOutputFormat === "png" ? "image/png" : "image/jpeg";
-  const sourceIsPng = normalizedSourceMimeType.includes("png");
-  const sourceIsJpeg =
-    normalizedSourceMimeType.includes("jpeg") || normalizedSourceMimeType.includes("jpg");
-  const requiresReencode =
-    (outputMimeType === "image/png" && !sourceIsPng) ||
-    (outputMimeType === "image/jpeg" && !sourceIsJpeg);
-
-  if (
-    !(
-      resizeScale < 1 ||
-      requiresReencode ||
-      (outputMimeType !== "image/png" && outputQualityScale < 0.995)
-    )
-  )
-    return sourceImageDataUrl;
-
-  const canvasElement = document.createElement("canvas");
-  canvasElement.width = outputWidth;
-  canvasElement.height = outputHeight;
-  const canvasContext2d = canvasElement.getContext("2d");
-  if (!canvasContext2d) return sourceImageDataUrl;
-  canvasContext2d.drawImage(loadedImageElement, 0, 0, outputWidth, outputHeight);
-  return (
-    canvasElement.toDataURL(
-      outputMimeType,
-      outputMimeType === "image/png" ? void 0 : outputQualityScale,
-    ) || sourceImageDataUrl
-  );
 }
 
 function readBlobAsDataUrl(blob) {
@@ -8377,9 +10567,9 @@ function clearCachedPreviewDataUrlExceptIndex(
       if (!previewImage || typeof previewImage !== "object") {
         return previewImage;
       }
-      const hasCacheBinding = !!String(
-          previewImage.cacheFilePath || previewImage.cacheFileName || "",
-        ).trim(),
+      const hasCacheBinding =
+          !!resolveAssetRecordStoragePath(previewImage) ||
+          !!resolveAssetRecordDisplayName(previewImage, ""),
         hasInlineDataUrl = /^data:image\//i.test(
           String(previewImage.dataUrl || "").trim(),
         );
@@ -8401,42 +10591,85 @@ async function resolvePreviewImageDataUrl(
   previewImage,
   generatedCacheRead,
   onCacheReadError,
+  readPsCacheEntry,
+  readChatImageCache,
 ) {
   if (!previewImage || typeof previewImage !== "object") {
     return "";
   }
   const inlineDataUrl = String(previewImage.dataUrl || "").trim(),
-    normalizedCacheFilePath = String(previewImage.cacheFilePath || "").trim(),
-    normalizedCacheFileName = String(previewImage.cacheFileName || "").trim(),
+    normalizedCacheFilePath = resolveAssetRecordStoragePath(previewImage),
+    normalizedCacheFileName = resolveAssetRecordDisplayName(previewImage, ""),
     hasCacheBinding = Boolean(normalizedCacheFilePath || normalizedCacheFileName);
   if (/^data:image\//i.test(inlineDataUrl)) return inlineDataUrl;
-  if (!hasCacheBinding || typeof generatedCacheRead !== "function") return "";
-  try {
-    const cacheReadResult = await generatedCacheRead({
-        filePath: normalizedCacheFilePath,
-        fileName: normalizedCacheFileName,
-      }),
-      cachedDataUrl = String(cacheReadResult?.dataUrl || "").trim();
-    return /^data:image\//i.test(cachedDataUrl) ? cachedDataUrl : "";
-  } catch (cacheReadError) {
-    if (typeof onCacheReadError === "function") {
-      onCacheReadError(cacheReadError);
+  if (hasCacheBinding && typeof generatedCacheRead === "function")
+    try {
+      const cacheReadResult = await generatedCacheRead({
+          filePath: normalizedCacheFilePath,
+          fileName: normalizedCacheFileName,
+        }),
+        cachedDataUrl = String(cacheReadResult?.dataUrl || "").trim();
+      if (/^data:image\//i.test(cachedDataUrl)) return cachedDataUrl;
+    } catch (cacheReadError) {
+      if (typeof onCacheReadError === "function") {
+        onCacheReadError(cacheReadError);
+      }
     }
-    return "";
+  const previewLookupKeys = buildImageRecordLookupKeys(previewImage);
+  if (typeof readPsCacheEntry === "function") {
+    for (const psCacheLookupKey of previewLookupKeys) {
+      if (!psCacheLookupKey) continue;
+      try {
+        const psCacheLookupResult = await readPsCacheEntry(psCacheLookupKey),
+          psCacheEntry =
+            psCacheLookupResult?.item &&
+            typeof psCacheLookupResult.item === "object"
+              ? psCacheLookupResult.item
+              : null,
+          psCacheDataUrl = String(psCacheEntry?.dataUrl || "").trim();
+        if (/^data:image\//i.test(psCacheDataUrl)) return psCacheDataUrl;
+      } catch (cacheReadError) {
+        if (typeof onCacheReadError === "function") {
+          onCacheReadError(cacheReadError);
+        }
+      }
+    }
   }
+  if (typeof readChatImageCache === "function") {
+    for (const chatCacheLookupKey of previewLookupKeys) {
+      if (!chatCacheLookupKey) continue;
+      try {
+        const chatCacheLookupResult = await readChatImageCache({
+            cacheId: chatCacheLookupKey,
+            cacheFileName: normalizedCacheFileName,
+          }),
+          chatCacheDataUrl = String(chatCacheLookupResult?.dataUrl || "").trim();
+        if (/^data:image\//i.test(chatCacheDataUrl)) return chatCacheDataUrl;
+      } catch (cacheReadError) {
+        if (typeof onCacheReadError === "function") {
+          onCacheReadError(cacheReadError);
+        }
+      }
+    }
+  }
+  return "";
 }
 
 function buildPreviewImageMergeKey(previewImage, fallbackIndex = 0) {
   if (!previewImage || typeof previewImage !== "object") {
     return `idx:${Math.max(0, Math.floor(Number(fallbackIndex) || 0))}`;
   }
-  const cacheFilePath = String(previewImage.cacheFilePath || "").trim();
+  const cacheFilePath = resolveAssetRecordStoragePath(previewImage);
   if (cacheFilePath) {
     return `file:${cacheFilePath}`;
   }
-  const cacheFileName = String(previewImage.cacheFileName || "").trim();
+  const cacheFileName = resolveAssetRecordDisplayName(previewImage, "");
   if (cacheFileName) {
     return `name:${cacheFileName}`;
+  }
+  const imageLookupKey = buildImageRecordLookupKeys(previewImage)[0];
+  if (imageLookupKey) {
+    return `asset:${imageLookupKey}`;
   }
   const previewImageId = String(previewImage.id || "").trim();
   if (previewImageId) {
@@ -8446,7 +10679,7 @@ function buildPreviewImageMergeKey(previewImage, fallbackIndex = 0) {
   if (dataUrl) {
     return `data:${dataUrl.length}:${dataUrl.slice(0, 128)}`;
   }
-  const imageName = String(previewImage.name || previewImage.originName || "").trim();
+  const imageName = resolveAssetRecordDisplayName(previewImage, "");
   return imageName
     ? `name-only:${imageName}`
     : `idx:${Math.max(0, Math.floor(Number(fallbackIndex) || 0))}`;
@@ -9006,9 +11239,10 @@ function resolvePreviewHoverCardState({
     hoveredPreviewImage = previewImageList[normalizedPreviewIndex];
   const resolvedHoverName = String(
     hoverNameOverride ||
-      hoveredPreviewImage?.name ||
-      hoveredPreviewImage?.originName ||
-      `preview-${normalizedPreviewIndex + 1}`,
+      resolveAssetRecordDisplayName(
+        hoveredPreviewImage,
+        `preview-${normalizedPreviewIndex + 1}`,
+      ),
   ).trim();
   return {
     open: true,
@@ -9315,8 +11549,7 @@ function resolvePreviewThumbnailRenderSource({
   if (typeof preloadPreviewThumbnail === "function") {
     preloadPreviewThumbnail(previewIndex);
   }
-  const rawPreviewDataUrl = String(previewImage?.dataUrl || "").trim();
-  return /^data:image\//i.test(rawPreviewDataUrl) ? rawPreviewDataUrl : "";
+  return resolveRunQueueTaskThumbSrc(previewImage);
 }
 
 function buildFallbackReturnTestImageFiles() {
@@ -10162,6 +12395,20 @@ function resolveCanvasExportSuccessMessage(exportTrigger) {
   return exportTrigger === "auto" ? "已自动导出到画布" : "已导出到画布";
 }
 
+function resolveCanvasExportResultDetail(resultInput) {
+  const result =
+    resultInput && typeof resultInput === "object" ? resultInput : {};
+  const detailParts = [];
+  result.groupCreated &&
+    detailParts.push(
+      result.groupName
+        ? `已建组：${String(result.groupName || "").trim()}`
+        : "已自动建组",
+    );
+  result.maskCreated && detailParts.push("已自动建蒙版");
+  return detailParts.filter(Boolean).join("，");
+}
+
 function resolveCanvasExportTargetMeta(exportImageItem, exportOptions = {}) {
   const normalizedImportMeta = normalizeImportTargetMeta(exportImageItem);
   const targetRect =
@@ -10190,21 +12437,72 @@ function resolveCanvasExportTargetMeta(exportImageItem, exportOptions = {}) {
 function buildCanvasExportPayload({
   dataUrl = "",
   layerType = "smart-object",
+  autoGroup = false,
+  autoMask = false,
   targetRect = null,
   targetRectNorm = null,
   targetCanvas = null,
   targetDocumentId = null,
   targetDocumentName = "",
+  returnFileName = "",
+  returnIndex = -1,
+  returnTargetSignature = "",
 } = {}) {
   return {
     dataUrl,
+    autoGroup: !!autoGroup,
+    autoMask: !!autoMask,
     targetRect,
     targetRectNorm,
     targetCanvas,
     targetDocumentId,
     targetDocumentName: String(targetDocumentName || "").trim(),
+    returnFileName: String(returnFileName || "").trim(),
+    returnIndex: normalizeNonNegativeIndex(returnIndex, -1),
+    returnTargetSignature: String(returnTargetSignature || "").trim(),
     layerType: layerType === "rasterized" ? "rasterized" : "smart-object",
   };
+}
+
+function resolveCanvasExportReturnFileName(exportImageItem, exportOptions = {}) {
+  const fileNameCandidates = [
+    exportOptions?.returnFileName,
+    exportImageItem?.fileName,
+    exportImageItem?.internalCacheId,
+    exportImageItem?.itemId,
+    exportImageItem?.cacheFileName,
+    exportImageItem?.originName,
+    exportImageItem?.name,
+  ];
+  for (const fileNameCandidate of fileNameCandidates) {
+    const normalizedFileName = extractImageFileLeafName(fileNameCandidate);
+    if (normalizedFileName) return normalizedFileName;
+  }
+  return "image";
+}
+
+function buildCanvasExportTargetSignature(targetMetaInput = {}) {
+  const targetMeta =
+    targetMetaInput && typeof targetMetaInput === "object" ? targetMetaInput : {};
+  const documentId = toPositiveIntOrNull(targetMeta.targetDocumentId);
+  const documentName = String(targetMeta.targetDocumentName || "").trim();
+  const targetRectSignature = buildComparableTargetRectSignature(targetMeta.targetRect);
+  const targetRectNormSignature = buildComparableTargetRectNormSignature(
+    targetMeta.targetRectNorm,
+  );
+  const targetCanvas =
+    targetMeta.targetCanvas && typeof targetMeta.targetCanvas === "object"
+      ? targetMeta.targetCanvas
+      : null;
+  const canvasWidth = formatComparableNumber(Number(targetCanvas?.width), 0);
+  const canvasHeight = formatComparableNumber(Number(targetCanvas?.height), 0);
+  const signatureParts = [];
+  documentId && signatureParts.push(`doc:${documentId}`);
+  !documentId && documentName && signatureParts.push(`docName:${documentName}`);
+  targetRectSignature && signatureParts.push(`rect:${targetRectSignature}`);
+  targetRectNormSignature && signatureParts.push(`rectNorm:${targetRectNormSignature}`);
+  (canvasWidth || canvasHeight) && signatureParts.push(`canvas:${canvasWidth}x${canvasHeight}`);
+  return signatureParts.join("|");
 }
 
 function extractCanvasExportErrorContext(exportToCanvasResult) {
@@ -10268,6 +12566,33 @@ function isImageDataUrl(dataUrlInput) {
   return /^data:image\//i.test(String(dataUrlInput || "").trim());
 }
 
+function isRenderableImageSrc(imageSrcInput) {
+  const normalizedImageSrc = String(imageSrcInput || "").trim();
+  if (!normalizedImageSrc) return false;
+  return (
+    isImageDataUrl(normalizedImageSrc) ||
+    /^(blob:|https?:|file:|app:|asset:)/i.test(normalizedImageSrc)
+  );
+}
+
+function resolveRenderableFileImageUrl(filePathInput) {
+  const normalizedFilePath = String(filePathInput || "").trim();
+  if (!normalizedFilePath) return "";
+  if (/^(blob:|https?:|file:|app:|asset:)/i.test(normalizedFilePath)) {
+    return normalizedFilePath;
+  }
+  const normalizedSlashPath = normalizedFilePath.replace(/\\/g, "/");
+  if (/^[a-zA-Z]:\//.test(normalizedSlashPath)) {
+    return `file:///${encodeURI(normalizedSlashPath)}`;
+  }
+  if (/^\/\//.test(normalizedSlashPath)) {
+    return `file:${encodeURI(normalizedSlashPath)}`;
+  }
+  return `file://${encodeURI(
+    normalizedSlashPath.startsWith("/") ? normalizedSlashPath : `/${normalizedSlashPath}`,
+  )}`;
+}
+
 function resolveRunQueueTaskThumbSrc(taskImageInput) {
   const taskImage =
       taskImageInput && typeof taskImageInput === "object"
@@ -10279,6 +12604,9 @@ function resolveRunQueueTaskThumbSrc(taskImageInput) {
       taskImage?.thumbUrl,
       taskImage?.url,
       taskImage?.src,
+      resolveRenderableFileImageUrl(
+        String(taskImage?.cacheFilePath || taskImage?.filePath || "").trim(),
+      ),
     ];
   for (
     let thumbSrcCandidateIndex = 0;
@@ -10295,6 +12623,43 @@ function resolveRunQueueTaskThumbSrc(taskImageInput) {
     }
   }
   return "";
+}
+
+function buildRunQueueThumbBundle(imageListInput = []) {
+  const imageList = Array.isArray(imageListInput) ? imageListInput : [],
+    normalizedRefThumbList = imageList
+      .map((taskImageItem, taskImageIndex) => ({
+        id: `run-queue-ref-${taskImageIndex + 1}`,
+        src: resolveRunQueueTaskThumbSrc(taskImageItem),
+        name: resolveAssetRecordDisplayName(
+          taskImageItem,
+          `image_${taskImageIndex + 1}`,
+        ),
+      }))
+      .filter((taskRefThumbItem) => String(taskRefThumbItem?.src || "").trim()),
+    fallbackRefThumbList =
+      normalizedRefThumbList.length > 0
+        ? normalizedRefThumbList
+        : imageList.slice(0, 1).map((taskImageItem, taskImageIndex) => ({
+            id: `run-queue-ref-fallback-${taskImageIndex + 1}`,
+            src: resolveRunQueueTaskThumbSrc(taskImageItem),
+            name: resolveAssetRecordDisplayName(
+              taskImageItem,
+              `image_${taskImageIndex + 1}`,
+            ),
+          })),
+    thumbDataUrl = String(
+      fallbackRefThumbList[0]?.src || normalizedRefThumbList[0]?.src || "",
+    ).trim();
+  return {
+    thumbDataUrl,
+    refThumbList:
+      normalizedRefThumbList.length > 0
+        ? normalizedRefThumbList
+        : fallbackRefThumbList.filter((taskRefThumbItem) =>
+            String(taskRefThumbItem?.src || "").trim(),
+          ),
+  };
 }
 
 function resolvePreviewImageSelection(previewImagesInput, previewImageIndex) {
@@ -10463,14 +12828,8 @@ async function hydrateInputImagesWithCaches(
     ) {
       continue;
     }
-    const psCacheId = String(hydratedImageCandidate?.psCacheId || "").trim();
-    const chatImageCacheId = String(hydratedImageCandidate?.cacheId || "").trim();
-    const fallbackCacheId = String(
-      hydratedImageCandidate?.psCacheId ||
-        hydratedImageCandidate?.cacheId ||
-        "",
-    ).trim();
-    if (!psCacheId && !chatImageCacheId && !fallbackCacheId) continue;
+    const cacheLookupKeys = buildImageRecordLookupKeys(hydratedImageCandidate);
+    if (!cacheLookupKeys.length) continue;
     try {
       let resolvedImageDataUrl = "";
       let resolvedImageMimeType = "";
@@ -10478,49 +12837,124 @@ async function hydrateInputImagesWithCaches(
       let resolvedImageOriginName = "";
       let resolvedImageSource = "";
       let resolvedImageRole = "";
+      let resolvedAssetId = "";
+      let resolvedInternalCacheId = "";
+      let resolvedItemId = "";
+      let resolvedSourceRefKey = "";
+      let resolvedInputMethod = "";
+      let resolvedFilePath = "";
+      let resolvedUsageMeta;
+      let resolvedLegacy;
       let cachedSlotIndexFromPsCache;
-      if (typeof readPsCacheEntry === "function" && psCacheId) {
-        const psCacheLookupResult = await readPsCacheEntry(psCacheId);
-        const psCacheEntry =
-          psCacheLookupResult?.item && typeof psCacheLookupResult.item === "object"
-            ? psCacheLookupResult.item
-            : null;
-        const cachedDataUrl = String(psCacheEntry?.dataUrl || "").trim();
-        if (cachedDataUrl.startsWith("data:image/")) {
+      if (typeof readPsCacheEntry === "function") {
+        for (const psCacheLookupKey of cacheLookupKeys) {
+          if (!psCacheLookupKey) continue;
+          const psCacheLookupResult = await readPsCacheEntry(psCacheLookupKey);
+          const psCacheEntry =
+            psCacheLookupResult?.item && typeof psCacheLookupResult.item === "object"
+              ? psCacheLookupResult.item
+              : null;
+          const cachedDataUrl = String(psCacheEntry?.dataUrl || "").trim();
+          if (!cachedDataUrl.startsWith("data:image/")) continue;
           resolvedImageDataUrl = cachedDataUrl;
           resolvedImageMimeType = String(psCacheEntry?.type || "");
-          resolvedImageFileName = String(psCacheEntry?.name || "");
-          resolvedImageOriginName = String(psCacheEntry?.originName || "");
+          resolvedImageFileName = String(
+            resolveAssetRecordDisplayName(psCacheEntry, "") ||
+              psCacheEntry?.fileName ||
+              psCacheEntry?.name ||
+              "",
+          );
+          resolvedImageOriginName = String(
+            resolveAssetRecordDisplayName(psCacheEntry, "") ||
+              psCacheEntry?.originName ||
+              psCacheEntry?.fileName ||
+              psCacheEntry?.name ||
+              "",
+          );
           resolvedImageSource = String(psCacheEntry?.source || "");
           resolvedImageRole = String(psCacheEntry?.role || "");
+          resolvedAssetId = String(psCacheEntry?.assetId || "").trim();
+          resolvedInternalCacheId = String(
+            psCacheEntry?.internalCacheId || psCacheEntry?.fileName || "",
+          ).trim();
+          resolvedItemId = String(
+            psCacheEntry?.itemId ||
+              psCacheEntry?.internalCacheId ||
+              psCacheEntry?.fileName ||
+              "",
+          ).trim();
+          resolvedSourceRefKey = String(
+            psCacheEntry?.sourceRefKey ||
+              parseAssetIdentityFromFileName(resolvedImageFileName)?.sourceRefKey ||
+              "",
+          ).trim();
+          resolvedInputMethod = String(
+            psCacheEntry?.inputMethod || psCacheEntry?.source || "",
+          ).trim();
+          resolvedFilePath = String(psCacheEntry?.filePath || "").trim();
+          resolvedUsageMeta =
+            psCacheEntry?.usageMeta && typeof psCacheEntry.usageMeta === "object"
+              ? { ...psCacheEntry.usageMeta }
+              : void 0;
+          resolvedLegacy =
+            psCacheEntry?.legacy && typeof psCacheEntry.legacy === "object"
+              ? { ...psCacheEntry.legacy }
+              : void 0;
           cachedSlotIndexFromPsCache = Number.isFinite(psCacheEntry?.slotIndex)
             ? Number(psCacheEntry.slotIndex)
             : void 0;
+          break;
         }
       }
       if (!resolvedImageDataUrl && typeof readChatImageCache === "function") {
-        const cacheIdCandidates = [];
-        if (chatImageCacheId) cacheIdCandidates.push(chatImageCacheId);
-        if (fallbackCacheId && !cacheIdCandidates.includes(fallbackCacheId)) {
-          cacheIdCandidates.push(fallbackCacheId);
-        }
-        for (const cacheIdCandidate of cacheIdCandidates) {
+        for (const cacheIdCandidate of cacheLookupKeys) {
           if (!cacheIdCandidate) continue;
           try {
             const cachedChatImageResult = await readChatImageCache({
               cacheId: cacheIdCandidate,
-              cacheFileName: String(
-                hydratedImageCandidate?.cacheFileName ||
-                  hydratedImageCandidate?.fileName ||
-                  hydratedImageCandidate?.name ||
-                  "",
-              ).trim(),
+              cacheFileName: resolveAssetRecordDisplayName(
+                hydratedImageCandidate,
+                "",
+              ),
             });
             const cacheDataUrl = String(cachedChatImageResult?.dataUrl || "").trim();
             if (!cacheDataUrl.startsWith("data:image/")) continue;
             resolvedImageDataUrl = cacheDataUrl;
             resolvedImageMimeType = String(cachedChatImageResult?.mimeType || "");
-            resolvedImageFileName = String(cachedChatImageResult?.fileName || "");
+            resolvedImageFileName = String(
+              cachedChatImageResult?.fileName || "",
+            );
+            resolvedAssetId = String(cachedChatImageResult?.assetId || "").trim();
+            resolvedInternalCacheId = String(
+              cachedChatImageResult?.internalCacheId ||
+                cachedChatImageResult?.fileName ||
+                "",
+            ).trim();
+            resolvedItemId = String(
+              cachedChatImageResult?.itemId ||
+                cachedChatImageResult?.internalCacheId ||
+                cachedChatImageResult?.fileName ||
+                "",
+            ).trim();
+            resolvedSourceRefKey = String(
+              cachedChatImageResult?.sourceRefKey ||
+                parseAssetIdentityFromFileName(resolvedImageFileName)?.sourceRefKey ||
+                "",
+            ).trim();
+            resolvedInputMethod = String(
+              cachedChatImageResult?.inputMethod || "chat-cache",
+            ).trim();
+            resolvedFilePath = String(cachedChatImageResult?.filePath || "").trim();
+            resolvedUsageMeta =
+              cachedChatImageResult?.usageMeta &&
+              typeof cachedChatImageResult.usageMeta === "object"
+                ? { ...cachedChatImageResult.usageMeta }
+                : void 0;
+            resolvedLegacy =
+              cachedChatImageResult?.legacy &&
+              typeof cachedChatImageResult.legacy === "object"
+                ? { ...cachedChatImageResult.legacy }
+                : void 0;
             break;
           } catch (ignoredError) {
             if (typeof onIgnoredError === "function") {
@@ -10530,24 +12964,77 @@ async function hydrateInputImagesWithCaches(
         }
       }
       if (!resolvedImageDataUrl.startsWith("data:image/")) continue;
+      const resolvedHydratedDisplayName = resolveAssetRecordDisplayName(
+        {
+          ...hydratedImageCandidate,
+          fileName: resolvedImageFileName || hydratedImageCandidate?.fileName,
+          internalCacheId:
+            resolvedInternalCacheId || hydratedImageCandidate?.internalCacheId,
+          itemId: resolvedItemId || hydratedImageCandidate?.itemId,
+          originName:
+            resolvedImageOriginName || hydratedImageCandidate?.originName,
+          name: resolvedImageFileName || hydratedImageCandidate?.name,
+        },
+        "image",
+      );
       hasHydrationChange = true;
       hydratedImageList[hydratedImageIndex] = {
         ...hydratedImageCandidate,
+        assetId:
+          String(
+            hydratedImageCandidate?.assetId || resolvedAssetId || "",
+          ).trim(),
         dataUrl: resolvedImageDataUrl,
         type: String(hydratedImageCandidate?.type || resolvedImageMimeType || ""),
-        name: String(
-          hydratedImageCandidate?.name ||
+        name: resolvedHydratedDisplayName,
+        originName: resolvedHydratedDisplayName,
+        fileName: String(
+          hydratedImageCandidate?.fileName ||
+            resolvedHydratedDisplayName ||
+            "",
+        ).trim(),
+        filePath: String(
+          hydratedImageCandidate?.filePath || resolvedFilePath || "",
+        ).trim(),
+        cacheFileName: String(
+          hydratedImageCandidate?.cacheFileName ||
+            resolvedHydratedDisplayName ||
+            "",
+        ).trim(),
+        internalCacheId: String(
+          hydratedImageCandidate?.internalCacheId ||
+            resolvedInternalCacheId ||
             resolvedImageFileName ||
-            hydratedImageCandidate?.originName ||
-            "image",
-        ),
-        originName: String(
-          hydratedImageCandidate?.originName ||
-            resolvedImageOriginName ||
+            "",
+        ).trim(),
+        itemId: String(
+          hydratedImageCandidate?.itemId ||
+            resolvedItemId ||
+            resolvedInternalCacheId ||
             resolvedImageFileName ||
-            hydratedImageCandidate?.name ||
-            "image",
-        ),
+            "",
+        ).trim(),
+        sourceRefKey: String(
+          hydratedImageCandidate?.sourceRefKey ||
+            resolvedSourceRefKey ||
+            "",
+        ).trim(),
+        inputMethod: String(
+          hydratedImageCandidate?.inputMethod ||
+            resolvedInputMethod ||
+            hydratedImageCandidate?.source ||
+            "",
+        ).trim(),
+        usageMeta:
+          hydratedImageCandidate?.usageMeta &&
+          typeof hydratedImageCandidate.usageMeta === "object"
+            ? { ...hydratedImageCandidate.usageMeta }
+            : resolvedUsageMeta,
+        legacy:
+          hydratedImageCandidate?.legacy &&
+          typeof hydratedImageCandidate.legacy === "object"
+            ? { ...hydratedImageCandidate.legacy }
+            : resolvedLegacy,
         source: String(hydratedImageCandidate?.source || resolvedImageSource || "local"),
         role: String(hydratedImageCandidate?.role || resolvedImageRole || ""),
         slotIndex: Number.isFinite(hydratedImageCandidate?.slotIndex)
@@ -10611,7 +13098,7 @@ function buildImportTargetDialogState(dialogRequest = {}) {
     fallbackPromptMessage =
       dialogErrorCode === "target_document_required"
         ? "未检测到记录画布，且当前已打开多个画布。请选择导入目标。"
-        : "没有找到记录的画布。是否继续导入到已打开画布？";
+        : "记录的画布 ID 未命中。若你重新打开过 Ps 或该文档，旧画布 ID 可能已经失效；请选择当前已打开画布后继续导入。";
   return {
     open: true,
     errorCode: dialogErrorCode,
@@ -11448,6 +13935,7 @@ function resolveStatusIconKeyFromText(statusText) {
             : normalizedStatusText.includes("已连接")
               ? "apiConnectingPrimary"
               : normalizedStatusText.includes("待连接") ||
+                  normalizedStatusText.includes("连接失败") ||
                   normalizedStatusText.includes("插件")
                 ? "reconnect"
                 : normalizedStatusText.includes("发送中")
@@ -11512,7 +14000,7 @@ function getBridgeStatusText(bridgeStatusResponse) {
     ? "插件已连接"
     : bridgeStatusResponse && bridgeStatusResponse.ok
       ? "插件连接中"
-      : "插件待连接";
+      : "插件连接失败";
 }
 
 function getBridgeMiniStatusPayload(bridgeStatusResponse) {
@@ -11521,22 +14009,22 @@ function getBridgeMiniStatusPayload(bridgeStatusResponse) {
       title: "插件已连接",
       level: "ok",
       detail: "插件连接正常。",
-      iconKey: "apiConnectingPrimary",
+      iconKey: "bridgeConnected",
     };
   }
   if (bridgeStatusResponse && bridgeStatusResponse.ok) {
     return {
       title: "插件连接中",
-      level: "busy",
+      level: "warn",
       detail: "桥接服务可达，等待 Ps 插件握手。",
-      iconKey: "apiConnectingSecondary",
+      iconKey: "bridgeConnecting",
     };
   }
   return {
-    title: "插件待连接",
-    level: "warn",
-    detail: "插件待连接。点击微型控制台可展开查看桥接日志。",
-    iconKey: "reconnect",
+    title: "插件连接失败",
+    level: "error",
+    detail: "插件连接失败。点击微型控制台可展开查看桥接日志。",
+    iconKey: "bridgeReconnect",
   };
 }
 
@@ -11759,7 +14247,7 @@ function buildBridgeStatusChangedEvents(
 }
 
 function buildBridgeDisconnectedEvents(
-  bridgeDisconnectedMessage = "插件待连接",
+  bridgeDisconnectedMessage = "插件连接失败",
 ) {
   return [
     {
@@ -11775,10 +14263,10 @@ function buildBridgeDisconnectedEvents(
     {
       kind: "mini-status",
       payload: {
-        title: "插件待连接",
-        level: "warn",
+        title: "插件连接失败",
+        level: "error",
         detail: "插件连接中断。请打开大控制台查看详细日志。",
-        iconKey: "reconnect",
+        iconKey: "bridgeReconnect",
       },
     },
   ];
@@ -11888,46 +14376,6 @@ function getProviderModeOptions(
     : getProviderSupportedModes(providerPreset);
 }
 
-function summarizeRunImageSettledResults(settledRunResultsInput = []) {
-  const settledRunResults = Array.isArray(settledRunResultsInput)
-      ? settledRunResultsInput
-      : [],
-    collectedImageDataUrls = [],
-    collectedTextOutputs = [];
-  let failedRequestCount = 0,
-    firstFailureMessage = "";
-  settledRunResults.forEach((settledRunResult) => {
-    if (settledRunResult?.status === "rejected") {
-      ((failedRequestCount += 1),
-        firstFailureMessage ||
-          (firstFailureMessage = String(
-            settledRunResult?.reason?.message || settledRunResult?.reason || "跑图请求失败",
-          )));
-      return;
-    }
-    const providerRunResult = settledRunResult?.value,
-      providerResultText = String(providerRunResult?.text || "").trim();
-    providerResultText && collectedTextOutputs.push(providerResultText);
-    (Array.isArray(providerRunResult?.images) ? providerRunResult.images : []).forEach(
-      (providerImageDataUrl) => {
-        const normalizedProviderImageDataUrl = String(providerImageDataUrl || "").trim();
-        normalizedProviderImageDataUrl &&
-          collectedImageDataUrls.push(normalizedProviderImageDataUrl);
-      },
-    );
-  });
-  const mergedProviderText = Array.from(new Set(collectedTextOutputs.filter(Boolean)))
-    .join(`
-`)
-    .trim();
-  return {
-    failedRequestCount,
-    firstFailureMessage,
-    collectedImageDataUrls,
-    mergedProviderText,
-  };
-}
-
 function buildRunImageSuccessPlan({
   failedRequestCount,
   firstFailureMessage,
@@ -11973,15 +14421,27 @@ function buildRunImageSuccessPlan({
     warningMessages.push(
       `跑图请求数量 x${normalizedRequestedGenerateCount}，收到图片 ${normalizedCollectedImageDataUrls.length} 张`,
     );
+  normalizedFailedRequestCount > 0 &&
+    String(firstFailureMessage || "").trim() &&
+    warningMessages.push(`失败原因：${String(firstFailureMessage || "").trim()}`);
   const providerTextLogMessage = normalizedMergedProviderText
       ? `跑图返回：${normalizedMergedProviderText.length > 120 ? `${normalizedMergedProviderText.slice(0, 120)}...` : normalizedMergedProviderText}`
       : "",
-    lifecycleReturnMessage = `跑图完成，返回图片 ${normalizedCollectedImageDataUrls.length}/${normalizedRequestedGenerateCount} 张。`;
+    lifecycleReturnMessage = `跑图完成，返回图片 ${normalizedCollectedImageDataUrls.length}/${normalizedRequestedGenerateCount} 张。`,
+    taskResultMessage = [
+      lifecycleReturnMessage,
+      ...warningMessages,
+      providerTextLogMessage,
+    ]
+      .map((messageItem) => String(messageItem || "").trim())
+      .filter(Boolean)
+      .join("\n");
   return {
     fatalMessage,
     warningMessages,
     providerTextLogMessage,
     lifecycleReturnMessage,
+    taskResultMessage,
     normalizedCollectedImageDataUrls,
     normalizedMergedProviderText,
     normalizedRequestedGenerateCount,
@@ -12605,25 +15065,53 @@ async function requestServerAbortRunTask(
 
 function normalizeRunQueueTaskImageItem(imageItem) {
   if (!imageItem || typeof imageItem !== "object") return null;
-  const cacheId = String(imageItem?.psCacheId || imageItem?.cacheId || "").trim(),
+  const rawLegacyImageSnapshot =
+      imageItem?.legacy && typeof imageItem.legacy === "object"
+        ? imageItem.legacy
+        : {},
+    legacyPsCacheId = String(
+      imageItem?.psCacheId || rawLegacyImageSnapshot.psCacheId || "",
+    ).trim(),
+    legacyCacheId = String(
+      imageItem?.cacheId || rawLegacyImageSnapshot.cacheId || "",
+    ).trim(),
+    legacyChatCacheId = String(
+      imageItem?.chatCacheId || rawLegacyImageSnapshot.chatCacheId || "",
+    ).trim(),
     dataUrl = String(imageItem?.dataUrl || "").trim();
-  if (!cacheId && !dataUrl.startsWith("data:image/")) return null;
+  if (
+    !hasResolvableImageRecord(imageItem) &&
+    !legacyPsCacheId &&
+    !legacyCacheId &&
+    !legacyChatCacheId &&
+    !dataUrl.startsWith("data:image/")
+  )
+    return null;
   const normalizedDataUrl = dataUrl.startsWith("data:image/") ? dataUrl : "",
     normalizedTargetMeta = normalizeImportTargetMeta(imageItem),
     imageWidth = Number(imageItem?.width),
-    imageHeight = Number(imageItem?.height);
-  return {
+    imageHeight = Number(imageItem?.height),
+    normalizedDisplayName = resolveAssetRecordDisplayName(imageItem, "image");
+  const normalizedLegacyImageRecord = {
     id: String(imageItem.id || ""),
     dataUrl: normalizedDataUrl,
-    name: String(imageItem.name || imageItem.originName || "image"),
-    originName: String(imageItem.originName || imageItem.name || "image"),
+    fileName: String(
+      imageItem.fileName ||
+        imageItem.cacheFileName ||
+        normalizedDisplayName,
+    ).trim(),
+    name: normalizedDisplayName,
+    originName: normalizedDisplayName,
     type: String(imageItem.type || "image/*"),
     source: normalizeImageSource(imageItem.source),
+    inputMethod: normalizeImageSource(imageItem.source),
     role: String(imageItem.role || ""),
     slotIndex: Number.isFinite(imageItem.slotIndex)
       ? Number(imageItem.slotIndex)
       : void 0,
-    psCacheId: cacheId,
+    cacheId: legacyCacheId,
+    psCacheId: legacyPsCacheId,
+    chatCacheId: legacyChatCacheId,
     psCacheExpiresAt: Number.isFinite(imageItem.psCacheExpiresAt)
       ? Number(imageItem.psCacheExpiresAt)
       : void 0,
@@ -12635,6 +15123,51 @@ function normalizeRunQueueTaskImageItem(imageItem) {
     targetDocumentId: normalizedTargetMeta.targetDocumentId || void 0,
     targetDocumentName: normalizedTargetMeta.targetDocumentName || void 0,
   };
+  const assetImageRecord = normalizeLegacyImageRecordToAssetRecord(
+    normalizedLegacyImageRecord,
+    {
+      prefix: "task",
+      imageSourceKind: "task",
+      imageSourceMethod: normalizedLegacyImageRecord.source,
+      occurredAt:
+        imageItem.capturedAt || imageItem.cachedAt || imageItem.createdAt,
+      inputMethod: normalizedLegacyImageRecord.inputMethod,
+      usageMeta: {
+        ownerType: "task-image",
+      },
+    },
+  );
+  return {
+    ...normalizedLegacyImageRecord,
+    assetId: assetImageRecord.assetId,
+    fileName: assetImageRecord.fileName,
+    filePath: assetImageRecord.filePath,
+    internalCacheId: assetImageRecord.internalCacheId,
+    itemId: assetImageRecord.itemId,
+    sourceRefKey: assetImageRecord.sourceRefKey,
+    inputMethod: assetImageRecord.inputMethod,
+    usageMeta: assetImageRecord.usageMeta,
+    legacy: assetImageRecord.legacy,
+    imageTraceId: assetImageRecord.imageTraceId,
+    parentImageTraceIds: assetImageRecord.parentImageTraceIds,
+    imageSourceKind: assetImageRecord.imageSourceKind,
+    imageSourceMethod: assetImageRecord.imageSourceMethod,
+    displayFileName: assetImageRecord.displayFileName,
+    legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
+    legacyIdConversionRemoveAfter:
+      assetImageRecord.legacyIdConversionRemoveAfter,
+    cacheFileName:
+      assetImageRecord.fileName ||
+      normalizedLegacyImageRecord.fileName ||
+      "",
+    cacheFilePath:
+      assetImageRecord.filePath ||
+      normalizedLegacyImageRecord.filePath ||
+      "",
+    cacheId: normalizedLegacyImageRecord.cacheId || "",
+    psCacheId: normalizedLegacyImageRecord.psCacheId || "",
+    chatCacheId: normalizedLegacyImageRecord.chatCacheId || "",
+  };
 }
 
 function normalizeRunTaskImageSourceMode(imageSourceInput) {
@@ -12645,6 +15178,21 @@ function normalizeRunTaskImageSourceMode(imageSourceInput) {
 
 function clearRunQueueTaskOptionsInPlace(runQueueTask) {
   if (!runQueueTask || typeof runQueueTask !== "object") return;
+  if (Array.isArray(runQueueTask.itemResults)) {
+    runQueueTask.itemResults.forEach((itemResult) => {
+      if (!itemResult || typeof itemResult !== "object") return;
+      Array.isArray(itemResult.returnedImages) &&
+        (itemResult.returnedImages.length = 0);
+      itemResult.message = "";
+    });
+    runQueueTask.itemResults.length = 0;
+  }
+  Array.isArray(runQueueTask.returnedImages) &&
+    (runQueueTask.returnedImages.length = 0);
+  runQueueTask.resultMessage = "";
+  runQueueTask.completedItemCount = 0;
+  runQueueTask.successItemCount = 0;
+  runQueueTask.failedItemCount = 0;
   const taskOptions =
     runQueueTask.options && typeof runQueueTask.options === "object"
       ? runQueueTask.options
@@ -12665,6 +15213,523 @@ function clearRunQueueTaskOptionsInPlace(runQueueTask) {
     (runQueueTask.options = null));
 }
 
+function normalizeRunQueueHistoryImageItem(
+  imageItemInput,
+  fallbackIndex = 0,
+) {
+  const imageItem =
+    imageItemInput && typeof imageItemInput === "object"
+      ? imageItemInput
+      : null;
+  if (!imageItem) return null;
+  const normalizedDisplayName = resolveAssetRecordDisplayName(
+    imageItem,
+    "image",
+  );
+  const baseImageRecord = {
+      ...imageItem,
+      id: String(imageItem.id || "").trim(),
+      fileName: String(
+        imageItem.fileName ||
+          imageItem.cacheFileName ||
+          normalizedDisplayName ||
+          "",
+      ).trim(),
+      filePath: String(
+        imageItem.filePath || imageItem.cacheFilePath || "",
+      ).trim(),
+      cacheFileName: String(imageItem.cacheFileName || "").trim(),
+      cacheFilePath: String(imageItem.cacheFilePath || "").trim(),
+      name: normalizedDisplayName,
+      originName: normalizedDisplayName,
+      cacheId: String(imageItem.cacheId || "").trim(),
+      psCacheId: String(imageItem.psCacheId || "").trim(),
+      chatCacheId: String(imageItem.chatCacheId || "").trim(),
+      assetId: String(imageItem.assetId || "").trim(),
+      internalCacheId: String(imageItem.internalCacheId || "").trim(),
+      itemId: String(imageItem.itemId || "").trim(),
+      sourceRefKey: String(imageItem.sourceRefKey || "").trim(),
+      inputMethod: String(imageItem.inputMethod || imageItem.source || "").trim(),
+      usageMeta:
+        imageItem.usageMeta && typeof imageItem.usageMeta === "object"
+          ? { ...imageItem.usageMeta }
+          : void 0,
+      legacy:
+        imageItem.legacy && typeof imageItem.legacy === "object"
+          ? { ...imageItem.legacy }
+          : void 0,
+    },
+    assetImageRecord = normalizeLegacyImageRecordToAssetRecord(
+      baseImageRecord,
+      {
+        prefix: "result",
+        fileName:
+          baseImageRecord.fileName ||
+          baseImageRecord.cacheFileName ||
+          baseImageRecord.name,
+        filePath: baseImageRecord.filePath || baseImageRecord.cacheFilePath,
+        inputMethod:
+          baseImageRecord.inputMethod || baseImageRecord.source || "run-result",
+        sourceRefKey: baseImageRecord.sourceRefKey || "",
+        usageMeta: {
+          ownerType: "run-queue-output",
+          ...(baseImageRecord.usageMeta &&
+          typeof baseImageRecord.usageMeta === "object"
+            ? baseImageRecord.usageMeta
+            : {}),
+        },
+      },
+    ),
+    cacheFilePath = resolveAssetRecordStoragePath(assetImageRecord),
+    cacheFileName = resolveAssetRecordDisplayName(
+      assetImageRecord,
+      `image_${fallbackIndex + 1}`,
+    ),
+    widthValue = Number(imageItem.width),
+    heightValue = Number(imageItem.height);
+  if (!cacheFilePath && !cacheFileName) return null;
+  return {
+    ...baseImageRecord,
+    assetId: assetImageRecord.assetId,
+    fileName: assetImageRecord.fileName,
+    filePath: assetImageRecord.filePath,
+    internalCacheId: assetImageRecord.internalCacheId,
+    itemId: assetImageRecord.itemId,
+    sourceRefKey: assetImageRecord.sourceRefKey,
+    inputMethod: assetImageRecord.inputMethod,
+    usageMeta: assetImageRecord.usageMeta,
+    legacy: assetImageRecord.legacy,
+    id:
+      String(
+        baseImageRecord.id ||
+          assetImageRecord.assetId ||
+          assetImageRecord.internalCacheId ||
+          assetImageRecord.itemId ||
+          assetImageRecord.fileName ||
+          baseImageRecord.cacheId ||
+          `${cacheFileName || "image"}-${fallbackIndex + 1}`,
+      ).trim() || `history-image-${fallbackIndex + 1}`,
+    cacheFilePath,
+    cacheFileName: cacheFileName || `image_${fallbackIndex + 1}`,
+    cacheId: baseImageRecord.cacheId,
+    psCacheId: baseImageRecord.psCacheId,
+    width:
+      Number.isFinite(widthValue) && widthValue > 0
+        ? Math.round(widthValue)
+        : 0,
+    height:
+      Number.isFinite(heightValue) && heightValue > 0
+        ? Math.round(heightValue)
+        : 0,
+  };
+}
+
+function buildRunQueueTaskItemStatusLabel(statusInput) {
+  const normalizedStatus = String(statusInput || "").trim();
+  if (normalizedStatus === "success") return "成功";
+  if (normalizedStatus === "failed") return "失败";
+  if (normalizedStatus === "aborted") return "已中止";
+  if (normalizedStatus === "partial") return "部分完成";
+  if (normalizedStatus === "running") return "执行中";
+  if (normalizedStatus === "removed") return "已移除";
+  return "待执行";
+}
+
+function buildRunQueueBatchSummaryMessage({
+  totalCount,
+  successCount,
+  failedCount,
+} = {}) {
+  const normalizedTotalCount = Math.max(1, Number(totalCount) || 1),
+    normalizedSuccessCount = Math.max(0, Number(successCount) || 0),
+    normalizedFailedCount = Math.max(0, Number(failedCount) || 0);
+  return `${normalizedTotalCount}任务 ${normalizedSuccessCount}成功 ${normalizedFailedCount}失败`;
+}
+
+function normalizeRunQueueTaskItemResult(
+  itemResultInput,
+  fallbackIndex = 0,
+) {
+  const itemResult =
+    itemResultInput && typeof itemResultInput === "object" ? itemResultInput : null;
+  if (!itemResult) return null;
+  const itemIndex = Math.max(
+      1,
+      Math.floor(Number(itemResult.itemIndex) || fallbackIndex + 1),
+    ),
+    normalizedStatus = (() => {
+      const rawStatus = String(itemResult.status || "").trim();
+      return ["pending", "running", "success", "failed", "aborted", "removed", "partial"].includes(
+        rawStatus,
+      )
+        ? rawStatus
+        : "pending";
+    })(),
+    returnedImages = Array.isArray(itemResult.returnedImages)
+      ? itemResult.returnedImages
+          .map((imageItem, imageIndex) =>
+            normalizeRunQueueHistoryImageItem(imageItem, imageIndex),
+          )
+          .filter(Boolean)
+      : [];
+  return {
+    id:
+      String(itemResult.id || "").trim() ||
+      `run-queue-item-${itemIndex}`,
+    itemIndex,
+    status: normalizedStatus,
+    statusLabel: buildRunQueueTaskItemStatusLabel(normalizedStatus),
+    message: String(itemResult.message || "").trim(),
+    startedAtMs: Math.max(0, Number(itemResult.startedAtMs) || 0),
+    finishedAtMs: Math.max(0, Number(itemResult.finishedAtMs) || 0),
+    returnedImages,
+  };
+}
+
+function createRunQueueTaskItemResults(totalCountInput = 1) {
+  const normalizedTotalCount = Math.max(1, Number(totalCountInput) || 1);
+  return Array.from({ length: normalizedTotalCount }, (_, itemIndex) =>
+    normalizeRunQueueTaskItemResult(
+      {
+        id: `run-queue-item-${itemIndex + 1}`,
+        itemIndex: itemIndex + 1,
+        status: "pending",
+        message: "",
+        startedAtMs: 0,
+        finishedAtMs: 0,
+        returnedImages: [],
+      },
+      itemIndex,
+    ),
+  ).filter(Boolean);
+}
+
+function normalizeRunQueueHistoryTaskItem(taskItemInput) {
+  const taskItem =
+    taskItemInput && typeof taskItemInput === "object"
+      ? taskItemInput
+      : null;
+  if (!taskItem) return null;
+  const normalizedTaskId = String(taskItem.id || "").trim();
+  if (!normalizedTaskId) return null;
+  const normalizedStatus = (() => {
+      const rawStatus = String(
+        taskItem.status || taskItem.historyStatus || "",
+      ).trim();
+      if (["success", "failed", "aborted", "removed", "partial"].includes(rawStatus)) {
+        return rawStatus;
+      }
+      return "success";
+    })(),
+    createdAtMs = Math.max(0, Number(taskItem.createdAtMs) || 0),
+    startedAtMs = Math.max(0, Number(taskItem.startedAtMs) || 0),
+    finishedAtMs = Math.max(
+      0,
+      Number(taskItem.finishedAtMs || taskItem.createdAtMs) || 0,
+    ),
+    requestedItemCount = Math.max(1, Number(taskItem.requestedItemCount) || 1),
+    completedItemCount = Math.max(0, Number(taskItem.completedItemCount) || 0),
+    successItemCount = Math.max(0, Number(taskItem.successItemCount) || 0),
+    failedItemCount = Math.max(0, Number(taskItem.failedItemCount) || 0),
+    sourceImageRefs = Array.isArray(taskItem.sourceImageRefs)
+      ? taskItem.sourceImageRefs
+          .map((imageItem, imageIndex) =>
+            normalizeRunQueueHistoryImageItem(imageItem, imageIndex),
+          )
+          .filter(Boolean)
+      : [],
+    itemResults = Array.isArray(taskItem.itemResults)
+      ? taskItem.itemResults
+          .map((itemResult, itemIndex) =>
+            normalizeRunQueueTaskItemResult(itemResult, itemIndex),
+          )
+          .filter(Boolean)
+      : [],
+    legacyReturnedImages = Array.isArray(taskItem.returnedImages)
+      ? taskItem.returnedImages
+          .map((imageItem, imageIndex) =>
+            normalizeRunQueueHistoryImageItem(imageItem, imageIndex),
+          )
+          .filter(Boolean)
+      : [],
+    returnedImages = itemResults.length
+      ? itemResults.flatMap((itemResult) =>
+          Array.isArray(itemResult?.returnedImages)
+            ? itemResult.returnedImages
+            : [],
+        )
+      : legacyReturnedImages,
+    computedThumbBundle = buildRunQueueThumbBundle(
+      sourceImageRefs.length ? sourceImageRefs : returnedImages,
+    ),
+    legacyThumbDataUrl = String(taskItem.thumbDataUrl || "").trim(),
+    legacyRefThumbList = Array.isArray(taskItem.refThumbList)
+      ? taskItem.refThumbList
+          .map((thumbItem, thumbIndex) => ({
+            id:
+              String(thumbItem?.id || "").trim() ||
+              `${normalizedTaskId}-ref-${thumbIndex + 1}`,
+            src: String(thumbItem?.src || "").trim(),
+            name: String(thumbItem?.name || "").trim(),
+          }))
+          .filter(
+            (thumbItem) =>
+              thumbItem.src ||
+              thumbItem.name,
+          )
+      : [];
+  return {
+    id: normalizedTaskId,
+    phase: "history",
+    historyStatus: normalizedStatus,
+    statusLabel:
+      normalizedStatus === "success"
+        ? "已完成"
+        : normalizedStatus === "partial"
+          ? "部分完成"
+        : normalizedStatus === "failed"
+          ? "失败"
+          : normalizedStatus === "aborted"
+            ? "已中止"
+            : "已移除",
+    createdAtMs,
+    startedAtMs,
+    finishedAtMs,
+    promptText: String(taskItem.promptText || "").trim(),
+    imageCount: Math.max(
+      0,
+      Number(taskItem.imageCount) ||
+        sourceImageRefs.length ||
+        returnedImages.length ||
+        0,
+    ),
+    summaryText: String(taskItem.summaryText || "").trim(),
+    detailPrimaryText: String(taskItem.detailPrimaryText || "").trim(),
+    detailSecondaryText: String(taskItem.detailSecondaryText || "").trim(),
+    sourceLabel: String(taskItem.sourceLabel || "").trim(),
+    providerLabel: String(taskItem.providerLabel || "").trim(),
+    modelLabel: String(taskItem.modelLabel || "").trim(),
+    sourceImageRefs,
+    thumbDataUrl:
+      computedThumbBundle.thumbDataUrl ||
+      legacyThumbDataUrl,
+    refThumbList:
+      computedThumbBundle.refThumbList.length > 0
+        ? computedThumbBundle.refThumbList
+        : legacyRefThumbList,
+    timeoutMs: Math.max(0, Number(taskItem.timeoutMs) || 0),
+    canRerun: !!taskItem.canRerun,
+    resultMessage: String(taskItem.resultMessage || "").trim(),
+    requestedItemCount,
+    completedItemCount,
+    successItemCount,
+    failedItemCount,
+    itemResults,
+    returnedImages,
+  };
+}
+
+function stripRunQueueHistoryImageItemForStorage(
+  imageItemInput,
+  fallbackIndex = 0,
+) {
+  const normalizedImageItem = normalizeRunQueueHistoryImageItem(
+    imageItemInput,
+    fallbackIndex,
+  );
+  if (!normalizedImageItem) return null;
+  return {
+    id: String(normalizedImageItem.id || "").trim(),
+    fileName: String(normalizedImageItem.fileName || "").trim(),
+    filePath: String(normalizedImageItem.filePath || "").trim(),
+    cacheFileName: String(normalizedImageItem.cacheFileName || "").trim(),
+    cacheFilePath: String(normalizedImageItem.cacheFilePath || "").trim(),
+    cacheId: String(normalizedImageItem.cacheId || "").trim(),
+    psCacheId: String(normalizedImageItem.psCacheId || "").trim(),
+    chatCacheId: String(normalizedImageItem.chatCacheId || "").trim(),
+    assetId: String(normalizedImageItem.assetId || "").trim(),
+    internalCacheId: String(normalizedImageItem.internalCacheId || "").trim(),
+    itemId: String(normalizedImageItem.itemId || "").trim(),
+    sourceRefKey: String(normalizedImageItem.sourceRefKey || "").trim(),
+    inputMethod: String(normalizedImageItem.inputMethod || "").trim(),
+    usageMeta:
+      normalizedImageItem.usageMeta &&
+      typeof normalizedImageItem.usageMeta === "object"
+        ? { ...normalizedImageItem.usageMeta }
+        : void 0,
+    legacy:
+      normalizedImageItem.legacy &&
+      typeof normalizedImageItem.legacy === "object"
+        ? { ...normalizedImageItem.legacy }
+        : void 0,
+    width:
+      Number.isFinite(Number(normalizedImageItem.width)) &&
+      Number(normalizedImageItem.width) > 0
+        ? Math.round(Number(normalizedImageItem.width))
+        : 0,
+    height:
+      Number.isFinite(Number(normalizedImageItem.height)) &&
+      Number(normalizedImageItem.height) > 0
+        ? Math.round(Number(normalizedImageItem.height))
+        : 0,
+  };
+}
+
+function serializeRunQueueTaskItemResultForStorage(
+  itemResultInput,
+  fallbackIndex = 0,
+) {
+  const normalizedItemResult = normalizeRunQueueTaskItemResult(
+    itemResultInput,
+    fallbackIndex,
+  );
+  if (!normalizedItemResult) return null;
+  return {
+    id: String(normalizedItemResult.id || "").trim(),
+    itemIndex: Math.max(
+      1,
+      Math.floor(Number(normalizedItemResult.itemIndex) || fallbackIndex + 1),
+    ),
+    status: String(normalizedItemResult.status || "").trim(),
+    message: String(normalizedItemResult.message || "").trim(),
+    startedAtMs: Math.max(0, Number(normalizedItemResult.startedAtMs) || 0),
+    finishedAtMs: Math.max(0, Number(normalizedItemResult.finishedAtMs) || 0),
+    returnedImages: Array.isArray(normalizedItemResult.returnedImages)
+      ? normalizedItemResult.returnedImages
+          .map((imageItem, imageIndex) =>
+            stripRunQueueHistoryImageItemForStorage(imageItem, imageIndex),
+          )
+          .filter(Boolean)
+      : [],
+  };
+}
+
+function serializeRunQueueHistoryTaskItemForStorage(taskItemInput) {
+  const normalizedTaskItem = normalizeRunQueueHistoryTaskItem(taskItemInput);
+  if (!normalizedTaskItem) return null;
+  return {
+    id: String(normalizedTaskItem.id || "").trim(),
+    status: String(
+      normalizedTaskItem.historyStatus || normalizedTaskItem.status || "",
+    ).trim(),
+    createdAtMs: Math.max(0, Number(normalizedTaskItem.createdAtMs) || 0),
+    startedAtMs: Math.max(0, Number(normalizedTaskItem.startedAtMs) || 0),
+    finishedAtMs: Math.max(0, Number(normalizedTaskItem.finishedAtMs) || 0),
+    promptText: String(normalizedTaskItem.promptText || "").trim(),
+    imageCount: Math.max(0, Number(normalizedTaskItem.imageCount) || 0),
+    summaryText: String(normalizedTaskItem.summaryText || "").trim(),
+    detailPrimaryText: String(normalizedTaskItem.detailPrimaryText || "").trim(),
+    detailSecondaryText: String(
+      normalizedTaskItem.detailSecondaryText || "",
+    ).trim(),
+    sourceLabel: String(normalizedTaskItem.sourceLabel || "").trim(),
+    providerLabel: String(normalizedTaskItem.providerLabel || "").trim(),
+    modelLabel: String(normalizedTaskItem.modelLabel || "").trim(),
+    timeoutMs: Math.max(0, Number(normalizedTaskItem.timeoutMs) || 0),
+    canRerun: !!normalizedTaskItem.canRerun,
+    resultMessage: String(normalizedTaskItem.resultMessage || "").trim(),
+    requestedItemCount: Math.max(
+      1,
+      Number(normalizedTaskItem.requestedItemCount) || 1,
+    ),
+    completedItemCount: Math.max(
+      0,
+      Number(normalizedTaskItem.completedItemCount) || 0,
+    ),
+    successItemCount: Math.max(
+      0,
+      Number(normalizedTaskItem.successItemCount) || 0,
+    ),
+    failedItemCount: Math.max(
+      0,
+      Number(normalizedTaskItem.failedItemCount) || 0,
+    ),
+    sourceImageRefs: Array.isArray(normalizedTaskItem.sourceImageRefs)
+      ? normalizedTaskItem.sourceImageRefs
+          .map((imageItem, imageIndex) =>
+            stripRunQueueHistoryImageItemForStorage(imageItem, imageIndex),
+          )
+          .filter(Boolean)
+      : [],
+    itemResults: Array.isArray(normalizedTaskItem.itemResults)
+      ? normalizedTaskItem.itemResults
+          .map((itemResult, itemIndex) =>
+            serializeRunQueueTaskItemResultForStorage(itemResult, itemIndex),
+          )
+          .filter(Boolean)
+      : [],
+  };
+}
+
+function normalizeRunQueueHistoryState(historyItemsInput) {
+  return Array.isArray(historyItemsInput)
+    ? historyItemsInput
+        .map((historyItem) => normalizeRunQueueHistoryTaskItem(historyItem))
+        .filter(Boolean)
+    : [];
+}
+
+function serializeRunQueueTaskHistoryState(historyItemsInput) {
+  return JSON.stringify(
+    Array.isArray(historyItemsInput)
+      ? historyItemsInput
+          .map((historyItem) =>
+            serializeRunQueueHistoryTaskItemForStorage(historyItem),
+          )
+          .filter(Boolean)
+      : [],
+  );
+}
+
+function pruneRunQueueHistoryItems(
+  historyItemsInput,
+  retentionDaysInput = CACHE_RETENTION_DAYS_MIN,
+  maxRecordsInput = CONST_RUN_QUEUE_HISTORY_MAX_RECORDS,
+) {
+  const normalizedRetentionDays = clampCacheRetentionDays(
+      retentionDaysInput,
+      CACHE_RETENTION_DAYS_MIN,
+    ),
+    normalizedMaxRecords = Math.max(
+      0,
+      Number(maxRecordsInput) || CONST_RUN_QUEUE_HISTORY_MAX_RECORDS,
+    ),
+    normalizedHistoryItems = Array.isArray(historyItemsInput)
+      ? historyItemsInput
+          .map((historyItem) =>
+            normalizeRunQueueHistoryTaskItem(historyItem),
+          )
+          .filter(Boolean)
+      : [];
+  if (!normalizedRetentionDays || !normalizedMaxRecords) return [];
+  const nowTimestamp = Date.now(),
+    maxAgeMs = normalizedRetentionDays * 24 * 60 * 60 * 1000;
+  return normalizedHistoryItems
+    .filter((historyItem) => {
+      const baseTimestamp = Math.max(
+        0,
+        Number(
+          historyItem.finishedAtMs ||
+            historyItem.startedAtMs ||
+            historyItem.createdAtMs,
+        ) || 0,
+      );
+      return baseTimestamp > 0 && nowTimestamp - baseTimestamp <= maxAgeMs;
+    })
+    .sort((leftHistoryItem, rightHistoryItem) => {
+      const leftTimestamp = Math.max(
+          Number(leftHistoryItem.finishedAtMs) || 0,
+          Number(leftHistoryItem.createdAtMs) || 0,
+        ),
+        rightTimestamp = Math.max(
+          Number(rightHistoryItem.finishedAtMs) || 0,
+          Number(rightHistoryItem.createdAtMs) || 0,
+        );
+      return rightTimestamp - leftTimestamp;
+    })
+    .slice(0, normalizedMaxRecords);
+}
+
 function createRunQueueTaskRecord({
   runTaskInputOptions,
   normalizedRunTaskPromptText,
@@ -12682,58 +15747,35 @@ function createRunQueueTaskRecord({
       normalizedSourceMode === "assistant-prev-user"
         ? String(runTaskInputOptions?.assistantMessageId || "").trim()
         : "",
-    normalizedProviderKeySnapshot = String(
-      runTaskInputOptions?.providerKeySnapshot || "",
+    normalizedSessionId = String(
+      runTaskInputOptions?.sessionId || runTaskInputOptions?.sessionIdSnapshot || "",
     ).trim(),
-    imageApiConfigSnapshotCandidate =
-      runTaskInputOptions?.imageApiConfigSnapshot &&
-      typeof runTaskInputOptions.imageApiConfigSnapshot === "object"
-        ? runTaskInputOptions.imageApiConfigSnapshot
-        : null,
-    normalizedImageApiConfigSnapshot = imageApiConfigSnapshotCandidate
-      ? {
-          baseUrl: String(imageApiConfigSnapshotCandidate.baseUrl || "").trim(),
-          apiKey: String(imageApiConfigSnapshotCandidate.apiKey || "").trim(),
-          model: String(imageApiConfigSnapshotCandidate.model || "").trim(),
-          timeoutMs: Math.max(5e3, Number(imageApiConfigSnapshotCandidate.timeoutMs) || 3e4),
-          providerMode: imageApiConfigSnapshotCandidate.providerMode,
-        }
-      : null,
-    normalizedGenerationImageSizeLabelSnapshot = String(
-      runTaskInputOptions?.generationImageSizeLabelSnapshot || "",
-    ).trim(),
-    normalizedGenerationImageSizeTextSnapshot = String(
-      runTaskInputOptions?.generationImageSizeTextSnapshot || "",
-    ).trim(),
-    normalizedGenerationAspectRatioSnapshot = String(
-      runTaskInputOptions?.generationAspectRatioSnapshot || "",
-    ).trim(),
-    normalizedGenerationCountSnapshot = parseGenerationCount(
-      runTaskInputOptions?.generationCountSnapshot,
+    normalizedTimeoutOverrideMs =
+      Number.isFinite(Number(runTaskInputOptions?.timeoutOverrideMs)) &&
+      Number(runTaskInputOptions?.timeoutOverrideMs) > 0
+        ? Math.max(5e3, Math.round(Number(runTaskInputOptions.timeoutOverrideMs)))
+        : 0,
+    requestedItemCount = Math.max(
       1,
-    ),
-    normalizedSessionIdSnapshot = String(
-      runTaskInputOptions?.sessionIdSnapshot || "",
-    ).trim();
+      Number(runTaskInputOptions?.requestedItemCount) || 1,
+    );
   return {
     id: `imgq-${normalizedTimestamp}-${normalizedCounter}`,
     createdAtMs: normalizedTimestamp,
     startedAtMs: 0,
+    requestedItemCount,
+    completedItemCount: 0,
+    successItemCount: 0,
+    failedItemCount: 0,
+    resultMessage: "",
+    itemResults: createRunQueueTaskItemResults(requestedItemCount),
     options: {
       promptText: String(normalizedRunTaskPromptText || "").trim(),
       imageSource: normalizedSourceMode,
       assistantMessageId: normalizedAssistantMessageId,
-      sessionIdSnapshot: normalizedSessionIdSnapshot,
+      sessionId: normalizedSessionId,
       images: Array.isArray(normalizedRunTaskImages) ? normalizedRunTaskImages : [],
-      providerKeySnapshot: normalizedProviderKeySnapshot || "",
-      imageApiConfigSnapshot: normalizedImageApiConfigSnapshot,
-      generationImageSizeLabelSnapshot:
-        normalizedGenerationImageSizeLabelSnapshot || "",
-      generationImageSizeTextSnapshot:
-        normalizedGenerationImageSizeTextSnapshot || "",
-      generationAspectRatioSnapshot:
-        normalizedGenerationAspectRatioSnapshot || "",
-      generationCountSnapshot: normalizedGenerationCountSnapshot,
+      timeoutOverrideMs: normalizedTimeoutOverrideMs,
     },
   };
 }
@@ -13529,7 +16571,7 @@ function buildErrorRecoveryGuide(rawGuideInput) {
       : /target_document_not_found|target_document_required/.test(
             normalizedGuideText,
           )
-        ? "记录画布未命中；请在弹窗中选择已打开画布后继续导入。"
+      ? "记录画布 ID 未命中；若你重新打开过 Ps 或该文档，旧画布 ID 可能已失效。请在弹窗中重新指定已打开画布后继续导入。"
         : /bridge_runtime_contract_mismatch/.test(normalizedGuideText)
         ? "桥接运行时版本不匹配；当前会继续尝试执行。建议更新插件后再试。"
         : /capture_action_domain_mismatch|bridge_action_type_mismatch|queue_result_action_mismatch|action_type_mismatch/.test(
@@ -13821,7 +16863,7 @@ function normalizeUserFacingErrorMessage(rawErrorInput) {
       : rawErrorText.includes("chat_busy")
         ? "当前已有生成任务，请先停止或等待完成"
         : /target_document_not_found|target_document_required/i.test(rawErrorText)
-          ? "记录画布未命中，请在弹窗中选择已打开画布后继续导入。"
+        ? "记录画布 ID 未命中；若你重新打开过 Ps 或该文档，旧画布 ID 可能已失效。请在弹窗中重新指定已打开画布后继续导入。"
           : rawErrorText.includes("Failed to fetch")
             ? "网络连接失败，请检查地址或代理设置"
             : /ratio or price not set|倍率或价格未配置/i.test(rawErrorText)
@@ -14106,6 +17148,7 @@ function SettingsView({
   cacheStats,
   chatKeyVisible,
   chatConfigExpanded,
+  openCacheRetentionDropdownKey,
   settingsToolsFoldOpen,
   settingsDisplayFoldOpen,
   imageApiFormatLabel,
@@ -14139,8 +17182,13 @@ function SettingsView({
   setUploadFullImageShortcut,
   importLayerType,
   setImportLayerType,
+  importAutoGroupEnabled,
+  setImportAutoGroupEnabled,
+  importAutoMaskEnabled,
+  setImportAutoMaskEnabled,
   handleCachePolicyChange,
   setChatConfigExpanded,
+  setOpenCacheRetentionDropdownKey,
   setSettingsToolsFoldOpen,
   setSettingsDisplayFoldOpen,
   setImageKeyVisible,
@@ -14173,6 +17221,8 @@ function SettingsView({
   CACHE_RETENTION_DAYS_MAX,
   handleOpenCacheFolder,
   formatMemoryBytes,
+  chatConfigExpandedRef,
+  cacheRetentionDropdownRootRef,
 }) {
   const isChatProviderCustom = String(chatProviderKey || "") === "custom",
     isImageProviderCustom = String(imageProviderKey || "") === "custom",
@@ -14307,7 +17357,6 @@ function SettingsView({
     bridgePortDraftChanged =
       Number(normalizeBridgePort(bridgePortDraft, bridgePort)) !==
       Number(bridgePort),
-    chatConfigExpandedRef = React.useRef(null),
     chatSectionRef = React.useRef(null),
     imageSectionRef = React.useRef(null),
     toolsSectionRef = React.useRef(null),
@@ -14564,9 +17613,6 @@ function SettingsView({
         Math.min(CACHE_RETENTION_DAYS_MAX, currentValue),
       );
     },
-    [openCacheRetentionDropdownKey, setOpenCacheRetentionDropdownKey] =
-      React.useState(""),
-    cacheRetentionDropdownRootRef = React.useRef(null),
     [uiScaleDraftPercent, setUiScaleDraftPercent] = React.useState(
       () => uiScalePercent,
     ),
@@ -15001,24 +18047,6 @@ function SettingsView({
       setUploadFullImageShortcut,
     ]),
     React.useEffect(() => {
-      if (!chatConfigExpanded) return;
-      const handleOutsideMouseDown = (mouseEvent) => {
-        const eventTarget = mouseEvent?.target;
-        chatConfigExpandedRef.current?.contains(eventTarget) ||
-          setChatConfigExpanded(false);
-      };
-      return (
-        document.addEventListener("mousedown", handleOutsideMouseDown, true),
-        () => {
-          document.removeEventListener(
-            "mousedown",
-            handleOutsideMouseDown,
-            true,
-          );
-        }
-      );
-    }, [chatConfigExpanded, setChatConfigExpanded]),
-    React.useEffect(() => {
       if (
         !pendingFocusSection ||
         !(
@@ -15132,24 +18160,6 @@ function SettingsView({
             : floatingOpacityPercent,
         );
     }, [floatingOpacityPercent]),
-    React.useEffect(() => {
-      if (!openCacheRetentionDropdownKey) return;
-      const handleOutsidePointerDown = (mouseEvent) => {
-        const eventTarget = mouseEvent?.target;
-        cacheRetentionDropdownRootRef.current?.contains(eventTarget) ||
-          closeCacheRetentionDropdown();
-      };
-      return (
-        document.addEventListener("mousedown", handleOutsidePointerDown, true),
-        () => {
-          document.removeEventListener(
-            "mousedown",
-            handleOutsidePointerDown,
-            true,
-          );
-        }
-      );
-    }, [openCacheRetentionDropdownKey]),
     React.useEffect(
       () => () => {
         closeCacheRetentionDropdown();
@@ -16445,6 +19455,44 @@ function SettingsView({
                 </button>
               </div>
             </div>
+            <div className="settings-addon-item">
+              <div className="settings-addon-meta">
+                <div className="settings-title">回传后自动建组</div>
+                <div className="settings-process-desc">
+                  导入到 Ps 后，按回传图片名为导入图层自动建组。
+                </div>
+              </div>
+              <div className="settings-addon-control">
+                <button
+                  className={`settings-fetch-btn settings-toggle-btn${importAutoGroupEnabled ? " is-active" : ""}`}
+                  type="button"
+                  onClick={() =>
+                    setImportAutoGroupEnabled((previousValue) => !previousValue)
+                  }
+                >
+                  {importAutoGroupEnabled ? "已开启" : "已关闭"}
+                </button>
+              </div>
+            </div>
+            <div className="settings-addon-item">
+              <div className="settings-addon-meta">
+                <div className="settings-title">回传后自动建蒙版</div>
+                <div className="settings-process-desc">
+                  导入到 Ps 后，按记录目标区域为导入图层创建显示选区蒙版。
+                </div>
+              </div>
+              <div className="settings-addon-control">
+                <button
+                  className={`settings-fetch-btn settings-toggle-btn${importAutoMaskEnabled ? " is-active" : ""}`}
+                  type="button"
+                  onClick={() =>
+                    setImportAutoMaskEnabled((previousValue) => !previousValue)
+                  }
+                >
+                  {importAutoMaskEnabled ? "已开启" : "已关闭"}
+                </button>
+              </div>
+            </div>
           </section>
           <section
             ref={displaySectionRef}
@@ -16688,6 +19736,14 @@ function SettingsView({
               </button>
             </div>
           </section>
+          <div className="settings-build-footer">
+            <div className="settings-process-desc settings-build-line">
+              当前构建：{APP_BUILD_META.appVersionLabel}
+              {APP_BUILD_META.appRevision
+                ? ` · ${APP_BUILD_META.appRevision}`
+                : ""}
+            </div>
+          </div>
           {wechatGroupQrPopupOpen ? (
             <div
               className="modal-mask settings-wechat-mask"
@@ -16733,10 +19789,12 @@ function getLogMessageClass(logLine) {
   const state = String(logLine?.state || "").toLowerCase();
   if (state === "error") return "log-msg-error";
   if (state === "warn") return "log-msg-warn";
+  if (state) return "log-msg-info";
 
   const level = String(logLine?.level || "").toLowerCase();
   if (level === "error") return "log-msg-error";
   if (level === "warn") return "log-msg-warn";
+  if (level) return "log-msg-info";
 
   const message = String(logLine?.message || "");
   if (/失败|错误|异常|超时|不可用|中断/i.test(message)) return "log-msg-error";
@@ -16898,11 +19956,18 @@ const CONST_STATUS_POLL_VISIBLE_FAST_MS = 700,
   CONST_ZERO_INDEX = 0;
 const CONST_COPY_TOAST_DEFAULT_DURATION_MS = 1400,
   CONST_UPLOAD_LIMIT_TOAST_DURATION_MS = 2400,
+  CONST_COMET_RUNNER_FILL_MS = 850,
+  CONST_COMET_RUNNER_FREEZE_MS = 2000,
+  CONST_COMET_RUNNER_FADE_MS = 1500,
   psCachePutTtlMs = 120 * 1e3,
   CONST_RUN_POPOVER_ANCHOR_SIZE_PX = 28,
+  CONST_RUN_QUEUE_ELAPSED_REFRESH_MS = 1200,
+  CONST_RUN_QUEUE_BUTTON_STATUS_HOLD_MS = 5e3,
+  CONST_RUN_QUEUE_HISTORY_PANEL_BATCH_SIZE = 5,
   CONST_RUN_QUEUE_TOAST_THROTTLE_MS = 220,
   CONST_RUN_QUEUE_TIMEOUT_EXTEND_MS = 3e4,
   CONST_RUN_QUEUE_MAX_TASKS = 24,
+  CONST_RUN_QUEUE_HISTORY_MAX_RECORDS = 240,
   CONST_CONSOLE_LOG_LIMIT = 200,
   CONST_LOCAL_SESSION_SAVE_DEBOUNCE_MS = 400,
   CONST_LOCAL_STORAGE_SYNC_DEBOUNCE_MS = 180,
@@ -16910,9 +19975,7 @@ const CONST_COPY_TOAST_DEFAULT_DURATION_MS = 1400,
   CONST_SESSION_SWITCH_DEBOUNCE_MS = 120,
   CONST_SESSION_HYDRATION_DELAY_MS = 80,
   CONST_CONSOLE_LOG_TRUNCATE_MAX_LENGTH = 1600,
-  CONST_CONSOLE_GUIDE_TRUNCATE_MAX_LENGTH = 280,
-  CONST_PS_CACHE_RECOMPRESS_MAX_SIDE_PX = 768,
-  CONST_PS_CACHE_RECOMPRESS_MAX_QUALITY = 0.82;
+  CONST_CONSOLE_GUIDE_TRUNCATE_MAX_LENGTH = 280;
 const CONST_SESSION_PANEL_WIDTH = 280,
   CONST_SESSION_TOOLS_PANEL_WIDTH = 120,
   CONST_OVERLAY_VIEWPORT_PADDING_PX = 10,
@@ -16930,6 +19993,13 @@ const CONST_SESSION_PANEL_WIDTH = 280,
   CONST_COMPOSER_TEXTAREA_MAX_RATIO = 0.45,
   CONST_COMPOSER_TEXTAREA_FALLBACK_MAX_HEIGHT_PX = 168,
   CONST_COMPOSER_TEXTAREA_MAX_HEIGHT_PX = 260,
+  CONST_COMPOSER_RESIZE_STABILITY_PX = 2,
+  CONST_COMPOSER_EXPAND_ENTER_DELTA_PX = 2,
+  CONST_COMPOSER_OVERFLOW_ENTER_DELTA_PX = 2,
+  CONST_COMPOSER_OVERFLOW_EXIT_DELTA_PX = 2,
+  CONST_COMPOSER_SCROLL_BOTTOM_SNAP_PX = 6,
+  CONST_COMPOSER_COLLAPSE_DEBOUNCE_MS = 160,
+  CONST_COMPOSER_EXPANDED_HOLD_MS = 220,
   CONST_UPLOAD_SIZE_MIN_PX = 512,
   CONST_UPLOAD_SIZE_SLIDER_MAX_PX = 8192,
   CONST_UPLOAD_SIZE_HARD_MAX_PX = 8192,
@@ -17008,6 +20078,21 @@ const miniStatusIconMetaByKey = Object.freeze({
     zhName: "重连",
     enName: "Reconnect",
     iconSrc: iconReconnect,
+  },
+  bridgeConnecting: {
+    zhName: "插件连接中",
+    enName: "Plugin Connecting",
+    iconSrc: iconBridgeReconnect,
+  },
+  bridgeConnected: {
+    zhName: "插件已连接",
+    enName: "Plugin Connected",
+    iconSrc: iconBridgeConnected,
+  },
+  bridgeReconnect: {
+    zhName: "插件连接失败",
+    enName: "Plugin Disconnected",
+    iconSrc: iconBridgeDisconnected,
   },
   uploadFullImage: {
     zhName: "全图取图",
@@ -17509,15 +20594,51 @@ function renderModalMaskPortalHelper({
 const resolvePluginStatusButtonText = ({
   isReconnectButtonBusy,
   isPluginConnected,
+  isBridgeReachable,
   isReconnectButtonHovering,
 }) =>
   isReconnectButtonBusy
     ? "重连中"
+    : isReconnectButtonHovering
+      ? "重新连接"
+      : isPluginConnected
+        ? "已连接"
+        : isBridgeReachable
+          ? "连接中"
+          : "连接失败";
+
+const resolvePluginStatusButtonToneClass = ({
+  isReconnectButtonBusy,
+  isPluginConnected,
+  isBridgeReachable,
+  isReconnectButtonHovering,
+}) =>
+  isReconnectButtonBusy || isReconnectButtonHovering
+    ? "status-warn"
     : isPluginConnected
-      ? "连接中"
-      : isReconnectButtonHovering
-        ? "重新连接"
-        : "待连接";
+      ? "status-ok"
+      : isBridgeReachable
+        ? "status-warn"
+      : "status-error";
+
+const resolvePluginStatusButtonIconSrc = ({
+  isReconnectButtonBusy,
+  isPluginConnected,
+  isBridgeReachable,
+  isReconnectButtonHovering,
+  iconBridgeConnected,
+  iconBridgeDisconnected,
+  iconBridgeReconnect,
+}) =>
+  isReconnectButtonBusy
+    ? iconBridgeReconnect
+    : isReconnectButtonHovering
+      ? iconBridgeReconnect
+      : isPluginConnected
+        ? iconBridgeConnected
+        : isBridgeReachable
+          ? iconBridgeReconnect
+          : iconBridgeDisconnected;
 
 function AppTopbarShell({
   topbarRef,
@@ -17533,6 +20654,7 @@ function AppTopbarShell({
   closeWindow,
   isReconnectButtonBusy,
   isPluginConnected,
+  isBridgeReachable,
   isReconnectButtonHovering,
   setReconnectButtonHovering,
   reconnectPluginBridge,
@@ -17548,12 +20670,14 @@ function AppTopbarShell({
   iconAutoMinimize,
   iconCloseDelete,
   iconBrandLogo,
-  iconApiConnectingPrimary,
-  iconReconnect,
+  iconBridgeConnected,
+  iconBridgeDisconnected,
+  iconBridgeReconnect,
   iconSettings,
   iconHome,
   iconChatHistory,
   iconImage,
+  appVersionLabel,
 }) {
   return (
     <header className="topbar" ref={topbarRef} onClick={onTopbarPointerDown}>
@@ -17562,7 +20686,9 @@ function AppTopbarShell({
           <img className="brand-icon" src={iconBrandLogo} alt="logo" />
           <div className="brand-text">
             <div className="brand-title">小迪助词器</div>
-            <div className="brand-version">v0.0.2</div>
+            <div className="brand-version">
+              {String(appVersionLabel || APP_BUILD_META.appVersionLabel || "v1.0.3")}
+            </div>
           </div>
         </div>
         <div className="window-controls">
@@ -17625,23 +20751,37 @@ function AppTopbarShell({
         />
         <div className="top-actions" ref={topActionsRef}>
           <button
-            className={`status-btn ${isPluginConnected ? "status-ok" : "status-warn"}`}
+            className={`status-btn ${resolvePluginStatusButtonToneClass({
+              isReconnectButtonBusy,
+              isPluginConnected,
+              isBridgeReachable,
+              isReconnectButtonHovering,
+            })}`}
             type="button"
             onMouseEnter={() => setReconnectButtonHovering(true)}
             onMouseLeave={() => setReconnectButtonHovering(false)}
-            onClick={reconnectPluginBridge}
+            onClick={() => reconnectPluginBridge({ forceReconnect: true })}
             disabled={isReconnectButtonBusy}
             data-tip-text={pluginStatusTooltipText}
           >
             <img
               className="status-icon"
-              src={isPluginConnected ? iconApiConnectingPrimary : iconReconnect}
+              src={resolvePluginStatusButtonIconSrc({
+                isReconnectButtonBusy,
+                isPluginConnected,
+                isBridgeReachable,
+                isReconnectButtonHovering,
+                iconBridgeConnected,
+                iconBridgeDisconnected,
+                iconBridgeReconnect,
+              })}
               alt="status"
             />
             <span>
               {resolvePluginStatusButtonText({
                 isReconnectButtonBusy,
                 isPluginConnected,
+                isBridgeReachable,
                 isReconnectButtonHovering,
               })}
             </span>
@@ -17717,7 +20857,7 @@ function AppHomeMainContent({
           </div>
           {isInstructionMode ? (
             <div
-              className={`instruction-card instruction-scroll scrollbar-activity ${activeChatMessagesCount === 0 ? "is-empty" : ""} is-instruction-mode`}
+              className={`instruction-card instruction-scroll ${activeChatMessagesCount === 0 ? "is-empty" : ""} is-instruction-mode`}
               ref={(chatAreaElement) => {
                 chatCardRef.current = chatAreaElement;
                 chatScrollRef.current = chatAreaElement;
@@ -17802,6 +20942,103 @@ function AppViewportShell({
   );
 }
 
+const ComposerTextareaInput = React.memo(function ComposerTextareaInput({
+  textareaRef,
+  externalText,
+  placeholder,
+  isFocused,
+  onInputActivity,
+  onImmediateTextChange,
+  onStateSync,
+  onFocus,
+  onBlur,
+  onKeyDown,
+  onPaste,
+  shouldKeepScrolledToBottom,
+  requestResize,
+}) {
+  const [localComposerText, setLocalComposerText] = React.useState(() =>
+      String(externalText || ""),
+    ),
+    pendingComposerSyncTextRef = React.useRef(String(externalText || "")),
+    composerStateSyncRafRef = React.useRef(0);
+  React.useEffect(() => {
+    const normalizedExternalText = String(externalText || "");
+    pendingComposerSyncTextRef.current = normalizedExternalText;
+    setLocalComposerText((previousLocalComposerText) =>
+      previousLocalComposerText === normalizedExternalText
+        ? previousLocalComposerText
+        : normalizedExternalText,
+    );
+  }, [externalText]);
+  const flushComposerStateSync = React.useCallback(() => {
+      const nextComposerText = String(
+        pendingComposerSyncTextRef.current || "",
+      );
+      composerStateSyncRafRef.current &&
+        cancelAnimationFrame(composerStateSyncRafRef.current);
+      composerStateSyncRafRef.current = 0;
+      onStateSync(nextComposerText);
+    }, [onStateSync]),
+    scheduleComposerStateSync = React.useCallback(
+      (nextComposerText) => {
+        pendingComposerSyncTextRef.current = String(nextComposerText || "");
+        if (composerStateSyncRafRef.current) return;
+        composerStateSyncRafRef.current = requestAnimationFrame(() => {
+          composerStateSyncRafRef.current = 0;
+          onStateSync(String(pendingComposerSyncTextRef.current || ""));
+        });
+      },
+      [onStateSync],
+    );
+  React.useEffect(
+    () => () => {
+      composerStateSyncRafRef.current &&
+        cancelAnimationFrame(composerStateSyncRafRef.current);
+      composerStateSyncRafRef.current = 0;
+    },
+    [],
+  );
+  return (
+    <textarea
+      ref={textareaRef}
+      className={`chat-input ${localComposerText ? "has-content" : ""} ${isFocused ? "is-focused" : "is-unfocused"}`}
+      rows={1}
+      placeholder={placeholder}
+      value={localComposerText}
+      onChange={(composerTextareaChangeEvent) => {
+        const nextComposerText = String(
+            composerTextareaChangeEvent.target.value || "",
+          ),
+          shouldKeepComposerScrolledToBottom =
+            shouldKeepScrolledToBottom(composerTextareaChangeEvent.currentTarget);
+        onInputActivity();
+        setLocalComposerText(nextComposerText);
+        onImmediateTextChange(nextComposerText);
+        requestResize({
+          textareaElement: composerTextareaChangeEvent.currentTarget,
+          active: true,
+          scrollToBottom: shouldKeepComposerScrolledToBottom,
+        });
+        scheduleComposerStateSync(nextComposerText);
+      }}
+      onFocus={(composerFocusEvent) => {
+        onInputActivity();
+        onFocus(composerFocusEvent);
+      }}
+      onBlur={(composerBlurEvent) => {
+        flushComposerStateSync();
+        onBlur(composerBlurEvent);
+      }}
+      onKeyDown={onKeyDown}
+      onPaste={(composerPasteEvent) => {
+        onInputActivity();
+        onPaste(composerPasteEvent);
+      }}
+    />
+  );
+});
+
 const AppOverlayNodes = React.memo(function AppOverlayNodes({
   chatSessionImportInputRef,
   onChatSessionImportInputChange,
@@ -17836,6 +21073,7 @@ const AppOverlayNodes = React.memo(function AppOverlayNodes({
   imagePreviewDialogPortal,
   previewHoverPortalNode,
   uploadHoverPortalNode,
+  runQueueOutputHoverPortalNode,
   previewThumbContextMenuPortalNode,
 }) {
   return (
@@ -17878,6 +21116,7 @@ const AppOverlayNodes = React.memo(function AppOverlayNodes({
       {imagePreviewDialogPortal}
       {previewHoverPortalNode}
       {uploadHoverPortalNode}
+      {runQueueOutputHoverPortalNode}
       {previewThumbContextMenuPortalNode}
     </>
   );
@@ -18865,24 +22104,23 @@ function InstructionGroupInputModalContent({
 function InstructionGroupDeleteActionModalContent({
   instructionGroupDeleteActionDialogState,
   onCancelInstructionGroupDeleteAction,
-  onMoveInstructionGroupItems,
-  onDeleteInstructionGroupItems,
+  onConfirmInstructionGroupDeleteAction,
 }) {
   return (
     <div className="modal">
       <div className="modal-title">删除分组</div>
       <div className="modal-text">
-        {`分组“${String(instructionGroupDeleteActionDialogState?.targetGroupName || "").trim()}”删除后，组内标签如何处理？`}
+        {`确认删除分组“${String(instructionGroupDeleteActionDialogState?.targetGroupName || "").trim()}”？`}
+      </div>
+      <div className="modal-text">
+        删除分组同时将删除组内标签，且无法恢复。
       </div>
       <div className="modal-actions">
         <button className="modal-btn" onClick={onCancelInstructionGroupDeleteAction}>
           取消
         </button>
-        <button className="modal-btn" onClick={onMoveInstructionGroupItems}>
-          移动到最后一组
-        </button>
-        <button className="modal-btn danger" onClick={onDeleteInstructionGroupItems}>
-          删除组内标签
+        <button className="modal-btn danger" onClick={onConfirmInstructionGroupDeleteAction}>
+          确认删除
         </button>
       </div>
     </div>
@@ -19004,9 +22242,14 @@ function ImportTargetDialogContent({
 }) {
   return (
     <div className="modal modal-import-target">
-      <div className="modal-title">未找到对应画布</div>
+      <div className="modal-title">
+        {documentImportTargetDialogState.errorCode === "target_document_required"
+          ? "需要选择导入画布"
+          : "记录画布 ID 已失效"}
+      </div>
       <div className="modal-text">
-        {documentImportTargetDialogState.message || "未找到记录的画布，请选择导入目标。"}
+        {documentImportTargetDialogState.message ||
+          "记录的画布 ID 未命中；若你重新打开过 Ps 或该文档，旧画布 ID 可能已经失效。请选择导入目标。"}
       </div>
       <div className="import-target-recorded">
         <div className="import-target-label">记录画布</div>
@@ -19144,7 +22387,20 @@ function App() {
     [isAutoExportHovering, setAutoExportHovering] = React.useState(false),
     [runQueueTaskPanelOpen, setRunQueueTaskPanelOpen] = React.useState(false),
     [runQueueTaskListState, setRunQueueTaskListState] = React.useState([]),
+    [runQueueTaskHistoryState, setRunQueueTaskHistoryState] = React.useState(() =>
+      normalizeRunQueueHistoryState(
+        safeGetStorageJson(storageKeyMap.runQueueTaskHistory, []),
+      ),
+    ),
     [runQueueElapsedNowMs, setRunQueueElapsedNowMs] = React.useState(() => Date.now()),
+    [runQueueHistoryVisibleCount, setRunQueueHistoryVisibleCount] =
+      React.useState(CONST_RUN_QUEUE_HISTORY_PANEL_BATCH_SIZE),
+    [runQueueTaskButtonRunnerVisualStateState, setRunQueueTaskButtonRunnerVisualState] =
+      React.useState(() => buildIdleCometRunnerVisualState("run")),
+    [chatRunnerVisualStateState, setChatRunnerVisualState] = React.useState(
+      () => buildIdleCometRunnerVisualState("chat"),
+    ),
+    [, setOverlayViewportRevision] = React.useState(0),
     [expandedRunQueueTaskId, setExpandedRunQueueTaskId] = React.useState(""),
     [editedJsonPromptBySessionId, setEditedJsonPromptBySessionId] = React.useState({}),
     [messageExpandMap, setMessageExpandMap] = React.useState({}),
@@ -19248,7 +22504,35 @@ function App() {
         return "smart-object";
       }
     }),
-    [autoExportEnabled, setAutoExportEnabled] = React.useState(true),
+    [importAutoGroupEnabled, setImportAutoGroupEnabled] = React.useState(() => {
+      try {
+        return localStorage.getItem(storageKeyMap.importAutoGroupEnabled) === "1";
+      } catch (ignoredError) {
+        void ignoredError;
+        return false;
+      }
+    }),
+    [importAutoMaskEnabled, setImportAutoMaskEnabled] = React.useState(() => {
+      try {
+        return localStorage.getItem(storageKeyMap.importAutoMaskEnabled) === "1";
+      } catch (ignoredError) {
+        void ignoredError;
+        return false;
+      }
+    }),
+    [autoExportEnabled, setAutoExportEnabled] = React.useState(() => {
+      try {
+        const storedAutoExportEnabled = localStorage.getItem(
+          storageKeyMap.autoExportEnabled,
+        );
+        return storedAutoExportEnabled == null
+          ? true
+          : storedAutoExportEnabled === "1";
+      } catch (ignoredError) {
+        void ignoredError;
+        return true;
+      }
+    }),
     [uploadSelectionShortcut, setUploadSelectionShortcut] = React.useState(
       () => {
         try {
@@ -19285,7 +22569,7 @@ function App() {
     uiScaleConfirmIntervalRef = React.useRef(null),
     floatingToggleOpacityDebounceRef = React.useRef(null),
     floatingToggleOpacityStorageDebounceRef = React.useRef(null),
-    floatingToggleRuntimeStatusRef = React.useRef("connected"),
+    floatingToggleRuntimeStatusRef = React.useRef("idle"),
     floatingToggleRuntimeVisibleRef = React.useRef(true),
     floatingToggleRuntimeQuickButtonsVisibleRef = React.useRef(true),
     uiScaleRollbackRef = React.useRef(1),
@@ -19406,6 +22690,7 @@ function App() {
       tip: "系统状态正常。",
       iconKey: "console",
     }),
+    [miniStatusBusyDotCount, setMiniStatusBusyDotCount] = React.useState(1),
     systemReadyLoggedRef = React.useRef(false),
     chatConfigLoadedLoggedRef = React.useRef(false),
     [logFilters, setLogFilters] = React.useState(() => {
@@ -19475,6 +22760,30 @@ function App() {
     consoleFilterRef = React.useRef(null),
     logFilterPopupRef = React.useRef(null),
     composerTextareaRef = React.useRef(null),
+    composerLiveTextRef = React.useRef(""),
+    composerResizeRafRef = React.useRef(0),
+    composerPendingResizeRequestRef = React.useRef(null),
+    composerScrollToBottomAfterSyncRef = React.useRef(false),
+    composerCollapseTimerRef = React.useRef(0),
+    composerExpandedHoldUntilRef = React.useRef(0),
+    composerExpandedVisualStateRef = React.useRef(false),
+    composerTextChangeSourceRef = React.useRef("external"),
+    composerResizeSignatureRef = React.useRef(""),
+    composerResizeMeasureRef = React.useRef({
+      textLength: 0,
+      clientWidth: 0,
+      maxHeightPx: CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX,
+      appliedHeightPx: CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX,
+      overflowY: "hidden",
+      expanded: false,
+    }),
+    chatCardMeasuredHeightRef = React.useRef(
+      CONST_COMPOSER_TEXTAREA_FALLBACK_MAX_HEIGHT_PX,
+    ),
+    instructionPanelNodeCacheRef = React.useRef({
+      snapshot: null,
+      node: null,
+    }),
     editMessageTextareaRef = React.useRef(null),
     chatAbortControllerRef = React.useRef(/* @__PURE__ */ new Map()),
     chatAbortReasonRef = React.useRef(/* @__PURE__ */ new Map()),
@@ -19491,6 +22800,15 @@ function App() {
     runQueueTimeoutDeadlineRef = React.useRef(0),
     runQueueIdCounterRef = React.useRef(0),
     runQueueToastThrottleUntilRef = React.useRef(0),
+    runQueueLiveSettingsRef = React.useRef(null),
+    runQueueLastHistorySignatureRef = React.useRef(""),
+    runQueueRunnerFlowTokenRef = React.useRef(0),
+    runQueueRunnerFlowTimersRef = React.useRef({
+      fillTimer: null,
+      freezeTimer: null,
+      tailTimer: null,
+    }),
+    runQueueRunnerTaskCountRef = React.useRef(0),
     uploadSlotsContainerRef = React.useRef(null),
     uploadSlotButtonRefs = React.useRef([]),
     uploadPointerDragRef = React.useRef(
@@ -19505,6 +22823,13 @@ function App() {
     exportCanvasInFlightRef = React.useRef(false),
     chatRequestInFlightLockRef = React.useRef(/* @__PURE__ */ new Map()),
     chatRequestInFlightCountRef = React.useRef(0),
+    chatRequestInFlightPreviousRef = React.useRef(false),
+    chatRunnerFlowTokenRef = React.useRef(0),
+    chatRunnerFlowTimersRef = React.useRef({
+      fillTimer: null,
+      freezeTimer: null,
+      tailTimer: null,
+    }),
     uploadBridgeActionLockRef = React.useRef(false),
     uploadSizeOutOfRangeWarnedRef = React.useRef(false),
     uploadSizeHardLimitWarnedRef = React.useRef(false),
@@ -19523,6 +22848,7 @@ function App() {
     pluginActionReconnectLastAttemptRef = React.useRef(0),
     pluginActionReconnectLastHintRef = React.useRef(0),
     pluginBridgeConnectedRef = React.useRef(false),
+    autoExportEnabledRef = React.useRef(!!autoExportEnabled),
     [chatConfig, setChatConfig] = React.useState(() => ({
       ...defaultChatApiConfig,
       ...decodeConfigApiKey(safeGetStorageJson(storageKeyMap.chatConfig, {})),
@@ -19644,7 +22970,11 @@ function App() {
     imageModeSwitchAnchorRef = React.useRef(null),
     chatApiKeyInputRef = React.useRef(null),
     imageApiKeyInputRef = React.useRef(null),
+    chatConfigExpandedRef = React.useRef(null),
+    cacheRetentionDropdownRootRef = React.useRef(null),
     [isChatConfigExpanded, setChatConfigExpanded] = React.useState(false),
+    [openCacheRetentionDropdownKey, setOpenCacheRetentionDropdownKey] =
+      React.useState(""),
     [isChatApiSectionOpen, setChatApiFoldOpen] = React.useState(false),
     [isImageApiSectionOpen, setImageApiFoldOpen] = React.useState(false),
     [isSettingsToolsSectionOpen, setSettingsToolsSectionOpen] =
@@ -19817,6 +23147,11 @@ function App() {
         title: "",
         content: "",
       }),
+    pendingCreatedPresetIdsRef = React.useRef({
+      chat: "",
+      image: "",
+      identity: "",
+    }),
     [isChatQuickBatchSelectMode, setChatQuickBatchSelectMode] =
       React.useState(false),
     [selectedChatQuickPromptIds, setSelectedChatQuickPromptIds] =
@@ -19824,6 +23159,8 @@ function App() {
     [isImageQuickBatchSelectMode, setImageQuickBatchSelectMode] =
       React.useState(false),
     [selectedImageQuickPromptIds, setSelectedImageQuickPromptIds] =
+      React.useState([]),
+    [selectedImageQuickGroupNames, setSelectedImageQuickGroupNames] =
       React.useState([]),
     [openInstructionTagMenuId, setOpenInstructionTagMenuId] =
       React.useState(""),
@@ -19853,19 +23190,49 @@ function App() {
     }),
     instructionGroupMenuPopupRef = React.useRef(null),
     instructionGroupMenuButtonRefsMap = React.useRef({}),
-    [draggingInstructionTagId, setDraggingInstructionTagId] =
-      React.useState(""),
-    [draggingInstructionTagPayloadIds, setDraggingInstructionTagPayloadIds] =
-      React.useState([]),
-    [instructionTagDragSourceGroupName, setInstructionTagDragSourceGroupName] =
-      React.useState(""),
-    [draggingInstructionGroupName, setDraggingInstructionGroupName] =
-      React.useState(""),
-    [dragOverInstructionGroupName, setDragOverInstructionGroupName] =
-      React.useState(""),
-    instructionPanelGroupsRef = React.useRef(null),
-    [isInstructionTagPointerDragActive, setInstructionTagPointerDragActive] =
+    [instructionGroupSortSession, setInstructionGroupSortSession] =
+      React.useState(null),
+    instructionGroupSortSessionRef = React.useRef(null),
+    instructionGroupSortPointerStateRef = React.useRef({
+      pending: false,
+      active: false,
+      pointerId: -1,
+      groupName: "",
+      holdReadyAt: 0,
+      startClientX: 0,
+      startClientY: 0,
+      pointerClientX: 0,
+      pointerClientY: 0,
+      sourceRectLeft: 0,
+      sourceRectTop: 0,
+      sourceRectWidth: 0,
+      sourceRectHeight: 0,
+      pointerOffsetY: 0,
+      visualClientY: NaN,
+    }),
+    instructionGroupSortOverlaySyncRafRef = React.useRef(0),
+    instructionGroupSortOverlaySyncAccelerateRef = React.useRef(false),
+    instructionGroupSortItemRectCacheRef = React.useRef([]),
+    instructionGroupSortMeasureRafRef = React.useRef(0),
+    instructionGroupSortFlipRectsRef = React.useRef(new Map()),
+    instructionGroupSortFlipCleanupTimerRef = React.useRef(0),
+    instructionGroupSortReorderTimerRef = React.useRef(0),
+    instructionGroupSortLastCommitAtRef = React.useRef(0),
+    instructionGroupSortSettleTimerRef = React.useRef(0),
+    instructionGroupSortExpandRevealTimerRef = React.useRef(0),
+    instructionGroupSortLastActiveRef = React.useRef(false),
+    clearInstructionGroupSortPointerListenersRef = React.useRef(null),
+    finishInstructionGroupPointerDragRef = React.useRef(() => {}),
+    [instructionGroupSortExpandRevealActive, setInstructionGroupSortExpandRevealActive] =
       React.useState(false),
+    suppressInstructionGroupToggleClickRef = React.useRef(false),
+    suppressInstructionGroupToggleClickTimerRef = React.useRef(0),
+    instructionPanelGroupsRef = React.useRef(null),
+    instructionGroupSortOverlayRef = React.useRef(null),
+    instructionTagPointerDragUiActiveRef = React.useRef(false),
+    instructionTagPointerDragUiSourceGroupRef = React.useRef(""),
+    instructionPointerDragOverGroupNameRef = React.useRef(""),
+    instructionPointerDragOverSectionRef = React.useRef(null),
     instructionTagDragDebugRef = React.useRef(
       createIdleInstructionTagDragDebugState(),
     ),
@@ -19882,25 +23249,34 @@ function App() {
       orderedInstructionGroupNames: [],
       orderedInstructionGroups: [],
     }),
+    instructionPanelFrozenNodeRef = React.useRef(null),
     instructionTagGroupRectCacheRef = React.useRef([]),
     instructionTagPointerDragVisualRef = React.useRef({
       anchorEl: null,
       buttonEl: null,
       overlayEl: null,
     }),
-    instructionTagDropZoneLayoutVersionRef = React.useRef(0),
-    instructionTagDropZoneCacheRef = React.useRef({
-      groupName: "",
-      segmentType: "normal",
-      layoutVersion: 0,
-      zones: [],
-    }),
+    instructionTagPointerOverlaySyncRafRef = React.useRef(0),
+    instructionTagPointerOverlaySyncAccelerateRef = React.useRef(false),
     instructionTagPointerDragRafRef = React.useRef(0),
+    instructionTagGapAnchorVisualRafRef = React.useRef(0),
+    instructionTagGapAnchorVisualPendingRef = React.useRef({
+      dropTarget: null,
+      dragState: null,
+    }),
+    instructionTagDragPerfSampleRef = React.useRef(
+      createIdleInstructionTagDragPerfSampleState(),
+    ),
+    instructionTagDragPerfMonitorRef = React.useRef(
+      createIdleInstructionTagDragPerfMonitorState(),
+    ),
+    instructionTagDragPerfEnabledRef = React.useRef(false),
     instructionTagGapShiftAnimationRef = React.useRef({
       rafId: 0,
       cleanupTimerId: 0,
       elements: [],
     }),
+    suspendScrollbarHoverRef = React.useRef(false),
     clearInstructionTagPointerListenersRef = React.useRef(null),
     suppressInstructionTagClickRef = React.useRef(false),
     suppressInstructionTagClickTimerRef = React.useRef(0),
@@ -19973,11 +23349,59 @@ function App() {
         (clearInstructionTagPointerListenersRef.current(),
         (clearInstructionTagPointerListenersRef.current = null));
       instructionTagPointerDragRafRef.current &&
-        (cancelAnimationFrame(instructionTagPointerDragRafRef.current),
+        (clearTimeout(instructionTagPointerDragRafRef.current),
         (instructionTagPointerDragRafRef.current = 0));
+      instructionTagGapAnchorVisualRafRef.current &&
+        (cancelAnimationFrame(instructionTagGapAnchorVisualRafRef.current),
+        (instructionTagGapAnchorVisualRafRef.current = 0));
+      instructionTagGapAnchorVisualPendingRef.current = {
+        dropTarget: null,
+        dragState: null,
+      };
+      const instructionTagDragPerfMonitorState =
+        instructionTagDragPerfMonitorRef.current || {};
+      instructionTagDragPerfMonitorState.rafId &&
+        (cancelAnimationFrame(instructionTagDragPerfMonitorState.rafId),
+        (instructionTagDragPerfMonitorState.rafId = 0));
+      instructionTagDragPerfMonitorState.eventLoopIntervalId &&
+        (clearInterval(instructionTagDragPerfMonitorState.eventLoopIntervalId),
+        (instructionTagDragPerfMonitorState.eventLoopIntervalId = 0));
+      instructionTagDragPerfMonitorState.longTaskObserver?.disconnect?.();
+      instructionTagDragPerfMonitorRef.current =
+        createIdleInstructionTagDragPerfMonitorState();
+      suspendScrollbarHoverRef.current = false;
       suppressInstructionTagClickTimerRef.current &&
         (clearTimeout(suppressInstructionTagClickTimerRef.current),
         (suppressInstructionTagClickTimerRef.current = 0));
+      typeof clearInstructionGroupSortPointerListenersRef.current ===
+        "function" &&
+        (clearInstructionGroupSortPointerListenersRef.current(),
+        (clearInstructionGroupSortPointerListenersRef.current = null));
+      instructionGroupSortOverlaySyncRafRef.current &&
+        (cancelAnimationFrame(instructionGroupSortOverlaySyncRafRef.current),
+        (instructionGroupSortOverlaySyncRafRef.current = 0));
+      instructionGroupSortMeasureRafRef.current &&
+        (cancelAnimationFrame(instructionGroupSortMeasureRafRef.current),
+        (instructionGroupSortMeasureRafRef.current = 0));
+      instructionGroupSortItemRectCacheRef.current = [];
+      suppressInstructionGroupToggleClickTimerRef.current &&
+        (clearTimeout(suppressInstructionGroupToggleClickTimerRef.current),
+        (suppressInstructionGroupToggleClickTimerRef.current = 0));
+      instructionGroupSortFlipCleanupTimerRef.current &&
+        (clearTimeout(instructionGroupSortFlipCleanupTimerRef.current),
+        (instructionGroupSortFlipCleanupTimerRef.current = 0));
+      instructionGroupSortReorderTimerRef.current &&
+        (clearTimeout(instructionGroupSortReorderTimerRef.current),
+        (instructionGroupSortReorderTimerRef.current = 0));
+      instructionGroupSortLastCommitAtRef.current = 0;
+      instructionGroupSortSettleTimerRef.current &&
+        (clearTimeout(instructionGroupSortSettleTimerRef.current),
+        (instructionGroupSortSettleTimerRef.current = 0));
+      instructionGroupSortExpandRevealTimerRef.current &&
+        (clearTimeout(instructionGroupSortExpandRevealTimerRef.current),
+        (instructionGroupSortExpandRevealTimerRef.current = 0));
+      instructionGroupSortFlipRectsRef.current = new Map();
+      instructionGroupSortLastActiveRef.current = false;
       instructionTagDragDebugTimerRef.current &&
         (clearTimeout(instructionTagDragDebugTimerRef.current),
         (instructionTagDragDebugTimerRef.current = 0));
@@ -20005,6 +23429,207 @@ function App() {
     },
     [],
   );
+  React.useEffect(() => {
+    instructionGroupSortSessionRef.current = instructionGroupSortSession;
+  }, [instructionGroupSortSession]);
+  const measureInstructionGroupSortItemRects = React.useCallback(() => {
+    const instructionGroupListElement = instructionPanelGroupsRef.current;
+    if (!instructionGroupListElement) {
+      instructionGroupSortItemRectCacheRef.current = [];
+      return [];
+    }
+    const instructionGroupSortRectSnapshot = Array.from(
+      instructionGroupListElement.querySelectorAll(
+        ".instruction-group-sort-card[data-group-sortable='true']",
+      ),
+    )
+      .map((instructionGroupSortCardElement) => {
+        const normalizedInstructionGroupName = String(
+            instructionGroupSortCardElement?.dataset?.instructionGroupName || "",
+          ).trim(),
+          instructionGroupSortCardRect =
+            instructionGroupSortCardElement?.getBoundingClientRect?.();
+        if (
+          !normalizedInstructionGroupName ||
+          normalizedInstructionGroupName === CONST_INSTRUCTION_FAVORITES_GROUP ||
+          normalizedInstructionGroupName === CONST_INSTRUCTION_DEFAULT_GROUP ||
+          !instructionGroupSortCardRect
+        ) {
+          return null;
+        }
+        const top = Number(instructionGroupSortCardRect.top || 0),
+          bottom = Number(instructionGroupSortCardRect.bottom || 0);
+        return {
+          groupName: normalizedInstructionGroupName,
+          top,
+          bottom,
+          center: top + (bottom - top) / 2,
+        };
+      })
+      .filter(Boolean);
+    instructionGroupSortItemRectCacheRef.current =
+      instructionGroupSortRectSnapshot;
+    return instructionGroupSortRectSnapshot;
+  }, []);
+  React.useEffect(() => {
+    return () => {
+      instructionGroupSortMeasureRafRef.current &&
+        cancelAnimationFrame(instructionGroupSortMeasureRafRef.current);
+      instructionGroupSortFlipCleanupTimerRef.current &&
+        clearTimeout(instructionGroupSortFlipCleanupTimerRef.current);
+    };
+  }, []);
+  React.useLayoutEffect(() => {
+    const instructionGroupSortDragging =
+      instructionGroupSortSession?.phase === "dragging" &&
+      !!instructionGroupSortSession?.sourceGroupName;
+    if (!instructionGroupSortDragging) {
+      instructionGroupSortItemRectCacheRef.current = [];
+      return;
+    }
+    measureInstructionGroupSortItemRects();
+  }, [
+    instructionGroupSortSession?.phase,
+    instructionGroupSortSession?.sourceGroupName,
+    instructionGroupSortSession?.previewOrder,
+    measureInstructionGroupSortItemRects,
+  ]);
+  React.useEffect(() => {
+    const instructionGroupSortDragging =
+      instructionGroupSortSession?.phase === "dragging" &&
+      !!instructionGroupSortSession?.sourceGroupName;
+    if (!instructionGroupSortDragging) {
+      instructionGroupSortMeasureRafRef.current &&
+        (cancelAnimationFrame(instructionGroupSortMeasureRafRef.current),
+        (instructionGroupSortMeasureRafRef.current = 0));
+      return;
+    }
+    const instructionGroupListElement = instructionPanelGroupsRef.current;
+    if (!instructionGroupListElement) {
+      return;
+    }
+    const scheduleInstructionGroupSortRectRefresh = () => {
+      if (instructionGroupSortMeasureRafRef.current) {
+        return;
+      }
+      instructionGroupSortMeasureRafRef.current = requestAnimationFrame(() => {
+        instructionGroupSortMeasureRafRef.current = 0;
+        measureInstructionGroupSortItemRects();
+      });
+    };
+    instructionGroupListElement.addEventListener(
+      "scroll",
+      scheduleInstructionGroupSortRectRefresh,
+      { passive: true },
+    );
+    window.addEventListener("resize", scheduleInstructionGroupSortRectRefresh);
+    return () => {
+      instructionGroupListElement.removeEventListener(
+        "scroll",
+        scheduleInstructionGroupSortRectRefresh,
+      );
+      window.removeEventListener(
+        "resize",
+        scheduleInstructionGroupSortRectRefresh,
+      );
+      instructionGroupSortMeasureRafRef.current &&
+        (cancelAnimationFrame(instructionGroupSortMeasureRafRef.current),
+        (instructionGroupSortMeasureRafRef.current = 0));
+    };
+  }, [
+    instructionGroupSortSession?.phase,
+    instructionGroupSortSession?.sourceGroupName,
+    measureInstructionGroupSortItemRects,
+  ]);
+  React.useLayoutEffect(() => {
+    const instructionGroupListElement = instructionPanelGroupsRef.current,
+      instructionGroupSortDragging =
+        instructionGroupSortSession?.phase === "dragging" &&
+        !!instructionGroupSortSession?.sourceGroupName;
+    if (!instructionGroupListElement || !instructionGroupSortDragging) {
+      instructionGroupSortFlipRectsRef.current = new Map();
+      instructionGroupSortLastActiveRef.current = false;
+      return;
+    }
+    const dragActiveChanged =
+      instructionGroupSortLastActiveRef.current !== instructionGroupSortDragging;
+    instructionGroupSortLastActiveRef.current = instructionGroupSortDragging;
+    const instructionGroupCardElementList = Array.from(
+        instructionGroupListElement.querySelectorAll(
+          ".instruction-group-sort-card[data-group-flip='true']",
+        ),
+      ),
+      previousInstructionGroupRectMap = instructionGroupSortFlipRectsRef.current,
+      nextInstructionGroupRectMap = new Map();
+    instructionGroupCardElementList.forEach((instructionGroupCardElement) => {
+      const normalizedInstructionGroupName = String(
+        instructionGroupCardElement?.dataset?.instructionGroupName || "",
+      ).trim();
+      if (!normalizedInstructionGroupName) {
+        return;
+      }
+      nextInstructionGroupRectMap.set(
+        normalizedInstructionGroupName,
+        instructionGroupCardElement.getBoundingClientRect(),
+      );
+    });
+    if (dragActiveChanged) {
+      instructionGroupSortFlipCleanupTimerRef.current &&
+        clearTimeout(instructionGroupSortFlipCleanupTimerRef.current);
+      instructionGroupCardElementList.forEach((instructionGroupCardElement) => {
+        instructionGroupCardElement.style.removeProperty("transition");
+        instructionGroupCardElement.style.removeProperty("transform");
+        instructionGroupCardElement.style.removeProperty("will-change");
+      });
+      instructionGroupSortFlipRectsRef.current = nextInstructionGroupRectMap;
+      return;
+    }
+    if (previousInstructionGroupRectMap instanceof Map) {
+      instructionGroupCardElementList.forEach((instructionGroupCardElement) => {
+        const normalizedInstructionGroupName = String(
+            instructionGroupCardElement?.dataset?.instructionGroupName || "",
+          ).trim(),
+          previousInstructionGroupRect =
+            previousInstructionGroupRectMap.get(normalizedInstructionGroupName),
+          nextInstructionGroupRect = nextInstructionGroupRectMap.get(
+            normalizedInstructionGroupName,
+          );
+        if (!previousInstructionGroupRect || !nextInstructionGroupRect) {
+          return;
+        }
+        const instructionGroupDeltaY =
+          Number(previousInstructionGroupRect.top || 0) -
+          Number(nextInstructionGroupRect.top || 0);
+        if (Math.abs(instructionGroupDeltaY) < 0.5) {
+          return;
+        }
+        instructionGroupCardElement.style.transition = "none";
+        instructionGroupCardElement.style.transform = `translate3d(0, ${instructionGroupDeltaY}px, 0)`;
+        instructionGroupCardElement.style.willChange = "transform";
+        void instructionGroupCardElement.getBoundingClientRect();
+        requestAnimationFrame(() => {
+          instructionGroupCardElement.style.transition =
+            "transform .22s cubic-bezier(.22, .61, .36, 1)";
+          instructionGroupCardElement.style.transform = "translate3d(0, 0, 0)";
+        });
+      });
+      instructionGroupSortFlipCleanupTimerRef.current &&
+        clearTimeout(instructionGroupSortFlipCleanupTimerRef.current);
+      instructionGroupSortFlipCleanupTimerRef.current = window.setTimeout(() => {
+        instructionGroupCardElementList.forEach((instructionGroupCardElement) => {
+          instructionGroupCardElement.style.removeProperty("transition");
+          instructionGroupCardElement.style.removeProperty("transform");
+          instructionGroupCardElement.style.removeProperty("will-change");
+        });
+        instructionGroupSortFlipCleanupTimerRef.current = 0;
+      }, 280);
+    }
+    instructionGroupSortFlipRectsRef.current = nextInstructionGroupRectMap;
+  }, [
+    instructionGroupSortSession?.phase,
+    instructionGroupSortSession?.sourceGroupName,
+    instructionGroupSortSession?.previewOrder,
+  ]);
   const [isIdentityPanelOpen, setIdentityPanelOpen] = React.useState(false),
     identityPanelAnchorRef = React.useRef(null),
     [, setIdentityPanelRect] = React.useState({
@@ -20100,9 +23725,13 @@ function App() {
     logApiLifecycleEventRef = React.useRef(null),
     verifyApiConnectivityRef = React.useRef(null),
     resizeComposerTextareaRef = React.useRef(null),
+    requestComposerResizeRef = React.useRef(null),
     scheduleSessionHydrationRef = React.useRef(null),
     preloadPreviewThumbnailRef = React.useRef(null),
     _syncJsonPromptFromLatestAssistantRef = React.useRef(null),
+    assistantJsonPromptSyncSignatureBySessionRef = React.useRef(
+      /* @__PURE__ */ new Map(),
+    ),
     closeFloatingQuickActionStateRef = React.useRef(null),
     isFloatingQuickActionTargetOpenRef = React.useRef(null),
     closeFloatingQuickActionTargetRef = React.useRef(null),
@@ -20148,6 +23777,78 @@ function App() {
     alignImagePresetPanelRef.current = alignImagePresetPanel;
     alignIdentityPresetPanelRef.current = alignIdentityPresetPanel;
   });
+  React.useEffect(() => {
+    const readViewportMetrics = () => {
+      const visualViewportState = window.visualViewport || null;
+      return {
+        width: Math.max(
+          0,
+          Math.round(
+            Number(
+              visualViewportState?.width ||
+                window.innerWidth ||
+                document.documentElement?.clientWidth ||
+                0,
+            ) || 0,
+          ),
+        ),
+        height: Math.max(
+          0,
+          Math.round(
+            Number(
+              visualViewportState?.height ||
+                window.innerHeight ||
+                document.documentElement?.clientHeight ||
+                0,
+            ) || 0,
+          ),
+        ),
+        offsetLeft: Math.round(Number(visualViewportState?.offsetLeft || 0) || 0),
+        offsetTop: Math.round(Number(visualViewportState?.offsetTop || 0) || 0),
+      };
+    };
+    let viewportResizeRafId = 0;
+    const lastViewportMetricsRef = {
+        current: readViewportMetrics(),
+      },
+      scheduleViewportSync = () => {
+        if (viewportResizeRafId) return;
+        viewportResizeRafId = requestAnimationFrame(() => {
+          viewportResizeRafId = 0;
+          const nextViewportMetrics = readViewportMetrics(),
+            previousViewportMetrics = lastViewportMetricsRef.current || {};
+          if (
+            nextViewportMetrics.width === previousViewportMetrics.width &&
+            nextViewportMetrics.height === previousViewportMetrics.height &&
+            nextViewportMetrics.offsetLeft === previousViewportMetrics.offsetLeft &&
+            nextViewportMetrics.offsetTop === previousViewportMetrics.offsetTop
+          ) {
+            return;
+          }
+          (lastViewportMetricsRef.current = nextViewportMetrics,
+            (overlayPositionEpochRef.current += 1),
+            overlayPreparedRectMapRef.current.clear(),
+            setOverlayViewportRevision((previousRevision) =>
+              previousRevision >= 1e9 ? 1 : previousRevision + 1,
+            ));
+        });
+      };
+    window.addEventListener("resize", scheduleViewportSync, {
+      passive: true,
+    });
+    window.visualViewport?.addEventListener("resize", scheduleViewportSync, {
+      passive: true,
+    });
+    window.visualViewport?.addEventListener("scroll", scheduleViewportSync, {
+      passive: true,
+    });
+    return () => {
+      (window.removeEventListener("resize", scheduleViewportSync),
+        window.visualViewport?.removeEventListener("resize", scheduleViewportSync),
+        window.visualViewport?.removeEventListener("scroll", scheduleViewportSync),
+        viewportResizeRafId && cancelAnimationFrame(viewportResizeRafId));
+    };
+  }, []);
   React.useEffect(() => {
     let isCancelled = false,
       animationFrameHandle = null,
@@ -20235,9 +23936,8 @@ function App() {
           !Array.isArray(chatMessageEntry?.images) ||
           (hasImageNeedHydration = chatMessageEntry.images.some(
             (chatMessageImage) =>
-              String(
-                chatMessageImage?.cacheId || chatMessageImage?.psCacheId || "",
-              ).trim() && !String(chatMessageImage?.dataUrl || "").trim(),
+              String(buildImageRecordLookupKeys(chatMessageImage)[0] || "").trim() &&
+              !String(chatMessageImage?.dataUrl || "").trim(),
           ));
       });
       return {
@@ -20338,6 +24038,20 @@ function App() {
     uploadHoverPendingIndexRef = React.useRef(-1),
     uploadHoverPendingElementRef = React.useRef(null),
     uploadScrollIdleTimerRef = React.useRef(null),
+    [runQueueOutputHoverState, setRunQueueOutputHoverState] = React.useState({
+      open: false,
+      index: -1,
+      top: 0,
+      left: 0,
+      width: 0,
+      height: 0,
+      dataUrl: "",
+      name: "",
+    }),
+    runQueueOutputHoverTimerRef = React.useRef(null),
+    runQueueOutputHoverTokenRef = React.useRef(0),
+    runQueueOutputHoverActiveElementRef = React.useRef(null),
+    runQueueOutputHoverActiveKeyRef = React.useRef(""),
     [previewThumbContextMenu, setPreviewThumbContextMenu] = React.useState({
       open: false,
       top: 0,
@@ -20429,14 +24143,56 @@ function App() {
     chatIndicatorPrevStatusByIdRef = React.useRef(/* @__PURE__ */ new Map()),
     chatIndicatorFinishTimerByIdRef = React.useRef(/* @__PURE__ */ new Map()),
     messageBranchStoreRef = React.useRef(/* @__PURE__ */ new Map()),
-    [jsonPromptText, setJsonPromptText] = React.useState(() => {
-      try {
-        return String(localStorage.getItem(storageKeyMap.jsonPrompt) || "");
-      } catch (ignoredError) {
-        void ignoredError;
-        return "";
-      }
-    }),
+    [jsonPromptState, dispatchJsonPromptState] = React.useReducer(
+      (previousJsonPromptState, jsonPromptAction) => {
+        if (
+          !jsonPromptAction ||
+          jsonPromptAction.type !== "commit-text"
+        ) {
+          return previousJsonPromptState;
+        }
+        const nextJsonPromptText = String(
+            jsonPromptAction.text ?? "",
+          ),
+          nextJsonPromptSource = String(
+            jsonPromptAction.source || "unknown",
+          ),
+          nextJsonPromptSessionId = String(
+            jsonPromptAction.sessionId || "",
+          ).trim(),
+          shouldKeepPreviousJsonPromptState =
+            previousJsonPromptState.text === nextJsonPromptText &&
+            previousJsonPromptState.lastWriteSessionId ===
+              nextJsonPromptSessionId;
+        return shouldKeepPreviousJsonPromptState
+          ? previousJsonPromptState
+          : {
+              ...previousJsonPromptState,
+              text: nextJsonPromptText,
+              lastWriteSource: nextJsonPromptSource,
+              lastWriteSessionId: nextJsonPromptSessionId,
+              updatedAt: Date.now(),
+            };
+      },
+      null,
+      () => {
+        let initialJsonPromptText = "";
+        try {
+          initialJsonPromptText = String(
+            localStorage.getItem(storageKeyMap.jsonPrompt) || "",
+          );
+        } catch (ignoredError) {
+          void ignoredError;
+        }
+        return {
+          text: initialJsonPromptText,
+          lastWriteSource: "init",
+          lastWriteSessionId: "",
+          updatedAt: Date.now(),
+        };
+      },
+    ),
+    jsonPromptText = jsonPromptState.text,
     [chatRequestInFlight, setChatRequestInFlight] = React.useState(false),
     isChatResponsePendingOrLocked = React.useMemo(
       () => !!activeChatMessageIndexSnapshot?.hasPendingAssistantMessage,
@@ -20485,6 +24241,7 @@ function App() {
     chatQuickPromptsStorageDebounceRef = React.useRef(null),
     imageQuickPromptsStorageDebounceRef = React.useRef(null),
     imageQuickPromptGroupsStorageDebounceRef = React.useRef(null),
+    runQueueTaskHistoryStorageDebounceRef = React.useRef(null),
     [thinkingTranslateEnabled, setThinkingTranslateEnabled] = React.useState(
       () =>
         safeGetStorageString(storageKeyMap.thinkingTranslateEnabled, "1") !==
@@ -20552,6 +24309,11 @@ function App() {
       if (!normalizedDraftScopeKey) return;
       const cachedComposerDraftText =
         composerDraftBySessionRef.current.get(normalizedDraftScopeKey);
+      composerLiveTextRef.current =
+        typeof cachedComposerDraftText === "string"
+          ? cachedComposerDraftText
+          : "";
+      composerTextChangeSourceRef.current = "external";
       setComposerText(
         typeof cachedComposerDraftText === "string"
           ? cachedComposerDraftText
@@ -20561,6 +24323,36 @@ function App() {
     React.useEffect(() => {
     composerImagesRef.current = composerImages;
   }, [composerImages]),
+    React.useEffect(() => {
+      const currentComposerImages = Array.isArray(composerImages)
+        ? composerImages
+        : [];
+      if (!currentComposerImages.length) return;
+      let isDisposed = false;
+      return (
+        (async () => {
+          const hydratedComposerImages = await hydrateInputImagesWithCaches(
+            currentComposerImages,
+            {
+              readPsCacheEntry: window.shell?.psCacheGet,
+              readChatImageCache: window.shell?.chatImageCacheGet,
+              onIgnoredError: (ignoredError) =>
+                reportIgnoredError("app/empty-catch", ignoredError),
+            },
+          );
+          if (
+            isDisposed ||
+            !Array.isArray(hydratedComposerImages) ||
+            hydratedComposerImages === currentComposerImages
+          )
+            return;
+          setComposerImageSlots(hydratedComposerImages);
+        })(),
+        () => {
+          isDisposed = true;
+        }
+      );
+    }, [composerImages]),
     React.useEffect(() => {
       previewImagesRef.current = previewImages;
     }, [previewImages]),
@@ -20700,6 +24492,11 @@ function App() {
           uploadScrollIdleTimerRef.current &&
             (clearTimeout(uploadScrollIdleTimerRef.current),
             (uploadScrollIdleTimerRef.current = null)),
+          runQueueOutputHoverTimerRef.current &&
+            (clearTimeout(runQueueOutputHoverTimerRef.current),
+            (runQueueOutputHoverTimerRef.current = null)),
+          (runQueueOutputHoverActiveElementRef.current = null),
+          (runQueueOutputHoverActiveKeyRef.current = ""),
           previewHoverLoadingRef.current.clear(),
           previewHoverCacheRef.current.clear(),
           previewImageCacheLoadingRef.current.clear(),
@@ -20763,9 +24560,23 @@ function App() {
     React.useEffect(() => {
       const hasAnyUploadImage = Array.isArray(composerImages)
         ? composerImages.some(
-            (composerImageItem) =>
-              /^data:image\//i.test(String(composerImageItem?.dataUrl || "").trim()) ||
-              !!String(composerImageItem?.psCacheId || composerImageItem?.cacheId || "").trim(),
+            (composerImageItem) => {
+              const normalizedDataUrl = String(
+                composerImageItem?.dataUrl || "",
+              ).trim();
+              if (/^data:image\//i.test(normalizedDataUrl)) return true;
+              return [
+                composerImageItem?.assetId,
+                composerImageItem?.internalCacheId,
+                composerImageItem?.itemId,
+                composerImageItem?.fileName,
+                composerImageItem?.filePath,
+                composerImageItem?.cacheFilePath,
+                composerImageItem?.psCacheId,
+                composerImageItem?.cacheId,
+                composerImageItem?.chatCacheId,
+              ].some((lookupValue) => !!String(lookupValue || "").trim());
+            },
           )
         : false;
       if (hasAnyUploadImage) return;
@@ -20823,26 +24634,7 @@ function App() {
     }, [previewImages, previewImageIndex]),
     React.useEffect(() => {
       if (!previewThumbContextMenu.open) return;
-      const handleContextMenuOutsidePointerDown = (pointerDownEvent) => {
-          if (
-            previewThumbContextMenuRef.current?.contains(
-              pointerDownEvent.target,
-            )
-          )
-            return;
-          setPreviewThumbContextMenu(
-            (currentPreviewThumbContextMenuState) =>
-              currentPreviewThumbContextMenuState.open
-                ? {
-                    ...currentPreviewThumbContextMenuState,
-                    open: false,
-                    index: -1,
-                    name: "",
-                  }
-                : currentPreviewThumbContextMenuState,
-          );
-        },
-        handleContextMenuEscapeKeydown = (keydownEvent) => {
+      const handleContextMenuEscapeKeydown = (keydownEvent) => {
           keydownEvent.key === "Escape" &&
             setPreviewThumbContextMenu(
               (currentPreviewThumbContextMenuState) =>
@@ -20871,11 +24663,6 @@ function App() {
         };
       return (
         document.addEventListener(
-          "pointerdown",
-          handleContextMenuOutsidePointerDown,
-          true,
-        ),
-        document.addEventListener(
           "keydown",
           handleContextMenuEscapeKeydown,
           true,
@@ -20888,11 +24675,6 @@ function App() {
         ),
         () => {
           (document.removeEventListener(
-            "pointerdown",
-            handleContextMenuOutsidePointerDown,
-            true,
-          ),
-            document.removeEventListener(
               "keydown",
               handleContextMenuEscapeKeydown,
               true,
@@ -21773,10 +25555,13 @@ function App() {
         textareaTextLength,
       );
     }, [editingMessageId]));
-  const setComposerTextWithDraftSync = React.useCallback(
-    (nextComposerTextCandidate) => {
-      setComposerText((previousComposerText) => {
-        const resolvedComposerText =
+  const syncComposerDraftStoreOnly = React.useCallback(
+      (nextComposerTextCandidate, previousComposerTextCandidate = void 0) => {
+        const previousComposerText =
+            typeof previousComposerTextCandidate === "string"
+              ? previousComposerTextCandidate
+              : String(composerLiveTextRef.current || ""),
+          resolvedComposerText =
             typeof nextComposerTextCandidate === "function"
               ? nextComposerTextCandidate(previousComposerText)
               : nextComposerTextCandidate,
@@ -21784,16 +25569,37 @@ function App() {
           normalizedDraftScopeKey = String(
             composerDraftScopeKeyRef.current || "",
           ).trim();
+        composerLiveTextRef.current = normalizedComposerText;
         normalizedDraftScopeKey &&
           composerDraftBySessionRef.current.set(
             normalizedDraftScopeKey,
             normalizedComposerText,
           );
         return normalizedComposerText;
-      });
-    },
-    [],
-  );
+      },
+      [],
+    ),
+    syncComposerTextStateOnly = React.useCallback((nextComposerText) => {
+      const normalizedComposerText = String(nextComposerText || "");
+      composerLiveTextRef.current = normalizedComposerText;
+      composerTextChangeSourceRef.current = "input";
+      setComposerText((previousComposerText) =>
+        previousComposerText === normalizedComposerText
+          ? previousComposerText
+          : normalizedComposerText,
+      );
+    }, []),
+    setComposerTextWithDraftSync = React.useCallback(
+      (nextComposerTextCandidate) => {
+        setComposerText((previousComposerText) =>
+          syncComposerDraftStoreOnly(
+            nextComposerTextCandidate,
+            String(previousComposerText || ""),
+          ),
+        );
+      },
+      [syncComposerDraftStoreOnly],
+    );
   const logApiLifecycleEvent = ({
       level: logLevel = "info",
       type: logType = "api",
@@ -21804,6 +25610,7 @@ function App() {
       endedAt: endedAtMsRaw = 0,
       requestId: requestId = "",
       guide: recoveryGuide = "",
+      emitHistory: shouldEmitHistory = true,
     } = {}) => {
       const lifecycleContext = buildApiLifecycleContext({
           level: logLevel,
@@ -21823,6 +25630,7 @@ function App() {
                 ? `${normalizedPrefixText}：${lifecycleContext.summaryText}`
                 : normalizedPrefixText
               : lifecycleContext.summaryText;
+          if (!shouldEmitHistory || !renderedMessage) return;
           appendConsoleLogEntry(logLevel, renderedMessage, logType, {
             requestId: requestId || extractRequestIdFromErrorText(logMessage),
             guide: recoveryGuide,
@@ -21832,15 +25640,11 @@ function App() {
           });
         };
       if (lifecycleContext.shouldEmitTaskStart) {
-        if (lifecycleContext.shouldUseTaskPrefix)
-          emitLifecycleLog("任务开始", "running");
+        emitLifecycleLog("", "running");
         return;
       }
       if (lifecycleContext.shouldEmitTaskEnd) {
-        emitLifecycleLog(
-          lifecycleContext.shouldUseTaskPrefix ? "任务结束" : "",
-          lifecycleContext.finalLifecycleState,
-        );
+        emitLifecycleLog("", lifecycleContext.finalLifecycleState);
         return;
       }
       emitLifecycleLog("", lifecycleContext.finalLifecycleState);
@@ -22725,6 +26529,21 @@ function App() {
       storageKeyMap.importLayerType,
     ),
     useLocalStorageItemSync(
+      importAutoGroupEnabled,
+      storageKeyMap.importAutoGroupEnabled,
+      serializeBooleanFlagStorageValue,
+    ),
+    useLocalStorageItemSync(
+      importAutoMaskEnabled,
+      storageKeyMap.importAutoMaskEnabled,
+      serializeBooleanFlagStorageValue,
+    ),
+    useLocalStorageItemSync(
+      autoExportEnabled,
+      storageKeyMap.autoExportEnabled,
+      serializeBooleanFlagStorageValue,
+    ),
+    useLocalStorageItemSync(
       alwaysOnTop,
       storageKeyMap.alwaysOnTop,
       serializeBooleanFlagStorageValue,
@@ -22835,6 +26654,31 @@ function App() {
       storageKeyMap.imageQuickPromptGroups,
       imageQuickPromptGroupsStorageDebounceRef,
     ),
+    useDebouncedLocalStorageItem(
+      runQueueTaskHistoryState,
+      storageKeyMap.runQueueTaskHistory,
+      runQueueTaskHistoryStorageDebounceRef,
+      serializeRunQueueTaskHistoryState,
+    ),
+    React.useEffect(() => {
+      const normalizedCurrentInstructionGroupNames =
+          normalizeInstructionGroupNameList(imageQuickPromptGroups),
+        orderedInstructionGroupNamesFromPrompts =
+          buildInstructionCustomGroupOrderFromPrompts(imageQuickPrompts),
+        nextInstructionGroupNames = normalizeInstructionGroupNameList([
+          ...normalizedCurrentInstructionGroupNames,
+          ...orderedInstructionGroupNamesFromPrompts,
+        ]);
+      if (
+        areInstructionGroupNameListsEqual(
+          normalizedCurrentInstructionGroupNames,
+          nextInstructionGroupNames,
+        )
+      ) {
+        return;
+      }
+      setImageQuickPromptGroups(nextInstructionGroupNames);
+    }, [imageQuickPrompts, imageQuickPromptGroups]),
     React.useEffect(() => {
       if (!!window.shell && typeof window.shell.chatSave === "function") {
         lastSavedSessionsJsonRef.current = "";
@@ -23091,6 +26935,9 @@ function App() {
         (pluginBridgeStatus.ok || pluginBridgeStatus.psConnected) &&
           (bridgeConnectedAtRef.current = Date.now()));
     }, [pluginBridgeStatus.ok, pluginBridgeStatus.psConnected]),
+    React.useEffect(() => {
+      autoExportEnabledRef.current = !!autoExportEnabled;
+    }, [autoExportEnabled]),
     useLocalStorageItemSync(
       chatStreamModeHintMap,
       storageKeyMap.chatStreamModeHints,
@@ -23185,6 +27032,23 @@ function App() {
     React.useEffect(() => {
       globalTipVisibleRef.current = !!globalTipState.visible;
     }, [globalTipState.visible]));
+  React.useEffect(() => {
+    if (miniStatusState.level !== "busy") {
+      setMiniStatusBusyDotCount(1);
+      return;
+    }
+    setMiniStatusBusyDotCount(1);
+    const miniStatusBusyTimerHandle = window.setInterval(() => {
+      setMiniStatusBusyDotCount((previousMiniStatusBusyDotCount) =>
+        previousMiniStatusBusyDotCount >= 3
+          ? 1
+          : previousMiniStatusBusyDotCount + 1,
+      );
+    }, 360);
+    return () => {
+      window.clearInterval(miniStatusBusyTimerHandle);
+    };
+  }, [miniStatusState.level, miniStatusState.text]);
   const updateMiniStatus = (
       statusTextInput,
       miniStatusLevel = "info",
@@ -23212,7 +27076,12 @@ function App() {
             },
       );
     },
-    miniStatus = miniStatusState.text,
+    miniStatus =
+      miniStatusState.level === "busy"
+        ? `${miniStatusState.text}${".".repeat(
+            Math.max(1, Number(miniStatusBusyDotCount) || 1),
+          )}`
+        : miniStatusState.text,
     miniStatusLevelClass =
       miniStatusState.level === "error"
         ? "is-error"
@@ -23676,7 +27545,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 ? previousBridgeStatus
                 : bridgeStatusPayload,
             );
-            const bridgeDisconnectedMessage = "插件待连接";
+            const bridgeDisconnectedMessage = "插件连接失败";
             bridgeDisconnectedMessage !== bridgeStatusTextRef.current &&
               (dispatchBridgeStatusEvents(
                 buildBridgeDisconnectedEvents(
@@ -24137,8 +28006,22 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             const computeSectionHeight = (sectionElementRef) =>
                 computeHeightFromRef(sectionElementRef),
               chatHeaderHeight = computeSectionHeight(chatModuleHeaderRef),
-              chatInputRowHeight =
-                computeSectionHeight(chatInputRowRef),
+              chatInputRowElement = chatInputRowRef.current,
+              chatInputRowComputedStyle = chatInputRowElement
+                ? getComputedStyle(chatInputRowElement)
+                : null,
+              chatInputRowBaseHeightCssPx =
+                (chatInputRowComputedStyle &&
+                  parseFloat(
+                    chatInputRowComputedStyle.getPropertyValue(
+                      "--chat-input-size",
+                    ),
+                  )) ||
+                CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX,
+              // Keep min-window sizing independent from multiline input growth.
+              chatInputRowHeight = toMeasuredPxFromCss(
+                chatInputRowBaseHeightCssPx,
+              ),
               uploadAreaHeight =
                 computeSectionHeight(uploadAreaRef),
               chatModuleComputedStyle = chatModuleRef.current
@@ -24226,7 +28109,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             footerRef.current,
             previewModuleRef.current,
             consoleRef.current,
-            bottomControlsRef.current,
             homeContentScrollRef.current,
             contentScrollSettingsRef.current,
           ].forEach((observedScrollElement) => {
@@ -24482,7 +28364,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         requestAnimationFrame(() => {
           (unlockPagePanelsHeight(),
             composerTextareaRef.current &&
-              resizeComposerTextarea(composerTextareaRef.current),
+              requestComposerResize({
+                textareaElement: composerTextareaRef.current,
+              }),
             shouldTriggerPendingLayoutReflow &&
               layoutReflowHandlerRef.current &&
               layoutReflowHandlerRef.current());
@@ -24748,10 +28632,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           setImageApiFoldOpen(false),
           setSettingsToolsSectionOpen(false),
           setSettingsDisplayFoldOpen(false),
-          setChatConfigExpanded(false));
+          setChatConfigExpanded(false),
+          setOpenCacheRetentionDropdownKey(""));
         return;
       }
-      setChatConfigExpanded(false);
+      (setChatConfigExpanded(false), setOpenCacheRetentionDropdownKey(""));
     }, [activePage]),
     React.useEffect(() => {
       const normalizedChatApiConfig = normalizeChatApiConfig(chatConfig),
@@ -25025,21 +28910,104 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           : sanitizedChatSessions;
       });
     }, [activeChatSession?.id, activeChatSessionId]));
-  const syncJsonPromptFromLatestAssistant = async () => {
-    const latestAssistantMessageWithText = [...activeChatMessages]
-      .reverse()
-      .find(
-        (messageItem) =>
-          messageItem.role === "assistant" && messageItem.text,
-      );
+  React.useEffect(() => {
+    const validSessionIdSet = new Set(
+      (Array.isArray(chatSessions) ? chatSessions : [])
+        .map((sessionItem) => String(sessionItem?.id || "").trim())
+        .filter(Boolean),
+    );
+    const assistantSyncSignatureMap =
+      assistantJsonPromptSyncSignatureBySessionRef.current;
+    Array.from(assistantSyncSignatureMap.keys()).forEach((sessionIdKey) => {
+      validSessionIdSet.has(sessionIdKey) ||
+        assistantSyncSignatureMap.delete(sessionIdKey);
+    });
+  }, [chatSessions]);
+  const commitJsonPromptText = React.useCallback(
+      (nextJsonPromptText, commitOptions = {}) => {
+        const normalizedCommitOptions =
+            commitOptions && typeof commitOptions === "object"
+              ? commitOptions
+              : {},
+          normalizedSessionId = String(
+            normalizedCommitOptions.sessionId ||
+              activeSessionIdRef.current ||
+              activeChatSession?.id ||
+              "",
+          ).trim(),
+          normalizedSource = String(
+            normalizedCommitOptions.source || "unknown",
+          ).trim() || "unknown",
+          protectEditedSession =
+            normalizedCommitOptions.protectEditedSession !== false;
+        if (
+          protectEditedSession &&
+          normalizedSessionId &&
+          editedJsonPromptBySessionId?.[normalizedSessionId]
+        ) {
+          return false;
+        }
+        dispatchJsonPromptState({
+          type: "commit-text",
+          text: String(nextJsonPromptText ?? ""),
+          source: normalizedSource,
+          sessionId: normalizedSessionId,
+        });
+        return true;
+      },
+      [editedJsonPromptBySessionId, activeChatSession?.id],
+    ),
+    syncJsonPromptFromLatestAssistant = async () => {
+    const normalizedSessionId = String(
+        activeChatSession?.id || "",
+      ).trim(),
+      latestAssistantMessageWithText = [...activeChatMessages]
+        .reverse()
+        .find(
+          (messageItem) =>
+            messageItem.role === "assistant" && messageItem.text,
+        );
+    if (!normalizedSessionId) return;
     if (latestAssistantMessageWithText) {
       const selectedJsonPromptText = resolveJsonPromptTextFromAssistantPayload({
-        jsonPromptText: latestAssistantMessageWithText.jsonPromptText,
-        jsonPrompt: latestAssistantMessageWithText.jsonPrompt,
-        assistantText: latestAssistantMessageWithText.text,
+          jsonPromptText: latestAssistantMessageWithText.jsonPromptText,
+          jsonPrompt: latestAssistantMessageWithText.jsonPrompt,
+          assistantText: latestAssistantMessageWithText.text,
+        }),
+        normalizedLatestAssistantMessageId = String(
+          latestAssistantMessageWithText.id || "",
+        ).trim(),
+        nextAssistantSyncSignature = `${normalizedLatestAssistantMessageId}\u001f${String(selectedJsonPromptText || "")}`,
+        previousAssistantSyncSignature =
+          assistantJsonPromptSyncSignatureBySessionRef.current.get(
+            normalizedSessionId,
+          ) || "";
+      if (nextAssistantSyncSignature === previousAssistantSyncSignature) return;
+      assistantJsonPromptSyncSignatureBySessionRef.current.set(
+        normalizedSessionId,
+        nextAssistantSyncSignature,
+      );
+      commitJsonPromptText(selectedJsonPromptText || "", {
+        source: "assistant-sync",
+        sessionId: normalizedSessionId,
+        protectEditedSession: true,
       });
-      setJsonPromptText(selectedJsonPromptText || "");
-    } else setJsonPromptText("");
+      return;
+    }
+    const previousAssistantSyncSignature =
+      assistantJsonPromptSyncSignatureBySessionRef.current.get(
+        normalizedSessionId,
+      ) || "";
+    if (previousAssistantSyncSignature === "__empty__") return;
+    assistantJsonPromptSyncSignatureBySessionRef.current.set(
+      normalizedSessionId,
+      "__empty__",
+    );
+    commitJsonPromptText("", {
+      source: "assistant-sync-empty",
+      sessionId: normalizedSessionId,
+      protectEditedSession: true,
+    });
   };
   _syncJsonPromptFromLatestAssistantRef.current = syncJsonPromptFromLatestAssistant;
   (React.useEffect(() => {
@@ -25052,29 +29020,121 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       _syncJsonPromptFromLatestAssistantRef.current?.();
     }, [activeChatSession?.id, activeChatMessages]));
   const isPluginConnected = pluginBridgeStatus.psConnected,
+    isPluginBridgeReachable = !!pluginBridgeStatus.ok,
+    runningRunQueueTaskList = Array.isArray(runQueueTaskListState)
+      ? runQueueTaskListState.filter(
+          (runQueueTaskItem) =>
+            String(runQueueTaskItem?.phase || "")
+              .trim()
+              .toLowerCase() === "running",
+        )
+      : [],
     runQueueDisplayCount =
       imageRunQueueState.pending + (imageRunQueueState.running ? 1 : 0),
+    runQueueHistoryDisplayCount = Array.isArray(runQueueTaskHistoryState)
+      ? runQueueTaskHistoryState.length
+      : 0,
+    runQueueLatestHistoryTask =
+      Array.isArray(runQueueTaskHistoryState) && runQueueTaskHistoryState.length
+        ? runQueueTaskHistoryState[0]
+        : null,
+    runQueueLatestHistoryStatus =
+      String(
+        runQueueLatestHistoryTask?.historyStatus ||
+          runQueueLatestHistoryTask?.status ||
+          "",
+      ).trim() || "",
+    runQueueLatestHistorySignature = runQueueLatestHistoryTask
+      ? `${String(runQueueLatestHistoryTask?.id || "").trim()}::${runQueueLatestHistoryStatus}::${Number(runQueueLatestHistoryTask?.finishedAtMs || runQueueLatestHistoryTask?.createdAtMs || 0)}`
+      : "",
+    runQueueLatestHistoryResultTone = toResultToneByRunQueueStatus(
+      runQueueLatestHistoryStatus,
+    ),
     hasRunQueueTask = runQueueDisplayCount > 0,
+    hasRunQueueHistory = runQueueHistoryDisplayCount > 0,
+    hasRunQueuePanelEntries = hasRunQueueTask || hasRunQueueHistory,
+    runQueueTaskButtonRunnerVisualState = runQueueTaskButtonRunnerVisualStateState,
+    chatRunnerVisualState = chatRunnerVisualStateState,
+    runQueueTaskRunnerRecentTone = resolveCometRunnerRecentTone(
+      runQueueTaskButtonRunnerVisualState,
+    ),
+    chatRunnerRecentTone = resolveCometRunnerRecentTone(chatRunnerVisualState),
+    floatingRunnerVisualState = resolveFloatingRunnerVisualState({
+      runQueueRunnerVisualState: runQueueTaskButtonRunnerVisualState,
+      chatRunnerVisualState,
+      runQueueTaskCount: runQueueDisplayCount,
+      chatRequestInFlight,
+    }),
+    floatingRunnerSource = String(floatingRunnerVisualState?.source || "none")
+      .trim()
+      .toLowerCase(),
+    floatingRunnerPhase = String(floatingRunnerVisualState?.phase || "idle")
+      .trim()
+      .toLowerCase(),
+    floatingRunnerLen = String(floatingRunnerVisualState?.len || "soft-short")
+      .trim()
+      .toLowerCase(),
+    floatingRunnerColorTone = String(
+      floatingRunnerVisualState?.colorTone || "orange",
+    )
+      .trim()
+      .toLowerCase(),
+    floatingRunnerVisible = !!floatingRunnerVisualState?.visible,
+    floatingRunnerFrozen = !!floatingRunnerVisualState?.frozen,
+    floatingRunnerFading = !!floatingRunnerVisualState?.fading,
+    floatingRunnerSpinDurationMs = Math.max(
+      0,
+      Number(floatingRunnerVisualState?.spinDurationMs) || 0,
+    ),
+    floatingRunnerVisualStateSignature =
+      buildCometRunnerStateSignature(floatingRunnerVisualState),
     runQueueTaskButtonTipText = hasRunQueueTask
-      ? `跑图任务 x${runQueueDisplayCount}`
-      : "跑图任务",
-    pluginStatusTooltipText = `插件连接状态：${pluginBridgeStatus.psConnected ? "已连接" : pluginBridgeStatus.ok ? "连接中" : "待连接"}`;
+      ? `任务列表 x${runQueueDisplayCount}`
+      : "任务列表",
+    pluginStatusTooltipText = isReconnectButtonBusy
+      ? "插件重连中；请稍候。"
+      : `插件连接状态：${pluginBridgeStatus.psConnected ? "已连接" : pluginBridgeStatus.ok ? "连接中" : "连接失败"}\n点击重新连接插件桥接`;
   React.useEffect(() => {
-    if (runQueueDisplayCount <= 0) {
-      setRunQueueTaskPanelOpen(false);
-      setExpandedRunQueueTaskId("");
-    }
-  }, [runQueueDisplayCount]);
-  React.useEffect(() => {
-    if (!runQueueTaskPanelOpen || runQueueDisplayCount <= 0) return;
+    if (
+      !runQueueTaskPanelOpen ||
+      !imageRunQueueState.running ||
+      !!expandedRunQueueTaskId
+    )
+      return;
     setRunQueueElapsedNowMs(Date.now());
     const runQueueElapsedTimer = setInterval(() => {
       setRunQueueElapsedNowMs(Date.now());
-    }, 1000);
+    }, CONST_RUN_QUEUE_ELAPSED_REFRESH_MS);
     return () => {
       clearInterval(runQueueElapsedTimer);
     };
-  }, [runQueueTaskPanelOpen, runQueueDisplayCount, imageRunQueueState.running]);
+  }, [runQueueTaskPanelOpen, imageRunQueueState.running, expandedRunQueueTaskId]);
+  React.useEffect(() => {
+    runQueueTaskPanelOpen &&
+      setRunQueueHistoryVisibleCount(CONST_RUN_QUEUE_HISTORY_PANEL_BATCH_SIZE);
+  }, [runQueueTaskPanelOpen]);
+  React.useEffect(() => {
+    if (runQueueTaskPanelOpen) return;
+    (runQueueOutputHoverTimerRef.current &&
+      (clearTimeout(runQueueOutputHoverTimerRef.current),
+      (runQueueOutputHoverTimerRef.current = null)),
+      (runQueueOutputHoverTokenRef.current += 1),
+      (runQueueOutputHoverActiveElementRef.current = null),
+      (runQueueOutputHoverActiveKeyRef.current = ""),
+      setRunQueueOutputHoverState((previousHoverState) =>
+        previousHoverState.open
+          ? {
+              ...previousHoverState,
+              open: false,
+              index: -1,
+              width: 0,
+              height: 0,
+              dataUrl: "",
+              name: "",
+            }
+          : previousHoverState,
+      ));
+  }, [runQueueTaskPanelOpen]);
   React.useEffect(() => {
     if (!runQueueTaskPanelOpen && expandedRunQueueTaskId) {
       setExpandedRunQueueTaskId("");
@@ -25082,11 +29142,108 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
   }, [runQueueTaskPanelOpen, expandedRunQueueTaskId]);
   React.useEffect(() => {
     if (!expandedRunQueueTaskId) return;
-    const hasExpandedTask = runQueueTaskListState.some(
-      (runQueueTaskItem) => runQueueTaskItem.id === expandedRunQueueTaskId,
-    );
+    const hasExpandedTask =
+      runQueueTaskListState.some(
+        (runQueueTaskItem) => runQueueTaskItem.id === expandedRunQueueTaskId,
+      ) ||
+      runQueueTaskHistoryState.some(
+        (runQueueTaskItem) => runQueueTaskItem.id === expandedRunQueueTaskId,
+      );
     !hasExpandedTask && setExpandedRunQueueTaskId("");
-  }, [runQueueTaskListState, expandedRunQueueTaskId]);
+  }, [runQueueTaskListState, runQueueTaskHistoryState, expandedRunQueueTaskId]);
+  React.useEffect(() => {
+    const normalizedRunQueueTaskCount = Math.max(
+      0,
+      Number(runQueueDisplayCount) || 0,
+    );
+    runQueueRunnerTaskCountRef.current = normalizedRunQueueTaskCount;
+    if (normalizedRunQueueTaskCount > 0) {
+      startCometRunnerRunningVisual({
+        source: "run",
+        taskCount: normalizedRunQueueTaskCount,
+        spinDurationMs: 2000,
+        setVisualState: setRunQueueTaskButtonRunnerVisualState,
+        tokenRef: runQueueRunnerFlowTokenRef,
+        timerRef: runQueueRunnerFlowTimersRef,
+      });
+      return;
+    }
+    setRunQueueTaskButtonRunnerVisualState((currentRunnerVisualState) =>
+      isCometRunnerCompletionPhase(currentRunnerVisualState?.phase)
+        ? currentRunnerVisualState
+        : buildIdleCometRunnerVisualState("run"),
+    );
+  }, [runQueueDisplayCount]);
+  React.useEffect(() => {
+    if (!runQueueLatestHistorySignature) return;
+    if (!runQueueLastHistorySignatureRef.current) {
+      runQueueLastHistorySignatureRef.current = runQueueLatestHistorySignature;
+      return;
+    }
+    if (runQueueLastHistorySignatureRef.current === runQueueLatestHistorySignature)
+      return;
+    runQueueLastHistorySignatureRef.current = runQueueLatestHistorySignature;
+    if (!runQueueLatestHistoryResultTone) return;
+    startCometRunnerCompleteVisualFlow({
+      source: "run",
+      resultTone:
+        runQueueLatestHistoryResultTone === "success"
+          ? "success"
+          : "failed",
+      remainingTaskCount: runQueueRunnerTaskCountRef.current,
+      spinDurationMs: 2000,
+      fillDurationMs: CONST_COMET_RUNNER_FILL_MS,
+      freezeDurationMs: CONST_COMET_RUNNER_FREEZE_MS,
+      fadeDurationMs: CONST_COMET_RUNNER_FADE_MS,
+      setVisualState: setRunQueueTaskButtonRunnerVisualState,
+      tokenRef: runQueueRunnerFlowTokenRef,
+      timerRef: runQueueRunnerFlowTimersRef,
+    });
+  }, [runQueueLatestHistorySignature, runQueueLatestHistoryResultTone]);
+  React.useEffect(() => {
+    const wasChatRequestInFlight = !!chatRequestInFlightPreviousRef.current;
+    if (!wasChatRequestInFlight && chatRequestInFlight) {
+      chatRequestInFlightPreviousRef.current = true;
+      startCometRunnerRunningVisual({
+        source: "chat",
+        taskCount: 1,
+        spinDurationMs: 2000,
+        setVisualState: setChatRunnerVisualState,
+        tokenRef: chatRunnerFlowTokenRef,
+        timerRef: chatRunnerFlowTimersRef,
+      });
+      return;
+    }
+    if (wasChatRequestInFlight && !chatRequestInFlight) {
+      chatRequestInFlightPreviousRef.current = false;
+      const chatResultTone = toResultToneByMiniStatusLevel(miniStatusState.level);
+      if (!chatResultTone) {
+        setChatRunnerVisualState(buildIdleCometRunnerVisualState("chat"));
+        return;
+      }
+      startCometRunnerCompleteVisualFlow({
+        source: "chat",
+        resultTone: chatResultTone === "success" ? "success" : "failed",
+        remainingTaskCount: 0,
+        spinDurationMs: 2000,
+        fillDurationMs: CONST_COMET_RUNNER_FILL_MS,
+        freezeDurationMs: CONST_COMET_RUNNER_FREEZE_MS,
+        fadeDurationMs: CONST_COMET_RUNNER_FADE_MS,
+        setVisualState: setChatRunnerVisualState,
+        tokenRef: chatRunnerFlowTokenRef,
+        timerRef: chatRunnerFlowTimersRef,
+      });
+      return;
+    }
+    chatRequestInFlightPreviousRef.current = !!chatRequestInFlight;
+  }, [chatRequestInFlight, miniStatusState.level]);
+  React.useEffect(
+    () => () => {
+      (clearCometRunnerTimers(runQueueRunnerFlowTimersRef),
+      clearCometRunnerTimers(chatRunnerFlowTimersRef));
+    },
+    [],
+  );
   (React.useEffect(() => {
     !window.shell ||
       typeof window.shell.setFloatingToggleEnabled !== "function" ||
@@ -25156,9 +29313,46 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         typeof normalizedFloatingToggleState.quickButtonsVisible === "boolean" &&
           (floatingToggleRuntimeQuickButtonsVisibleRef.current =
             normalizedFloatingToggleState.quickButtonsVisible);
-        typeof normalizedFloatingToggleState.status === "string" &&
-          (floatingToggleRuntimeStatusRef.current =
-            normalizedFloatingToggleState.status);
+        if (typeof normalizedFloatingToggleState.status === "string") {
+          const runnerSource = String(
+              floatingToggleStatePayload?.runnerSource || "",
+            )
+              .trim()
+              .toLowerCase(),
+            runnerPhase = String(
+              floatingToggleStatePayload?.runnerPhase || "",
+            )
+              .trim()
+              .toLowerCase(),
+            runnerLen = String(
+              floatingToggleStatePayload?.runnerLen || "",
+            )
+              .trim()
+              .toLowerCase(),
+            runnerColorTone = String(
+              floatingToggleStatePayload?.runnerColorTone || "",
+            )
+              .trim()
+              .toLowerCase(),
+            runnerVisible = !!floatingToggleStatePayload?.runnerVisible,
+            runnerFrozen = !!floatingToggleStatePayload?.runnerFrozen,
+            runnerFading = !!floatingToggleStatePayload?.runnerFading,
+            runnerSpinDurationMs = Math.max(
+              0,
+              Number(floatingToggleStatePayload?.runnerSpinDurationMs) || 0,
+            );
+          floatingToggleRuntimeStatusRef.current = [
+            normalizedFloatingToggleState.status,
+            runnerSource,
+            runnerPhase,
+            runnerLen,
+            runnerColorTone,
+            runnerVisible ? "1" : "0",
+            runnerFrozen ? "1" : "0",
+            runnerFading ? "1" : "0",
+            String(runnerSpinDurationMs),
+          ].join("|");
+        }
         const floatingToggleOpacityValue = readFloatingToggleOpacity(
           normalizedFloatingToggleState,
         );
@@ -25298,22 +29492,125 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         },
         pluginStatusObserved: pluginBridgeStatusObservedRef.current,
         miniStatusLevel: miniStatusState.level || "warn",
-      });
-      if (floatingToggleRuntimeStatusRef.current === nextFloatingToggleStatus)
+        runQueueRunning: hasRunQueueTask,
+        runQueueRecentTone: runQueueTaskRunnerRecentTone,
+        chatRunning: chatRequestInFlight,
+        chatRecentTone: chatRunnerRecentTone,
+      }),
+        nextFloatingToggleStatusPayload = {
+          status: nextFloatingToggleStatus,
+          runnerSource: floatingRunnerSource,
+          runnerPhase: floatingRunnerPhase,
+          runnerLen: floatingRunnerLen,
+          runnerColorTone: floatingRunnerColorTone,
+          runnerVisible: floatingRunnerVisible,
+          runnerFrozen: floatingRunnerFrozen,
+          runnerFading: floatingRunnerFading,
+          runnerSpinDurationMs: floatingRunnerSpinDurationMs,
+        },
+        nextFloatingToggleStatusSignature = [
+          nextFloatingToggleStatusPayload.status,
+          nextFloatingToggleStatusPayload.runnerSource,
+          nextFloatingToggleStatusPayload.runnerPhase,
+          nextFloatingToggleStatusPayload.runnerLen,
+          nextFloatingToggleStatusPayload.runnerColorTone,
+          nextFloatingToggleStatusPayload.runnerVisible ? "1" : "0",
+          nextFloatingToggleStatusPayload.runnerFrozen ? "1" : "0",
+          nextFloatingToggleStatusPayload.runnerFading ? "1" : "0",
+          String(nextFloatingToggleStatusPayload.runnerSpinDurationMs),
+        ].join("|");
+      if (
+        floatingToggleRuntimeStatusRef.current ===
+        nextFloatingToggleStatusSignature
+      )
         return;
       window.shell
-        .updateFloatingToggleStatus(nextFloatingToggleStatus)
+        .updateFloatingToggleStatus(nextFloatingToggleStatusPayload)
         .then((updateFloatingToggleStatusResponse) => {
-          floatingToggleRuntimeStatusRef.current =
-            normalizeFloatingToggleStatusValue(
+          const resolvedFloatingStatus = normalizeFloatingToggleStatusValue(
               updateFloatingToggleStatusResponse?.status ||
-                nextFloatingToggleStatus,
+                nextFloatingToggleStatusPayload.status,
+            ),
+            resolvedFloatingRunnerSource = String(
+              updateFloatingToggleStatusResponse?.runnerSource ||
+                nextFloatingToggleStatusPayload.runnerSource ||
+                "none",
+            )
+              .trim()
+              .toLowerCase(),
+            resolvedFloatingRunnerPhase = String(
+              updateFloatingToggleStatusResponse?.runnerPhase ||
+                nextFloatingToggleStatusPayload.runnerPhase ||
+                "idle",
+            )
+              .trim()
+              .toLowerCase(),
+            resolvedFloatingRunnerLen = String(
+              updateFloatingToggleStatusResponse?.runnerLen ||
+                nextFloatingToggleStatusPayload.runnerLen ||
+                "soft-short",
+            )
+              .trim()
+              .toLowerCase(),
+            resolvedFloatingRunnerColorTone = String(
+              updateFloatingToggleStatusResponse?.runnerColorTone ||
+                nextFloatingToggleStatusPayload.runnerColorTone ||
+                "orange",
+            )
+              .trim()
+              .toLowerCase(),
+            resolvedFloatingRunnerVisible =
+              typeof updateFloatingToggleStatusResponse?.runnerVisible ===
+              "boolean"
+                ? !!updateFloatingToggleStatusResponse.runnerVisible
+                : !!nextFloatingToggleStatusPayload.runnerVisible,
+            resolvedFloatingRunnerFrozen =
+              typeof updateFloatingToggleStatusResponse?.runnerFrozen ===
+              "boolean"
+                ? !!updateFloatingToggleStatusResponse.runnerFrozen
+                : !!nextFloatingToggleStatusPayload.runnerFrozen,
+            resolvedFloatingRunnerFading =
+              typeof updateFloatingToggleStatusResponse?.runnerFading ===
+              "boolean"
+                ? !!updateFloatingToggleStatusResponse.runnerFading
+                : !!nextFloatingToggleStatusPayload.runnerFading,
+            resolvedFloatingRunnerSpinDurationMs = Math.max(
+              0,
+              Number(
+                updateFloatingToggleStatusResponse?.runnerSpinDurationMs ||
+                  nextFloatingToggleStatusPayload.runnerSpinDurationMs ||
+                  0,
+              ) || 0,
             );
+          floatingToggleRuntimeStatusRef.current = [
+            resolvedFloatingStatus,
+            resolvedFloatingRunnerSource,
+            resolvedFloatingRunnerPhase,
+            resolvedFloatingRunnerLen,
+            resolvedFloatingRunnerColorTone,
+            resolvedFloatingRunnerVisible ? "1" : "0",
+            resolvedFloatingRunnerFrozen ? "1" : "0",
+            resolvedFloatingRunnerFading ? "1" : "0",
+            String(resolvedFloatingRunnerSpinDurationMs),
+          ].join("|");
         })
         .catch((ignoredError) => {
           void ignoredError;
         });
     }, [
+      hasRunQueueTask,
+      runQueueTaskRunnerRecentTone,
+      chatRequestInFlight,
+      chatRunnerRecentTone,
+      floatingRunnerSource,
+      floatingRunnerPhase,
+      floatingRunnerLen,
+      floatingRunnerColorTone,
+      floatingRunnerVisible,
+      floatingRunnerFrozen,
+      floatingRunnerFading,
+      floatingRunnerSpinDurationMs,
+      floatingRunnerVisualStateSignature,
       miniStatusState.level,
       pluginBridgeStatus.ok,
       pluginBridgeStatus.psConnected,
@@ -25359,6 +29656,40 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           isCachePolicyEffectActive = false;
         }
       );
+    }, []),
+    React.useEffect(() => {
+      if (
+        !window.shell ||
+        typeof window.shell.onCacheCleanupResult !== "function"
+      ) {
+        return;
+      }
+      return window.shell.onCacheCleanupResult((cacheCleanupPayload) => {
+        const normalizedCleanupPolicy = normalizeCacheRetentionPolicy(
+          cacheCleanupPayload?.policy || cachePolicyRef.current,
+        );
+        cachePolicyRef.current = normalizedCleanupPolicy;
+        setCachePolicy((previousCachePolicy) =>
+          isSameCacheRetentionPolicy(
+            previousCachePolicy,
+            normalizedCleanupPolicy,
+          )
+            ? previousCachePolicy
+            : normalizedCleanupPolicy,
+        );
+        cacheCleanupPayload?.stats?.ok &&
+          setCacheStats(parseCacheStatsPayload(cacheCleanupPayload.stats));
+        setRunQueueTaskHistoryState((previousRunQueueTaskHistoryState) => {
+          const nextRunQueueTaskHistoryState = pruneRunQueueHistoryItems(
+            previousRunQueueTaskHistoryState,
+            normalizedCleanupPolicy.images,
+          );
+          return JSON.stringify(nextRunQueueTaskHistoryState) ===
+            JSON.stringify(previousRunQueueTaskHistoryState)
+            ? previousRunQueueTaskHistoryState
+            : nextRunQueueTaskHistoryState;
+        });
+      });
     }, []),
     React.useEffect(() => {
       const pendingPolicy = normalizeCacheRetentionPolicy(
@@ -25772,6 +30103,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       (ignoredError) => {
         reportIgnoredError("app/empty-catch", ignoredError);
       },
+      window.shell?.psCacheGet,
+      window.shell?.chatImageCacheGet,
     );
   }
   function handleClosePreviewThumbContextMenu() {
@@ -25901,11 +30234,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       return;
     }
     const transferFileName =
-      String(
-        previewThumbItem?.item?.originName ||
-          previewThumbItem?.name ||
+      resolveAssetRecordDisplayName(
+        previewThumbItem?.item,
+        previewThumbItem?.name ||
           `图片-${Number(previewThumbItem?.idx) + 1 || 1}`,
-      ).trim() || "回传图片";
+      ) || "回传图片";
     transferData.effectAllowed = "copy";
     try {
       transferData.clearData();
@@ -26315,8 +30648,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             normalizedExportTargetMeta.targetDocumentName
           );
       const hasGeneratedCacheBinding =
-          String(exportImageItem?.cacheFilePath || "").trim() ||
-          String(exportImageItem?.cacheFileName || "").trim(),
+          resolveAssetRecordStoragePath(exportImageItem) ||
+          resolveAssetRecordDisplayName(exportImageItem, ""),
         shouldRecoverExportTargetMeta =
           Boolean(hasGeneratedCacheBinding) &&
           !hasExportTargetMeta;
@@ -26344,6 +30677,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           exportOptions?.trigger,
         ),
         startedAt: exportRequestStartedAt,
+        emitHistory: false,
       }),
         updateMiniStatus(
           "回传发送中",
@@ -26377,10 +30711,26 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           resolvedExportTargetMeta = resolveCanvasExportTargetMeta(
             exportImageItem,
             exportOptions,
+          ),
+          resolvedReturnFileName = resolveCanvasExportReturnFileName(
+            exportImageItem,
+            exportOptions,
+          ),
+          resolvedReturnIndex = normalizeNonNegativeIndex(
+            exportOptions?.returnIndex,
+            -1,
+          ),
+          resolvedReturnTargetSignature = buildCanvasExportTargetSignature(
+            resolvedExportTargetMeta,
           );
         let exportPayload = buildCanvasExportPayload({
             dataUrl: resolvedExportImageDataUrl,
             layerType: exportLayerType,
+            autoGroup: importAutoGroupEnabled,
+            autoMask: importAutoMaskEnabled,
+            returnFileName: resolvedReturnFileName,
+            returnIndex: resolvedReturnIndex,
+            returnTargetSignature: resolvedReturnTargetSignature,
             ...resolvedExportTargetMeta,
           }),
           exportToCanvasResult = await importImageToPsBridge(
@@ -26426,6 +30776,22 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 message: "import_target_selection_cancelled",
               }
             );
+          const selectedImportTargetDocumentId = toPositiveIntOrNull(
+              importTargetDialogResult?.documentId,
+            ),
+            selectedImportTargetDocumentName = String(
+              importTargetDialogResult?.documentName || "",
+            ).trim(),
+            selectedImportTargetDocumentLabel =
+              selectedImportTargetDocumentName ||
+              (selectedImportTargetDocumentId
+                ? `ID ${selectedImportTargetDocumentId}`
+                : "未命名画布");
+          appendConsoleLogEntry(
+            "info",
+            `已重新指定导入画布：${selectedImportTargetDocumentLabel}`,
+            "bridge",
+          );
           ((exportPayload = applyCanvasImportTargetSelection(
             exportPayload,
             importTargetDialogResult,
@@ -26463,28 +30829,45 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             }
           );
         }
-        const exportSuccessMessage =
-          resolveCanvasExportSuccessMessage(
+        const exportSuccessMessage = resolveCanvasExportSuccessMessage(
             exportOptions?.trigger,
-          );
+          ),
+          exportResultObject =
+            exportToCanvasResult?.result &&
+            typeof exportToCanvasResult.result === "object"
+              ? exportToCanvasResult.result
+              : null,
+          exportSuccessDetail = resolveCanvasExportResultDetail(
+            exportResultObject,
+          ),
+          exportSuccessLifecycleMessage = exportSuccessDetail
+            ? `${exportSuccessMessage}（${exportLayerTypeLabel}，${exportSuccessDetail}）`
+            : `${exportSuccessMessage}（${exportLayerTypeLabel}）`,
+          exportSuccessMiniStatusDetail = exportSuccessDetail
+            ? `已回传到 Ps 插件画布，${exportSuccessDetail}。`
+            : "已回传到 Ps 插件画布。";
         return (
           logApiLifecycleEvent({
             level: "info",
             type: "bridge",
             domain: "回传画布",
             phase: "完成",
-            message: `${exportSuccessMessage}（${exportLayerTypeLabel}）`,
+            message: exportSuccessLifecycleMessage,
             startedAt: exportRequestStartedAt,
             endedAt: Date.now(),
           }),
           updateMiniStatus(
             "回传已完成",
             "ok",
-            "已回传到 Ps 插件画布。",
+            exportSuccessMiniStatusDetail,
             "exportCanvas",
           ),
           {
             ok: true,
+            result: exportResultObject,
+            returnFileName: resolvedReturnFileName,
+            returnIndex: resolvedReturnIndex,
+            returnTargetSignature: resolvedReturnTargetSignature,
           }
         );
       } catch (returnToCanvasError) {
@@ -26600,15 +30983,50 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           reportIgnoredError("app/empty-catch", ignoredError);
         }
       try {
+        const assetViewerPayload = buildAssetViewerOpenPayload(
+          imageItem,
+          "image",
+        );
+        const imageLookupKeys = buildImageRecordLookupKeys(imageItem);
+        const primaryImageLookupKey = String(imageLookupKeys[0] || "").trim();
+        const imageLegacySnapshot =
+          imageItem?.legacy && typeof imageItem.legacy === "object"
+            ? imageItem.legacy
+            : {};
+        const normalizedLegacyPsCacheId = String(
+          imageItem?.psCacheId ||
+            imageLegacySnapshot?.psCacheId ||
+            (isPsCacheIdText(primaryImageLookupKey)
+              ? primaryImageLookupKey
+              : ""),
+        ).trim();
+        const normalizedLegacyCacheId = String(
+          imageItem?.cacheId ||
+            imageItem?.chatCacheId ||
+            imageLegacySnapshot?.cacheId ||
+            (!isPsCacheIdText(primaryImageLookupKey) &&
+            /^[a-f0-9]{16,128}$/i.test(primaryImageLookupKey)
+              ? primaryImageLookupKey
+              : ""),
+        ).trim();
+        const normalizedLegacyChatCacheId = String(
+          imageItem?.chatCacheId || imageLegacySnapshot?.chatCacheId || "",
+        ).trim();
         const openImageResult = await window.shell.openImageDefault({
-          name: String(imageItem.name || "").trim(),
-          originName: String(imageItem.originName || "").trim(),
+          assetId: String(imageItem.assetId || "").trim(),
+          itemId: String(imageItem.itemId || "").trim(),
+          internalCacheId: String(imageItem.internalCacheId || "").trim(),
+          sourceRefKey: String(imageItem.sourceRefKey || "").trim(),
+          name: assetViewerPayload.name,
+          originName: resolveAssetRecordDisplayName(imageItem, ""),
           type: String(imageItem.type || "").trim(),
-          filePath: String(imageItem.filePath || imageItem.cacheFilePath || "").trim(),
-          cacheFilePath: String(imageItem.cacheFilePath || "").trim(),
-          cacheFileName: String(imageItem.cacheFileName || "").trim(),
-          psCacheId: String(imageItem.psCacheId || "").trim(),
-          cacheId: String(imageItem.cacheId || "").trim(),
+          filePath: assetViewerPayload.cacheFilePath,
+          cacheFilePath: assetViewerPayload.cacheFilePath,
+          fileName: assetViewerPayload.cacheFileName,
+          cacheFileName: assetViewerPayload.cacheFileName,
+          psCacheId: normalizedLegacyPsCacheId,
+          cacheId: normalizedLegacyCacheId,
+          chatCacheId: normalizedLegacyChatCacheId,
           dataUrl: dataUrlOrSource,
         });
         if (openImageResult?.ok) return true;
@@ -27016,49 +31434,67 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       if (normalizedSlotIndex < 0 || !uploadImageItem) return null;
       let resolvedUploadDataUrl = String(uploadImageItem.dataUrl || "").trim();
       if (!/^data:image\//i.test(resolvedUploadDataUrl)) {
-        const uploadImagePsCacheId = String(uploadImageItem.psCacheId || "").trim();
-        if (
-          uploadImagePsCacheId &&
-          typeof window.shell?.psCacheGet === "function"
-        )
+        const uploadImageLookupKeys = buildImageRecordLookupKeys(uploadImageItem),
+          uploadImageDisplayName = resolveAssetRecordDisplayName(
+            uploadImageItem,
+            formatImageSlotLabel(normalizedSlotIndex, true),
+          );
+        for (const uploadImageLookupKey of uploadImageLookupKeys) {
+          if (
+            !uploadImageLookupKey ||
+            typeof window.shell?.psCacheGet !== "function"
+          )
+            continue;
           try {
             const psCacheLookupResult = await window.shell.psCacheGet(
-                uploadImagePsCacheId,
+                uploadImageLookupKey,
               ),
               psCacheDataUrl = String(
                 psCacheLookupResult?.item?.dataUrl || "",
               ).trim();
-            /^data:image\//i.test(psCacheDataUrl) &&
-              (resolvedUploadDataUrl = psCacheDataUrl);
+            if (/^data:image\//i.test(psCacheDataUrl)) {
+              resolvedUploadDataUrl = psCacheDataUrl;
+              break;
+            }
           } catch (ignoredError) {
             reportIgnoredError("app/empty-catch", ignoredError);
           }
-      }
-      if (!/^data:image\//i.test(resolvedUploadDataUrl)) {
-        const uploadImageChatCacheId = String(uploadImageItem.cacheId || "").trim();
-        if (
-          uploadImageChatCacheId &&
-          typeof window.shell?.chatImageCacheGet === "function"
-        )
-          try {
-            const chatCacheLookupResult = await window.shell.chatImageCacheGet(
-                {
-                  cacheId: uploadImageChatCacheId,
-                  cacheFileName: String(
-                    uploadImageItem.cacheFileName ||
-                      uploadImageItem.fileName ||
-                      uploadImageItem.name ||
-                      "",
-                  ).trim(),
-                },
-              ),
-              chatCacheDataUrl = String(
-                chatCacheLookupResult?.dataUrl || "",
-              ).trim();
-            /^data:image\//i.test(chatCacheDataUrl) &&
-              (resolvedUploadDataUrl = chatCacheDataUrl);
-          } catch (ignoredError) {
-            reportIgnoredError("app/empty-catch", ignoredError);
+        }
+        if (!/^data:image\//i.test(resolvedUploadDataUrl))
+          for (const uploadImageLookupKey of uploadImageLookupKeys) {
+            if (
+              !uploadImageLookupKey ||
+              typeof window.shell?.chatImageCacheGet !== "function"
+            )
+              continue;
+            try {
+              const chatCacheLookupResult = await window.shell.chatImageCacheGet(
+                  {
+                    assetId: String(uploadImageItem?.assetId || "").trim(),
+                    internalCacheId: String(
+                      uploadImageItem?.internalCacheId || uploadImageLookupKey || "",
+                    ).trim(),
+                    itemId: String(uploadImageItem?.itemId || "").trim(),
+                    fileName: String(
+                      uploadImageItem?.fileName || uploadImageDisplayName || "",
+                    ).trim(),
+                    filePath: String(
+                      uploadImageItem?.filePath || uploadImageItem?.cacheFilePath || "",
+                    ).trim(),
+                    cacheId: String(uploadImageItem?.cacheId || "").trim(),
+                    cacheFileName: uploadImageDisplayName,
+                  },
+                ),
+                chatCacheDataUrl = String(
+                  chatCacheLookupResult?.dataUrl || "",
+                ).trim();
+              if (/^data:image\//i.test(chatCacheDataUrl)) {
+                resolvedUploadDataUrl = chatCacheDataUrl;
+                break;
+              }
+            } catch (ignoredError) {
+              reportIgnoredError("app/empty-catch", ignoredError);
+            }
           }
       }
       const uploadImageMeta =
@@ -27084,11 +31520,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         dataUrl: resolvedUploadDataUrl,
         width: resolvedUploadWidth,
         height: resolvedUploadHeight,
-        name: String(
-          uploadImageItem.originName ||
-            uploadImageItem.name ||
-            formatImageSlotLabel(normalizedSlotIndex, true),
-        ).trim(),
+        name: resolveAssetRecordDisplayName(
+          uploadImageItem,
+          formatImageSlotLabel(normalizedSlotIndex, true),
+        ),
       };
     },
     scheduleUploadHoverCard = (
@@ -27112,9 +31547,21 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           ? composerImagesRef.current
           : [],
         slotImageItem = uploadItems[normalizedSlotIndex],
-        hasSlotImage = !!slotImageItem && !!String(
-          slotImageItem.dataUrl || slotImageItem.psCacheId || slotImageItem.cacheId || "",
-        ).trim();
+        hasSlotImage = !!slotImageItem && (() => {
+          const normalizedDataUrl = String(slotImageItem?.dataUrl || "").trim();
+          if (normalizedDataUrl) return true;
+          return [
+            slotImageItem?.assetId,
+            slotImageItem?.internalCacheId,
+            slotImageItem?.itemId,
+            slotImageItem?.fileName,
+            slotImageItem?.filePath,
+            slotImageItem?.cacheFilePath,
+            slotImageItem?.psCacheId,
+            slotImageItem?.cacheId,
+            slotImageItem?.chatCacheId,
+          ].some((lookupValue) => !!String(lookupValue || "").trim());
+        })();
       if (
         normalizedSlotIndex < 0 ||
         !hasSlotImage ||
@@ -27229,6 +31676,172 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       };
       uploadHoverTimerRef.current = setTimeout(
         scheduleUploadHoverDelayTimer,
+        initialDelayMs,
+      );
+    },
+    clearRunQueueOutputHoverTimer = () => {
+      runQueueOutputHoverTimerRef.current &&
+        (clearTimeout(runQueueOutputHoverTimerRef.current),
+        (runQueueOutputHoverTimerRef.current = null));
+    },
+    hideRunQueueOutputHoverCard = () => {
+      ((runQueueOutputHoverTokenRef.current += 1),
+        (runQueueOutputHoverActiveElementRef.current = null),
+        (runQueueOutputHoverActiveKeyRef.current = ""),
+        clearRunQueueOutputHoverTimer(),
+        setRunQueueOutputHoverState((previousHoverState) =>
+          previousHoverState.open
+            ? {
+                ...previousHoverState,
+                open: false,
+                index: -1,
+                width: 0,
+                height: 0,
+                dataUrl: "",
+                name: "",
+              }
+            : previousHoverState,
+        ));
+    },
+    resolveRunQueueOutputHoverImageData = async (imageItemInput) => {
+      const normalizedImageItem =
+        imageItemInput && typeof imageItemInput === "object"
+          ? imageItemInput
+          : null;
+      if (!normalizedImageItem) return null;
+      let resolvedHoverDataUrl = String(
+        resolveRunQueueTaskThumbSrc(normalizedImageItem),
+      ).trim();
+      if (!isRenderableImageSrc(resolvedHoverDataUrl)) {
+        const fallbackHoverDataUrl = String(
+          await resolvePreviewImageDataUrl(normalizedImageItem),
+        ).trim();
+        isRenderableImageSrc(fallbackHoverDataUrl) &&
+          (resolvedHoverDataUrl = fallbackHoverDataUrl);
+      }
+      const imageMeta =
+        normalizedImageItem?.meta && typeof normalizedImageItem.meta === "object"
+          ? normalizedImageItem.meta
+          : null;
+      const resolvedHoverWidth =
+          Number(normalizedImageItem?.width) || Number(imageMeta?.width) || 0,
+        resolvedHoverHeight =
+          Number(normalizedImageItem?.height) || Number(imageMeta?.height) || 0;
+      return {
+        dataUrl: resolvedHoverDataUrl,
+        width: resolvedHoverWidth,
+        height: resolvedHoverHeight,
+        name: resolveAssetRecordDisplayName(normalizedImageItem, "回传图片"),
+      };
+    },
+    scheduleRunQueueOutputHoverCard = (
+      imageItemInput,
+      imageElement,
+      scheduleOptions = {},
+    ) => {
+      clearRunQueueOutputHoverTimer();
+      const normalizedImageItem =
+          imageItemInput && typeof imageItemInput === "object"
+            ? imageItemInput
+            : null,
+        hoverImageKey = String(
+          normalizedImageItem?.id ||
+            normalizedImageItem?.assetId ||
+            normalizedImageItem?.internalCacheId ||
+            normalizedImageItem?.filePath ||
+            normalizedImageItem?.cacheFilePath ||
+            "",
+        ).trim();
+      if (
+        !normalizedImageItem ||
+        !hoverImageKey ||
+        !(
+          imageElement &&
+          typeof imageElement.getBoundingClientRect === "function"
+        )
+      )
+        return;
+      const initialDelayMsInput = Number(scheduleOptions?.initialDelayMs),
+        initialDelayMs = Number.isFinite(initialDelayMsInput)
+          ? Math.max(0, Math.round(initialDelayMsInput))
+          : 240,
+        hoverToken = ++runQueueOutputHoverTokenRef.current;
+      ((runQueueOutputHoverActiveElementRef.current = imageElement),
+        (runQueueOutputHoverActiveKeyRef.current = hoverImageKey));
+      let hasInitialHoverRender = false,
+        hoverImageDataUrl = String(
+          resolveRunQueueTaskThumbSrc(normalizedImageItem),
+        ).trim(),
+        hoverImageWidth = Number(normalizedImageItem?.width) || 0,
+        hoverImageHeight = Number(normalizedImageItem?.height) || 0,
+        hoverImageName = resolveAssetRecordDisplayName(
+          normalizedImageItem,
+          "回传图片",
+        );
+      const isRunQueueOutputHoverContextValid = () => {
+        const activeHoverElement = runQueueOutputHoverActiveElementRef.current,
+          isElementStillHovered =
+            activeHoverElement === imageElement &&
+            !!activeHoverElement &&
+            !!activeHoverElement.isConnected &&
+            (typeof activeHoverElement.matches !== "function" ||
+              activeHoverElement.matches(":hover"));
+        return (
+          runQueueOutputHoverTokenRef.current === hoverToken &&
+          runQueueOutputHoverActiveKeyRef.current === hoverImageKey &&
+          isElementStillHovered
+        );
+      };
+      const renderRunQueueOutputHoverCard = () => {
+        if (!hasInitialHoverRender || !isRunQueueOutputHoverContextValid()) return;
+        const hoverAnchorRect = imageElement?.getBoundingClientRect?.() || null,
+          hoverCardState = resolvePreviewHoverCardState({
+            previewImagesInput: [normalizedImageItem],
+            previewIndex: 0,
+            previewDataUrl: hoverImageDataUrl,
+            previewWidth: hoverImageWidth,
+            previewHeight: hoverImageHeight,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            anchorRect: hoverAnchorRect,
+            hoverNameOverride: hoverImageName,
+            preferredAnchorSide: "top",
+            anchorGap: 8,
+          });
+        hoverCardState && setRunQueueOutputHoverState(hoverCardState);
+      };
+      const runQueueOutputHoverDelayTimer = () => {
+        if (!isRunQueueOutputHoverContextValid()) {
+          runQueueOutputHoverTimerRef.current = null;
+          return;
+        }
+        ((hasInitialHoverRender = true),
+          (runQueueOutputHoverTimerRef.current = null),
+          renderRunQueueOutputHoverCard(),
+          resolveRunQueueOutputHoverImageData(normalizedImageItem).then(
+            (hoverImageResolveResult) => {
+              if (
+                !isRunQueueOutputHoverContextValid() ||
+                !hoverImageResolveResult ||
+                !isRenderableImageSrc(hoverImageResolveResult.dataUrl)
+              )
+                return;
+              ((hoverImageDataUrl = String(
+                hoverImageResolveResult.dataUrl || "",
+              ).trim()),
+                (hoverImageWidth =
+                  Number(hoverImageResolveResult.width) || hoverImageWidth || 0),
+                (hoverImageHeight =
+                  Number(hoverImageResolveResult.height) || hoverImageHeight || 0),
+                (hoverImageName = String(
+                  hoverImageResolveResult.name || hoverImageName || "",
+                ).trim()),
+                renderRunQueueOutputHoverCard());
+            },
+          ));
+      };
+      runQueueOutputHoverTimerRef.current = setTimeout(
+        runQueueOutputHoverDelayTimer,
         initialDelayMs,
       );
     },
@@ -27353,6 +31966,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             message: `模拟跑图结果处理完成，新增 ${previewMergeResult.addedCount} 张，当前 ${nextPreviewImages.length} 张预览图。`,
             startedAt: returnTestStartedAt,
             endedAt: Date.now(),
+            emitHistory: false,
           }),
           appendConsoleLogEntry(
             "ok",
@@ -27379,6 +31993,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           message: returnTestErrorMessage,
           startedAt: returnTestStartedAt,
           endedAt: Date.now(),
+          emitHistory: false,
         }),
           appendConsoleLogEntry(
             "warn",
@@ -27396,7 +32011,43 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
   floatingReturnTestHandlerRef.current = runFloatingReturnTestFlow;
   /* @section app-status-polling-and-mini-status:end */
   /* @section app-image-pipeline:start | scope=app | phase=S1-anchor */
-  const handleRunImagePipeline = async (runImagePipelineOptions = {}) => {
+  const getLiveRunQueueSettings = React.useCallback(() => {
+    const currentLiveSettings =
+      runQueueLiveSettingsRef.current &&
+      typeof runQueueLiveSettingsRef.current === "object"
+        ? runQueueLiveSettingsRef.current
+        : null;
+    const liveImageConfig =
+      currentLiveSettings?.imageConfig &&
+      typeof currentLiveSettings.imageConfig === "object"
+        ? currentLiveSettings.imageConfig
+        : defaultImageApiConfig;
+    const liveGenerationImageSizeLabel = String(
+      currentLiveSettings?.generationImageSizeLabel || "",
+    ).trim();
+    const liveGenerationImageSizeText = String(
+      currentLiveSettings?.generationImageSizeText || liveGenerationImageSizeLabel,
+    ).trim();
+    const liveGenerationAspectRatio = String(
+      currentLiveSettings?.generationAspectRatio || "AUTO",
+    ).trim();
+    return {
+      providerKey: String(currentLiveSettings?.providerKey || "").trim(),
+      imageConfig: liveImageConfig,
+      generationImageSizeLabel: liveGenerationImageSizeLabel,
+      generationImageSizeText: liveGenerationImageSizeText,
+      generationAspectRatio: liveGenerationAspectRatio,
+      generationCount: parseGenerationCount(
+        currentLiveSettings?.generationCount,
+        defaultImageApiConfig.generationCount,
+      ),
+    };
+  }, []);
+  const handleRunImagePipeline = async (
+    runImagePipelineOptions = {},
+    runQueueTaskRecordInput = null,
+  ) => {
+      const currentRunQueueSettings = getLiveRunQueueSettings();
       const trimmedPromptText = String(
         runImagePipelineOptions?.promptText ?? "",
       ).trim();
@@ -27408,56 +32059,44 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             "缺少 JSON 提示词，无法跑图。",
             "run",
           ));
-        return;
+        return {
+          status: "failed",
+          resultMessage: "缺少 JSON 提示词，无法跑图。",
+          returnedImages: [],
+        };
       }
-      const runTaskImageApiConfigSnapshot =
-          runImagePipelineOptions?.imageApiConfigSnapshot &&
-          typeof runImagePipelineOptions.imageApiConfigSnapshot === "object"
-            ? runImagePipelineOptions.imageApiConfigSnapshot
-            : null,
-        runTaskProviderKey = String(
-          runImagePipelineOptions?.providerKeySnapshot || imageProviderKey || "",
-        ).trim(),
+      const runTaskProviderKey = currentRunQueueSettings.providerKey,
         runGenerationImageSizeLabel = String(
-          runImagePipelineOptions?.generationImageSizeLabelSnapshot ||
-            generationImageSizeLabel ||
-            "",
+          currentRunQueueSettings.generationImageSizeLabel || "",
         ).trim(),
         runGenerationImageSizeText = String(
-          runImagePipelineOptions?.generationImageSizeTextSnapshot ||
-            generationImageSizeText ||
+          currentRunQueueSettings.generationImageSizeText ||
             runGenerationImageSizeLabel,
         ).trim(),
         runGenerationAspectRatio = String(
-          runImagePipelineOptions?.generationAspectRatioSnapshot ||
-            normalizedGenerationAspectRatio ||
-            "AUTO",
+          currentRunQueueSettings.generationAspectRatio || "AUTO",
         ).trim(),
-        runGenerationCount = parseGenerationCount(
-          runImagePipelineOptions?.generationCountSnapshot ??
-            normalizedGenerationCount,
-          defaultImageApiConfig.generationCount,
-        ),
+        runGenerationCount = currentRunQueueSettings.generationCount,
+        runTaskTimeoutOverrideMs =
+          Number.isFinite(Number(runImagePipelineOptions?.timeoutOverrideMs)) &&
+          Number(runImagePipelineOptions?.timeoutOverrideMs) > 0
+            ? Math.max(
+                5e3,
+                Math.round(Number(runImagePipelineOptions.timeoutOverrideMs)),
+              )
+            : 0,
         normalizedImageApiConfig = {
-          baseUrl: String(
-            runTaskImageApiConfigSnapshot?.baseUrl ?? imageConfig?.baseUrl ?? "",
-          ).trim(),
-          apiKey: String(
-            runTaskImageApiConfigSnapshot?.apiKey ?? imageConfig?.apiKey ?? "",
-          ).trim(),
-          model: String(
-            runTaskImageApiConfigSnapshot?.model ?? imageConfig?.model ?? "",
-          ).trim(),
+          baseUrl: String(currentRunQueueSettings.imageConfig?.baseUrl || "").trim(),
+          apiKey: String(currentRunQueueSettings.imageConfig?.apiKey || "").trim(),
+          model: String(currentRunQueueSettings.imageConfig?.model || "").trim(),
           timeoutMs: Math.max(
             5e3,
             Number(
-              runTaskImageApiConfigSnapshot?.timeoutMs ??
-                imageConfig?.timeoutMs,
-            ) || defaultImageApiConfig.timeoutMs,
+              runTaskTimeoutOverrideMs || currentRunQueueSettings.imageConfig?.timeoutMs,
+            ) ||
+              defaultImageApiConfig.timeoutMs,
           ),
-          providerMode:
-            runTaskImageApiConfigSnapshot?.providerMode ??
-            imageConfig?.providerMode,
+          providerMode: currentRunQueueSettings.imageConfig?.providerMode,
         },
         imageApiValidationErrors = validateImageApiConfig(
           normalizedImageApiConfig,
@@ -27478,7 +32117,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             "跑图前校验失败。请打开大控制台查看详细日志。",
             "run",
           ));
-        return;
+        return {
+          status: "failed",
+          resultMessage: imageApiValidationMessage,
+          returnedImages: [],
+        };
       }
       const selectedImageProviderKey = runTaskProviderKey || imageProviderKey,
         resolvedImageProviderMode = resolveImageProviderMode(
@@ -27490,6 +32133,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           "assistant-prev-user"
             ? "assistant-prev-user"
             : "upload";
+      const runQueueTaskRecord =
+          runQueueTaskRecordInput && typeof runQueueTaskRecordInput === "object"
+            ? runQueueTaskRecordInput
+            : null;
       let runQueueAbortController = null,
         runImageRequestStartedAt = Date.now(),
         selectedSourceImages = [],
@@ -27497,7 +32144,12 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         normalizedTargetMetaList = [],
         sourceImageBase64List = [],
         googleImageRequestParts = [],
-        openAiImageRequestContent = "";
+        openAiImageRequestContent = "",
+        runQueueExecutionSummary = {
+          status: "failed",
+          resultMessage: "",
+          returnedImages: [],
+        };
       try {
         selectedSourceImages = Array.isArray(
           runImagePipelineOptions?.images,
@@ -27541,6 +32193,49 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         });
         normalizedSourceImages = runImageRequestContext.normalizedSourceImages;
         normalizedTargetMetaList = runImageRequestContext.normalizedTargetMetaList;
+        if (normalizedSourceImages.length > 0) {
+          const persistedRunSourceImageRefs = await persistApiUsedImageList(
+              normalizedSourceImages,
+              window.shell?.apiImageStorePut,
+              {
+                usageMeta: {
+                  ownerType: "api-input-cache",
+                  runApiUsed: true,
+                },
+                context: {
+                  scope: "run-api",
+                  taskId: String(runQueueTaskRecord?.id || "").trim(),
+                  sessionId: String(
+                    runImagePipelineOptions?.sessionId ||
+                      runQueueTaskRecord?.options?.sessionId ||
+                      "",
+                  ).trim(),
+                },
+              },
+            ),
+            normalizedPersistedRunSourceImageRefs =
+              persistedRunSourceImageRefs
+                .map((imageItem) => normalizeRunQueueTaskImageItem(imageItem))
+                .filter(Boolean);
+          if (
+            runImagePipelineOptions &&
+            typeof runImagePipelineOptions === "object"
+          ) {
+            runImagePipelineOptions.images = normalizedPersistedRunSourceImageRefs;
+          }
+          if (
+            runQueueTaskRecord?.options &&
+            typeof runQueueTaskRecord.options === "object"
+          ) {
+            runQueueTaskRecord.options.images =
+              normalizedPersistedRunSourceImageRefs;
+            syncRunQueueBadgeState();
+          }
+          normalizedSourceImages = restoreRuntimeDataUrlOnPersistedApiImages(
+            normalizedSourceImages,
+            persistedRunSourceImageRefs,
+          );
+        }
         const syncRunQueueProgressMeta = (runTaskIdValue) => {
             const nextRunQueueProgressMeta = buildRunQueueProgressMeta({
               providerKey: selectedImageProviderKey,
@@ -27589,9 +32284,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           runSourcePreviewNames = normalizedSourceImages
             .slice(0, 3)
             .map((sourceImageItem, sourceImageIndex) =>
-              toSafeText(
-                sourceImageItem?.originName ||
-                  sourceImageItem?.name,
+              resolveAssetRecordDisplayName(
+                sourceImageItem,
                 `image_${sourceImageIndex + 1}`,
               ),
             )
@@ -27620,6 +32314,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             phase: "发送",
             message: `来源 ${imageSourceLabel}，协议 ${providerProtocolLabel}，模型 ${normalizedImageApiConfig.model}，分辨率 ${runGenerationImageSizeText} -> ${runGenerationImageSizeLabel}，比例 ${runGenerationAspectRatio}，数量 x${runGenerationCount}，参考图 ${normalizedSourceImages.length} 张。`,
             startedAt: runImageRequestStartedAt,
+            emitHistory: false,
           }),
           appendConsoleLogEntry(
             "info",
@@ -28113,109 +32808,363 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             });
           },
           requestedGenerateCount = parseGenerationCount(runGenerationCount, 1),
-          settledRunResults = await Promise.allSettled(
-            Array.from(
-              {
-                length: requestedGenerateCount,
-              },
-              () => executeImageProviderRequest(1),
-            ),
-          ),
-          runImageSettledSummary =
-            summarizeRunImageSettledResults(settledRunResults);
-        const {
-          failedRequestCount,
-          firstFailureMessage,
-          collectedImageDataUrls,
-          mergedProviderText,
-        } = runImageSettledSummary;
-        const runImageSuccessPlan = buildRunImageSuccessPlan({
-          failedRequestCount,
-          firstFailureMessage,
-          collectedImageDataUrls,
-          mergedProviderText,
-          requestedGenerateCount,
-          dispatchedRequestCount: settledRunResults.length,
-        });
-        if (runImageSuccessPlan.fatalMessage)
-          throw new Error(runImageSuccessPlan.fatalMessage);
-        runImageSuccessPlan.warningMessages.forEach((warningMessage) =>
-          appendConsoleLogEntry("warn", warningMessage, "api"),
-        );
-        if (runImageSuccessPlan.normalizedCollectedImageDataUrls.length) {
-          const generatedImageTimestamp = Date.now(),
-            mappedGeneratedImages = mapGeneratedImagesWithTargetMeta({
-              imageDataUrls:
-                runImageSuccessPlan.normalizedCollectedImageDataUrls,
-              targetMetaList: normalizedTargetMetaList,
-              requestedGenerateCount,
-              generatedImageTimestamp,
-            }),
-            ensuredPreviewImages =
-              await syncPreviewImagesToGeneratedCache(mappedGeneratedImages),
-            mergedPreviewImagesResult =
-              mergePreviewImagesIncremental(
+          ensureRunQueueTaskRecordState = () => {
+            if (!runQueueTaskRecord) return;
+            const normalizedItemResults = Array.isArray(runQueueTaskRecord.itemResults)
+              ? runQueueTaskRecord.itemResults
+                  .map((itemResult, itemIndex) =>
+                    normalizeRunQueueTaskItemResult(itemResult, itemIndex),
+                  )
+                  .filter(Boolean)
+              : [];
+            runQueueTaskRecord.requestedItemCount = requestedGenerateCount;
+            runQueueTaskRecord.itemResults =
+              normalizedItemResults.length === requestedGenerateCount
+                ? normalizedItemResults
+                : createRunQueueTaskItemResults(requestedGenerateCount);
+            runQueueTaskRecord.completedItemCount = Math.max(
+              0,
+              Number(runQueueTaskRecord.completedItemCount) || 0,
+            );
+            runQueueTaskRecord.successItemCount = Math.max(
+              0,
+              Number(runQueueTaskRecord.successItemCount) || 0,
+            );
+            runQueueTaskRecord.failedItemCount = Math.max(
+              0,
+              Number(runQueueTaskRecord.failedItemCount) || 0,
+            );
+            runQueueTaskRecord.returnedImages = Array.isArray(
+              runQueueTaskRecord.returnedImages,
+            )
+              ? runQueueTaskRecord.returnedImages
+              : [];
+            runQueueTaskRecord.resultMessage =
+              buildRunQueueBatchSummaryMessage({
+                totalCount: requestedGenerateCount,
+                successCount: runQueueTaskRecord.successItemCount,
+                failedCount: runQueueTaskRecord.failedItemCount,
+              });
+            syncRunQueueBadgeState();
+          },
+          updateRunQueueTaskItemResultState = ({
+            itemIndex,
+            status,
+            message,
+            returnedImages = [],
+            startedAtMs = 0,
+            finishedAtMs = 0,
+          } = {}) => {
+            if (!runQueueTaskRecord) return;
+            const normalizedItemIndex = Math.max(
+                1,
+                Math.min(
+                  requestedGenerateCount,
+                  Math.floor(Number(itemIndex) || 1),
+                ),
+              ),
+              nextItemResults = (Array.isArray(runQueueTaskRecord.itemResults)
+                ? runQueueTaskRecord.itemResults
+                : createRunQueueTaskItemResults(requestedGenerateCount)
+              ).map((itemResult, itemResultIndex) =>
+                itemResultIndex === normalizedItemIndex - 1
+                  ? normalizeRunQueueTaskItemResult(
+                      {
+                        ...itemResult,
+                        id:
+                          String(itemResult?.id || "").trim() ||
+                          `run-queue-item-${normalizedItemIndex}`,
+                        itemIndex: normalizedItemIndex,
+                        status,
+                        message,
+                        startedAtMs,
+                        finishedAtMs,
+                        returnedImages,
+                      },
+                      itemResultIndex,
+                    )
+                  : normalizeRunQueueTaskItemResult(
+                      itemResult,
+                      itemResultIndex,
+                    ),
+              ),
+              completedItemCount = nextItemResults.filter(
+                (itemResult) =>
+                  itemResult &&
+                  !["pending", "running"].includes(
+                    String(itemResult.status || "").trim(),
+                  ),
+              ).length,
+              successItemCount = nextItemResults.filter(
+                (itemResult) =>
+                  String(itemResult?.status || "").trim() === "success",
+              ).length,
+              failedItemCount = Math.max(
+                0,
+                completedItemCount - successItemCount,
+              );
+            runQueueTaskRecord.itemResults = nextItemResults;
+            runQueueTaskRecord.completedItemCount = completedItemCount;
+            runQueueTaskRecord.successItemCount = successItemCount;
+            runQueueTaskRecord.failedItemCount = failedItemCount;
+            runQueueTaskRecord.returnedImages = nextItemResults.flatMap(
+              (itemResult) =>
+                Array.isArray(itemResult?.returnedImages)
+                  ? itemResult.returnedImages
+                  : [],
+            );
+            runQueueTaskRecord.resultMessage = buildRunQueueBatchSummaryMessage({
+              totalCount: requestedGenerateCount,
+              successCount: successItemCount,
+              failedCount: failedItemCount,
+            });
+            syncRunQueueBadgeState();
+          },
+          appendGeneratedPreviewImages = async (mappedGeneratedImagesInput) => {
+            const mappedGeneratedImages = Array.isArray(mappedGeneratedImagesInput)
+              ? mappedGeneratedImagesInput
+              : [],
+              ensuredPreviewImages = await syncPreviewImagesToGeneratedCache(
+                mappedGeneratedImages,
+              );
+            if (!Array.isArray(ensuredPreviewImages) || !ensuredPreviewImages.length) {
+              return [];
+            }
+            const mergedPreviewImagesResult = mergePreviewImagesIncremental(
                 ensuredPreviewImages,
               ),
-            normalizedPreviewImageList = clearCachedPreviewDataUrlExceptIndex(
-              mergedPreviewImagesResult.list,
-              Math.max(
-                0,
-                mergedPreviewImagesResult.firstNewIndex,
-              ),
-            );
-          if (
-            (setPreviewImages(normalizedPreviewImageList),
-            mergedPreviewImagesResult.addedCount >
-              0 &&
-              setPreviewImageIndex(
-                mergedPreviewImagesResult.firstNewIndex,
-              ),
-            autoExportEnabled &&
-              hasSourceImagesForAutoExport &&
-              ensuredPreviewImages.length > 0)
-          )
-            for (
-              let autoExportImageIndex = 0;
-              autoExportImageIndex < ensuredPreviewImages.length;
-              autoExportImageIndex += 1
-            ) {
-              const autoExportImage =
-                ensuredPreviewImages[autoExportImageIndex];
-              if (!autoExportImage) continue;
-              await exportPreviewImageToCanvas(autoExportImage, {
-                trigger: "auto",
-                targetRect: autoExportImage.targetRect || null,
-                targetRectNorm:
-                  autoExportImage.targetRectNorm || null,
-                targetCanvas: autoExportImage.targetCanvas || null,
-                targetDocumentId: autoExportImage.targetDocumentId,
-              });
+              normalizedPreviewImageList = clearCachedPreviewDataUrlExceptIndex(
+                mergedPreviewImagesResult.list,
+                Math.max(0, mergedPreviewImagesResult.firstNewIndex),
+              );
+            previewImagesRef.current = normalizedPreviewImageList;
+            setPreviewImages(normalizedPreviewImageList);
+            mergedPreviewImagesResult.addedCount > 0 &&
+              setPreviewImageIndex(mergedPreviewImagesResult.firstNewIndex);
+            const shouldAutoExportAtReceive =
+              autoExportEnabledRef.current === true &&
+              hasSourceImagesForAutoExport;
+            if (shouldAutoExportAtReceive) {
+              for (
+                let autoExportImageIndex = 0;
+                autoExportImageIndex < ensuredPreviewImages.length;
+                autoExportImageIndex += 1
+              ) {
+                if (autoExportEnabledRef.current !== true) break;
+                const autoExportImage =
+                  ensuredPreviewImages[autoExportImageIndex];
+                if (!autoExportImage) continue;
+                await exportPreviewImageToCanvas(autoExportImage, {
+                  trigger: "auto",
+                  returnIndex: autoExportImageIndex,
+                  targetRect: autoExportImage.targetRect || null,
+                  targetRectNorm: autoExportImage.targetRectNorm || null,
+                  targetCanvas: autoExportImage.targetCanvas || null,
+                  targetDocumentId: autoExportImage.targetDocumentId,
+                });
+              }
             }
-        }
-        if (runImageSuccessPlan.providerTextLogMessage) {
-          appendConsoleLogEntry(
-            "info",
-            runImageSuccessPlan.providerTextLogMessage,
-            "api",
+            return ensuredPreviewImages;
+          };
+        let runQueueSettleUiWorkChain = Promise.resolve();
+        const enqueueRunQueueSettleUiWork = async (uiWorkHandler) => {
+          const normalizedUiWorkHandler =
+              typeof uiWorkHandler === "function"
+                ? uiWorkHandler
+                : async () => void 0,
+            nextUiWorkPromise = runQueueSettleUiWorkChain.then(
+              () => normalizedUiWorkHandler(),
+              () => normalizedUiWorkHandler(),
+            );
+          runQueueSettleUiWorkChain = nextUiWorkPromise.then(
+            () => void 0,
+            () => void 0,
           );
-        }
-        (logApiLifecycleEvent({
-          level: "info",
-          type: "api",
-          domain: "跑图请求",
-          phase: "返回",
-          message: runImageSuccessPlan.lifecycleReturnMessage,
-          startedAt: runImageRequestStartedAt,
-          endedAt: Date.now(),
-        }),
+          return nextUiWorkPromise;
+          };
+        ensureRunQueueTaskRecordState();
+        const runImageRequestPromises = Array.from(
+            {
+              length: requestedGenerateCount,
+            },
+            (_, requestIndex) => {
+              const itemIndex = requestIndex + 1,
+                itemStartedAtMs = Date.now();
+              updateRunQueueTaskItemResultState({
+                itemIndex,
+                status: "running",
+                message: "",
+                returnedImages: [],
+                startedAtMs: itemStartedAtMs,
+                finishedAtMs: 0,
+              });
+              return (async () => {
+                try {
+                  const providerRunResult = await executeImageProviderRequest(1),
+                    providerResultImages = Array.isArray(providerRunResult?.images)
+                      ? providerRunResult.images
+                          .map((providerImageDataUrl) =>
+                            String(providerImageDataUrl || "").trim(),
+                          )
+                          .filter(Boolean)
+                      : [],
+                    providerResultText = String(
+                      providerRunResult?.text || "",
+                    ).trim(),
+                    runImageSuccessPlan = buildRunImageSuccessPlan({
+                      failedRequestCount: 0,
+                      firstFailureMessage: "",
+                      collectedImageDataUrls: providerResultImages,
+                      mergedProviderText: providerResultText,
+                      requestedGenerateCount: 1,
+                      dispatchedRequestCount: 1,
+                    });
+                  if (runImageSuccessPlan.fatalMessage) {
+                    throw new Error(runImageSuccessPlan.fatalMessage);
+                  }
+                  const ensuredPreviewImages = await enqueueRunQueueSettleUiWork(
+                      async () => {
+                        const mappedGeneratedImages =
+                            mapGeneratedImagesWithTargetMeta({
+                              imageDataUrls:
+                                runImageSuccessPlan.normalizedCollectedImageDataUrls,
+                              targetMetaList: normalizedTargetMetaList.length
+                                ? [
+                                    normalizedTargetMetaList[
+                                      Math.min(
+                                        Math.max(0, itemIndex - 1),
+                                        normalizedTargetMetaList.length - 1,
+                                      )
+                                    ],
+                                  ]
+                                : [],
+                              requestedGenerateCount: 1,
+                              generatedImageTimestamp: Date.now(),
+                            }),
+                          nextEnsuredPreviewImages = mappedGeneratedImages.length
+                            ? await appendGeneratedPreviewImages(
+                                mappedGeneratedImages,
+                              )
+                            : [],
+                          successLogMessage = `第 ${itemIndex}/${requestedGenerateCount} 张跑图完成，返回图片 ${nextEnsuredPreviewImages.length || runImageSuccessPlan.normalizedCollectedImageDataUrls.length}/1 张。`;
+                        appendConsoleLogEntry("info", successLogMessage, "api");
+                        providerResultText &&
+                          appendConsoleLogEntry(
+                            "info",
+                            `第 ${itemIndex}/${requestedGenerateCount} 张返回文本：${providerResultText}`,
+                            "api",
+                          );
+                        updateRunQueueTaskItemResultState({
+                          itemIndex,
+                          status: "success",
+                          message: successLogMessage,
+                          returnedImages: nextEnsuredPreviewImages,
+                          startedAtMs: itemStartedAtMs,
+                          finishedAtMs: Date.now(),
+                        });
+                        return nextEnsuredPreviewImages;
+                      },
+                    ),
+                    successLogMessage = `第 ${itemIndex}/${requestedGenerateCount} 张跑图完成，返回图片 ${ensuredPreviewImages.length || runImageSuccessPlan.normalizedCollectedImageDataUrls.length}/1 张。`;
+                  return {
+                    status: "success",
+                    itemIndex,
+                    message: successLogMessage,
+                    returnedImages: ensuredPreviewImages,
+                  };
+                } catch (itemRunError) {
+                  const runImageErrorPlan = buildRunImageErrorPlan({
+                      runPipelineError: itemRunError,
+                      runQueueAbortReason: runQueueAbortReasonRef.current,
+                      timeoutMs: normalizedImageApiConfig.timeoutMs,
+                      elapsedMs: Math.max(0, Date.now() - itemStartedAtMs),
+                      providerKey: selectedImageProviderKey,
+                      providerMode: resolvedImageProviderMode,
+                    }),
+                    itemStatus = runImageErrorPlan.isManualAbort
+                      ? "aborted"
+                      : "failed",
+                    itemErrorLogMessage = `第 ${itemIndex}/${requestedGenerateCount} 张跑图${itemStatus === "aborted" ? "已中止" : "失败"}：${runImageErrorPlan.userFacingPipelineError}`;
+                  await enqueueRunQueueSettleUiWork(async () => {
+                    appendConsoleLogEntry(
+                      runImageErrorPlan.lifecycleLevel === "warn" ? "warn" : "error",
+                      itemErrorLogMessage,
+                      "api",
+                    );
+                    updateRunQueueTaskItemResultState({
+                      itemIndex,
+                      status: itemStatus,
+                      message: runImageErrorPlan.userFacingPipelineError,
+                      returnedImages: [],
+                      startedAtMs: itemStartedAtMs,
+                      finishedAtMs: Date.now(),
+                    });
+                  });
+                  return {
+                    status: itemStatus,
+                    itemIndex,
+                    message: runImageErrorPlan.userFacingPipelineError,
+                    returnedImages: [],
+                    isManualAbort: runImageErrorPlan.isManualAbort,
+                  };
+                }
+              })();
+            },
+          ),
+          settledRunResults = await Promise.all(runImageRequestPromises),
+          successfulRunResults = settledRunResults.filter(
+            (itemResult) => String(itemResult?.status || "").trim() === "success",
+          ),
+          failedRunResultCount = Math.max(
+            0,
+            settledRunResults.length - successfulRunResults.length,
+          ),
+          hasManualAbortResult = settledRunResults.some(
+            (itemResult) => itemResult?.isManualAbort === true,
+          ),
+          runQueueReturnedPreviewImages = settledRunResults.flatMap((itemResult) =>
+            Array.isArray(itemResult?.returnedImages) ? itemResult.returnedImages : [],
+          ),
+          runQueueBatchSummaryMessage =
+            requestedGenerateCount > 1
+              ? buildRunQueueBatchSummaryMessage({
+                  totalCount: requestedGenerateCount,
+                  successCount: successfulRunResults.length,
+                  failedCount: failedRunResultCount,
+                })
+              : "";
+        runQueueExecutionSummary = {
+          status: hasManualAbortResult
+            ? "aborted"
+            : successfulRunResults.length > 0
+              ? "success"
+              : "failed",
+          resultMessage: runQueueBatchSummaryMessage,
+          returnedImages: runQueueReturnedPreviewImages,
+        };
+        (runQueueBatchSummaryMessage &&
+          logApiLifecycleEvent({
+            level: successfulRunResults.length > 0 ? "info" : "warn",
+            type: "api",
+            domain: "跑图请求",
+            phase: "返回",
+            message: runQueueBatchSummaryMessage,
+            startedAt: runImageRequestStartedAt,
+            endedAt: Date.now(),
+          }),
           updateMiniStatus(
-            "跑图已返回",
-            "ok",
-            "跑图成功。可在大控制台查看完整返回信息。",
+            hasManualAbortResult
+              ? "跑图已中止"
+              : successfulRunResults.length > 0
+                ? "跑图已返回"
+                : "跑图失败",
+            successfulRunResults.length > 0 ? "ok" : "warn",
+            successfulRunResults.length > 0
+              ? "跑图任务已逐张返回。可在任务列表查看详情。"
+              : "跑图任务已结束，可在任务列表查看详情。",
             "run",
           ),
-          markApiConnected("image", ""));
+          successfulRunResults.length > 0 && markApiConnected("image", ""));
       } catch (runPipelineError) {
         let runImageErrorPlan = null;
         try {
@@ -28257,6 +33206,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         try {
           const shouldTreatRunImageFailureAsWarn =
             runImageErrorPlan.lifecycleLevel === "warn";
+          runQueueExecutionSummary = {
+            status: runImageErrorPlan.isManualAbort ? "aborted" : "failed",
+            resultMessage: runImageErrorPlan.userFacingPipelineError,
+            returnedImages: [],
+          };
           (logApiLifecycleEvent({
             level: runImageErrorPlan.lifecycleLevel,
             type: "api",
@@ -28314,6 +33268,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             "跑图失败。请打开大控制台查看详细日志。",
             "run",
           );
+          runQueueExecutionSummary = {
+            status: "failed",
+            resultMessage: pipelineErrorMessage,
+            returnedImages: [],
+          };
         }
       } finally {
         (clearRunQueueTimeoutGuard(),
@@ -28330,6 +33289,143 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           (googleImageRequestParts = []),
           (openAiImageRequestContent = ""));
       }
+      return runQueueExecutionSummary;
+    },
+    resolveRunQueueTaskTimeoutMs = (
+      taskOptionsInput = {},
+      runtimeOptions = {},
+    ) => {
+      const taskOptions =
+          taskOptionsInput && typeof taskOptionsInput === "object"
+            ? taskOptionsInput
+            : {},
+        timeoutOverrideMs =
+          Number.isFinite(Number(taskOptions.timeoutOverrideMs)) &&
+          Number(taskOptions.timeoutOverrideMs) > 0
+            ? Math.max(5e3, Math.round(Number(taskOptions.timeoutOverrideMs)))
+            : 0,
+        fallbackTimeoutMs = Math.max(
+          5e3,
+          Number(imageConfig?.timeoutMs) || defaultImageApiConfig.timeoutMs,
+        ),
+        startedAtMs =
+          Number.isFinite(Number(runtimeOptions?.startedAtMs)) &&
+          Number(runtimeOptions.startedAtMs) > 0
+            ? Math.floor(Number(runtimeOptions.startedAtMs))
+            : 0,
+        deadlineMs =
+          Number.isFinite(Number(runtimeOptions?.deadlineMs)) &&
+          Number(runtimeOptions.deadlineMs) > startedAtMs
+            ? Math.floor(Number(runtimeOptions.deadlineMs))
+            : 0;
+      if (startedAtMs > 0 && deadlineMs > startedAtMs) {
+        return Math.max(5e3, deadlineMs - startedAtMs);
+      }
+      return timeoutOverrideMs || fallbackTimeoutMs;
+    },
+    appendRunQueueHistoryRecord = (historyTaskRecordInput) => {
+      const normalizedHistoryTaskRecord = normalizeRunQueueHistoryTaskItem(
+        historyTaskRecordInput,
+      );
+      if (!normalizedHistoryTaskRecord) return;
+      setRunQueueTaskHistoryState((previousRunQueueTaskHistoryState) =>
+        pruneRunQueueHistoryItems(
+          [
+            normalizedHistoryTaskRecord,
+            ...(Array.isArray(previousRunQueueTaskHistoryState)
+              ? previousRunQueueTaskHistoryState
+              : []),
+          ],
+          cachePolicyRef.current?.images,
+        ),
+      );
+    },
+    buildRunQueueHistoryRecord = ({
+      taskRecordInput,
+      statusInput = "success",
+      sourceLabelInput = "上传图片",
+      providerLabelInput = "",
+      modelLabelInput = "",
+      sizeLabelInput = "",
+      ratioLabelInput = "",
+      generationCountInput = 1,
+      timeoutMsInput = 0,
+      resultMessageInput = "",
+      returnedImagesInput = [],
+    } = {}) => {
+      const taskRecord =
+        taskRecordInput && typeof taskRecordInput === "object"
+          ? taskRecordInput
+          : null;
+      if (!taskRecord) return null;
+      const taskOptions =
+          taskRecord.options && typeof taskRecord.options === "object"
+            ? taskRecord.options
+            : {},
+        sourceImages = Array.isArray(taskOptions.images) ? taskOptions.images : [],
+        normalizedSourceImages = sourceImages
+          .map(normalizeRunQueueTaskImageItem)
+          .filter(Boolean),
+        requestedItemCount = Math.max(
+          1,
+          Number(taskRecord.requestedItemCount) ||
+            parseGenerationCount(generationCountInput, 1),
+        ),
+        completedItemCount = Math.max(
+          0,
+          Number(taskRecord.completedItemCount) || 0,
+        ),
+        successItemCount = Math.max(0, Number(taskRecord.successItemCount) || 0),
+        failedItemCount = Math.max(0, Number(taskRecord.failedItemCount) || 0),
+        itemResults = Array.isArray(taskRecord.itemResults)
+          ? taskRecord.itemResults
+              .map((itemResult, itemIndex) =>
+                normalizeRunQueueTaskItemResult(itemResult, itemIndex),
+              )
+              .filter(Boolean)
+          : [],
+        historyReturnedImagesRaw =
+          Array.isArray(returnedImagesInput) && returnedImagesInput.length
+            ? returnedImagesInput
+            : itemResults.flatMap((itemResult) =>
+                Array.isArray(itemResult?.returnedImages)
+                  ? itemResult.returnedImages
+                  : [],
+              ),
+        historyReturnedImages = historyReturnedImagesRaw
+          .map(normalizeRunQueueTaskImageItem)
+          .filter(Boolean),
+        historySourceImageRefs = normalizedSourceImages
+          .map((taskImageItem, taskImageIndex) =>
+            normalizeRunQueueHistoryImageItem(taskImageItem, taskImageIndex),
+          )
+          .filter(Boolean),
+        normalizedTaskId = String(taskRecord.id || "").trim();
+      if (!normalizedTaskId) return null;
+      return normalizeRunQueueHistoryTaskItem({
+        id: normalizedTaskId,
+        status: statusInput,
+        createdAtMs: Number(taskRecord.createdAtMs) || Date.now(),
+        startedAtMs: Number(taskRecord.startedAtMs) || 0,
+        finishedAtMs: Date.now(),
+        promptText: String(taskOptions.promptText || "").trim(),
+        imageCount: normalizedSourceImages.length || historyReturnedImages.length,
+        summaryText: `${String(sizeLabelInput || "").trim() || "尺寸未设"} / ${String(ratioLabelInput || "").trim() || "比例未设"} / x${requestedItemCount}`,
+        detailPrimaryText: `${String(sourceLabelInput || "").trim() || "未知来源"} · ${String(modelLabelInput || "").trim() || "模型未设"}`,
+        detailSecondaryText: `${String(providerLabelInput || "").trim() || "服务商未设"} · ${statusInput === "success" ? "已完成" : statusInput === "failed" ? "失败" : statusInput === "aborted" ? "已中止" : "已移除"} · ${formatConsoleLogTime(Date.now())}`,
+        sourceLabel: String(sourceLabelInput || "").trim(),
+        providerLabel: String(providerLabelInput || "").trim(),
+        modelLabel: String(modelLabelInput || "").trim() || "模型未设",
+        sourceImageRefs: historySourceImageRefs,
+        timeoutMs: Math.max(0, Number(timeoutMsInput) || 0),
+        canRerun: !!String(taskOptions.promptText || "").trim(),
+        resultMessage: String(resultMessageInput || "").trim(),
+        requestedItemCount,
+        completedItemCount,
+        successItemCount,
+        failedItemCount,
+        itemResults,
+      });
     },
     buildRunQueueTaskListSnapshot = () => {
       const runningTaskRecord =
@@ -28340,6 +33436,23 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         pendingTaskRecords = Array.isArray(runQueueItemsRef.current)
           ? runQueueItemsRef.current
           : [],
+        liveGenerationSizeLabel = String(
+          generationImageSizeLabel || generationImageSizeText || "",
+        ).trim(),
+        liveGenerationAspectRatio = String(
+          normalizedGenerationAspectRatio || "",
+        ).trim(),
+        liveGenerationCount = parseGenerationCount(
+          normalizedGenerationCount,
+          defaultImageApiConfig.generationCount,
+        ),
+        liveProviderKey = String(imageProviderKey || "").trim(),
+        liveProviderLabel = resolveProviderSiteLabel(
+          liveProviderKey,
+          imageProviderPresets,
+          liveProviderKey || "服务商未设",
+        ),
+        liveModelLabel = String(imageConfig?.model || "").trim(),
         nextTaskListSnapshot = [],
         pushTaskSnapshot = (
           taskRecordInput,
@@ -28364,43 +33477,50 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             taskRefThumbList = taskImageList.map((taskImageItem, taskImageIndex) => ({
               id: `${normalizedTaskId}-ref-${taskImageIndex + 1}`,
               src: resolveRunQueueTaskThumbSrc(taskImageItem),
-              name: toSafeText(
-                taskImageItem?.originName ||
-                  taskImageItem?.name,
+              name: resolveAssetRecordDisplayName(
+                taskImageItem,
                 `image_${taskImageIndex + 1}`,
               ),
             })),
-            taskSizeLabel = String(
-              taskOptions.generationImageSizeLabelSnapshot ||
-                taskOptions.generationImageSizeTextSnapshot ||
-                "",
-            ).trim(),
-            taskRatioLabel = String(
-              taskOptions.generationAspectRatioSnapshot || "",
-            ).trim(),
-            taskCount = parseGenerationCount(
-              taskOptions.generationCountSnapshot,
+            taskSizeLabel = liveGenerationSizeLabel,
+            taskRatioLabel = liveGenerationAspectRatio,
+            taskCount = Math.max(
               1,
+              Number(taskRecord.requestedItemCount) || liveGenerationCount,
             ),
-            taskTimeoutMs = Math.max(
-              5e3,
-              Number(taskOptions?.imageApiConfigSnapshot?.timeoutMs) ||
-                defaultImageApiConfig.timeoutMs,
+            taskCompletedCount = Math.max(
+              0,
+              Number(taskRecord.completedItemCount) || 0,
             ),
+            taskSuccessCount = Math.max(
+              0,
+              Number(taskRecord.successItemCount) || 0,
+            ),
+            taskFailedCount = Math.max(
+              0,
+              Number(taskRecord.failedItemCount) || 0,
+            ),
+            taskItemResults = Array.isArray(taskRecord.itemResults)
+              ? taskRecord.itemResults
+                  .map((itemResult, itemIndex) =>
+                    normalizeRunQueueTaskItemResult(itemResult, itemIndex),
+                  )
+                  .filter(Boolean)
+              : [],
             taskStartedAtMs = Number(taskRecord?.startedAtMs),
             normalizedTaskStartedAtMs =
               Number.isFinite(taskStartedAtMs) && taskStartedAtMs > 0
                 ? Math.floor(taskStartedAtMs)
                 : 0,
-            taskProviderKey = String(taskOptions.providerKeySnapshot || "").trim(),
-            taskProviderLabel = resolveProviderSiteLabel(
-              taskProviderKey,
-              imageProviderPresets,
-              taskProviderKey || "服务商未设",
-            ),
-            taskModelLabel = String(
-              taskOptions?.imageApiConfigSnapshot?.model || "",
-            ).trim(),
+            taskTimeoutMs = resolveRunQueueTaskTimeoutMs(taskOptions, {
+              startedAtMs: normalizedTaskStartedAtMs,
+              deadlineMs:
+                phase === "running"
+                  ? Number(runQueueTimeoutDeadlineRef.current)
+                  : 0,
+            }),
+            taskProviderLabel = liveProviderLabel,
+            taskModelLabel = liveModelLabel,
             taskSourceLabel =
               String(taskOptions.imageSource || "upload").trim() ===
               "assistant-prev-user"
@@ -28417,7 +33537,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                   ? `排队第 ${normalizedQueueOrder}`
                   : "排队中",
             taskDetailPrimaryText = `${taskSourceLabel} · ${taskModelLabel || "模型未设"}`,
-            taskDetailSecondaryText = `${taskProviderLabel} · ${taskPhaseLabel}`;
+            taskDetailSecondaryText = `${taskProviderLabel} · ${taskPhaseLabel}${taskCount > 1 ? ` · ${Math.min(taskCompletedCount, taskCount)}/${taskCount}` : ""}`;
           const normalizedRefThumbList = taskRefThumbList.filter(
             (taskRefThumbItem) => String(taskRefThumbItem?.src || "").trim(),
           );
@@ -28441,6 +33561,17 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             timeoutMs: taskTimeoutMs,
             startedAtMs: normalizedTaskStartedAtMs,
             canRerun: !!normalizedPromptText,
+            requestedItemCount: taskCount,
+            completedItemCount: taskCompletedCount,
+            successItemCount: taskSuccessCount,
+            failedItemCount: taskFailedCount,
+            itemResults: taskItemResults,
+            resultMessage: String(taskRecord.resultMessage || "").trim(),
+            returnedImages: taskItemResults.flatMap((itemResult) =>
+              Array.isArray(itemResult?.returnedImages)
+                ? itemResult.returnedImages
+                : [],
+            ),
           });
         };
       runningTaskRecord && pushTaskSnapshot(runningTaskRecord, "running", -1);
@@ -28564,6 +33695,33 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       );
       if (queueTaskIndex < 0) return false;
       const removedQueueTask = runQueueItemsRef.current.splice(queueTaskIndex, 1)[0];
+      appendRunQueueHistoryRecord(
+        buildRunQueueHistoryRecord({
+          taskRecordInput: removedQueueTask,
+          statusInput: "removed",
+          sourceLabelInput:
+            String(removedQueueTask?.options?.imageSource || "upload").trim() ===
+            "assistant-prev-user"
+              ? "对话图片"
+              : "上传图片",
+          providerLabelInput: resolveProviderSiteLabel(
+            String(imageProviderKey || "").trim(),
+            imageProviderPresets,
+            String(imageProviderKey || "").trim() || "服务商未设",
+          ),
+          modelLabelInput: String(imageConfig?.model || "").trim() || "模型未设",
+          sizeLabelInput: String(
+            generationImageSizeLabel || generationImageSizeText || "",
+          ).trim(),
+          ratioLabelInput: String(normalizedGenerationAspectRatio || "").trim(),
+          generationCountInput: parseGenerationCount(
+            normalizedGenerationCount,
+            defaultImageApiConfig.generationCount,
+          ),
+          timeoutMsInput: resolveRunQueueTaskTimeoutMs(removedQueueTask?.options),
+          resultMessageInput: "已从排队中移除该任务。",
+        }),
+      );
       clearRunQueueTaskOptionsInPlace(removedQueueTask);
       syncRunQueueBadgeState();
       appendConsoleLogEntry("warn", "已从队列中移除跑图任务", "api");
@@ -28576,17 +33734,21 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           "assistant-prev-user"
             ? "assistant-prev-user"
             : "upload",
-        normalizedRunTaskSessionIdSnapshot = String(
-          runTaskInputOptions?.sessionIdSnapshot ||
+        normalizedRunTaskSessionId = String(
+          runTaskInputOptions?.sessionId ||
+            runTaskInputOptions?.sessionIdSnapshot ||
             activeSessionIdRef.current ||
             activeChatSession?.id ||
             "",
         ).trim(),
-        liveImageConfigSnapshot =
-          imageConfig && typeof imageConfig === "object"
-            ? imageConfig
-            : defaultImageApiConfig,
-        liveProviderKeySnapshot = String(imageProviderKey || "").trim(),
+        normalizedRunTaskTimeoutOverrideMs =
+          Number.isFinite(Number(runTaskInputOptions?.timeoutOverrideMs)) &&
+          Number(runTaskInputOptions?.timeoutOverrideMs) > 0
+            ? Math.max(
+                5e3,
+                Math.round(Number(runTaskInputOptions.timeoutOverrideMs)),
+              )
+            : 0,
         explicitRunTaskImages = Array.isArray(runTaskInputOptions?.images)
           ? runTaskInputOptions.images
           : null,
@@ -28618,38 +33780,18 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             await hydrateInputImagesFromCache(uploadSourceImageList);
         }
       }
-      const runTaskInputOptionsWithSnapshot = {
+      const normalizedRunTaskInputOptions = {
         ...runTaskInputOptions,
-        sessionIdSnapshot: normalizedRunTaskSessionIdSnapshot,
-        providerKeySnapshot: liveProviderKeySnapshot,
-        imageApiConfigSnapshot: {
-          baseUrl: String(liveImageConfigSnapshot?.baseUrl || "").trim(),
-          apiKey: String(liveImageConfigSnapshot?.apiKey || "").trim(),
-          model: String(liveImageConfigSnapshot?.model || "").trim(),
-          timeoutMs: Math.max(
-            5e3,
-            Number(liveImageConfigSnapshot?.timeoutMs) ||
-              defaultImageApiConfig.timeoutMs,
-          ),
-          providerMode: liveImageConfigSnapshot?.providerMode,
-        },
-        generationImageSizeLabelSnapshot: String(
-          generationImageSizeLabel || "",
-        ).trim(),
-        generationImageSizeTextSnapshot: String(
-          generationImageSizeText || "",
-        ).trim(),
-        generationAspectRatioSnapshot: String(
-          normalizedGenerationAspectRatio || "",
-        ).trim(),
-        generationCountSnapshot: parseGenerationCount(
-          runTaskInputOptions?.generationCountSnapshot ?? normalizedGenerationCount,
+        sessionId: normalizedRunTaskSessionId,
+        timeoutOverrideMs: normalizedRunTaskTimeoutOverrideMs,
+        requestedItemCount: parseGenerationCount(
+          normalizedGenerationCount,
           defaultImageApiConfig.generationCount,
         ),
       };
       runQueueIdCounterRef.current += 1;
       const runQueueTaskBuildResult = buildRunQueueTaskFromInputCore({
-        runTaskInputOptions: runTaskInputOptionsWithSnapshot,
+        runTaskInputOptions: normalizedRunTaskInputOptions,
         fallbackPromptText: "",
         uploadSourceImages: hydratedUploadSourceImageList,
         assistantSourceImages: hydratedAssistantSourceImageList,
@@ -28687,13 +33829,32 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                   typeof nextRunQueueTaskItem.options === "object"
                     ? nextRunQueueTaskItem.options
                     : {},
+                currentRunQueueSettings = getLiveRunQueueSettings(),
+                runningTaskProviderKey = currentRunQueueSettings.providerKey,
+                runningTaskProviderLabel = resolveProviderSiteLabel(
+                  runningTaskProviderKey,
+                  imageProviderPresets,
+                  runningTaskProviderKey || "服务商未设",
+                ),
+                runningTaskModelLabel =
+                  String(currentRunQueueSettings.imageConfig?.model || "").trim() ||
+                  "模型未设",
+                runningTaskSizeLabel = String(
+                  currentRunQueueSettings.generationImageSizeLabel ||
+                    currentRunQueueSettings.generationImageSizeText ||
+                    "",
+                ).trim(),
+                runningTaskRatioLabel = String(
+                  currentRunQueueSettings.generationAspectRatio || "",
+                ).trim(),
+                runningTaskGenerationCount =
+                  currentRunQueueSettings.generationCount,
                 runningTaskSourceImages = Array.isArray(runningTaskOptions.images)
                   ? runningTaskOptions.images
                   : [],
                 runningFirstSourceImage = runningTaskSourceImages[0] || null,
-                runningFirstSourceImageName = toSafeText(
-                  runningFirstSourceImage?.originName ||
-                    runningFirstSourceImage?.name,
+                runningFirstSourceImageName = resolveAssetRecordDisplayName(
+                  runningFirstSourceImage,
                   "未命名图片",
                 ),
                 runningFirstSourceImageWidth = Number(
@@ -28714,13 +33875,17 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                   "assistant-prev-user"
                     ? "对话图片"
                     : "上传区图片";
+              let runQueueTaskExecutionSummary = null;
               appendConsoleLogEntry(
                 "info",
                 `开始执行跑图任务：来源 ${runningTaskSourceLabel}，共 ${runningTaskSourceImages.length} 张，首张 ${runningFirstSourceImageSizeLabel} | ${runningFirstSourceImageName}`,
                 "api",
               );
               try {
-                await handleRunImagePipeline(nextRunQueueTaskItem.options);
+                runQueueTaskExecutionSummary = await handleRunImagePipeline(
+                  nextRunQueueTaskItem.options,
+                  nextRunQueueTaskItem,
+                );
               } catch (runQueueTaskError) {
                 const runQueueTaskErrorMessage = resolveSafeErrorMessage(
                     runQueueTaskError,
@@ -28763,7 +33928,39 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                     "跑图队列任务异常（日志降级），请重试。",
                   );
                 }
+                runQueueTaskExecutionSummary = {
+                  status: "failed",
+                  resultMessage: runQueueTaskErrorMessage,
+                  returnedImages: [],
+                };
               } finally {
+                appendRunQueueHistoryRecord(
+                  buildRunQueueHistoryRecord({
+                    taskRecordInput: nextRunQueueTaskItem,
+                    statusInput: String(
+                      runQueueTaskExecutionSummary?.status || "failed",
+                    ).trim(),
+                    sourceLabelInput: runningTaskSourceLabel,
+                    providerLabelInput: runningTaskProviderLabel,
+                    modelLabelInput: runningTaskModelLabel,
+                    sizeLabelInput: runningTaskSizeLabel,
+                    ratioLabelInput: runningTaskRatioLabel,
+                    generationCountInput: runningTaskGenerationCount,
+                    timeoutMsInput: resolveRunQueueTaskTimeoutMs(
+                      nextRunQueueTaskItem?.options,
+                      {
+                        startedAtMs: Number(nextRunQueueTaskItem?.startedAtMs) || 0,
+                      },
+                    ),
+                    resultMessageInput:
+                      runQueueTaskExecutionSummary?.resultMessage || "",
+                    returnedImagesInput: Array.isArray(
+                      runQueueTaskExecutionSummary?.returnedImages,
+                    )
+                      ? runQueueTaskExecutionSummary.returnedImages
+                      : [],
+                  }),
+                );
                 clearRunQueueTaskOptionsInPlace(nextRunQueueTaskItem);
               }
               (runQueueCurrentTaskRef.current?.id ===
@@ -28801,6 +33998,36 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       if (
         (queuedRunTaskCount > 0 &&
           (runQueueItemsRef.current.forEach((runQueueItem) => {
+            appendRunQueueHistoryRecord(
+              buildRunQueueHistoryRecord({
+                taskRecordInput: runQueueItem,
+                statusInput: "removed",
+                sourceLabelInput:
+                  String(runQueueItem?.options?.imageSource || "upload").trim() ===
+                  "assistant-prev-user"
+                    ? "对话图片"
+                    : "上传图片",
+                providerLabelInput: resolveProviderSiteLabel(
+                  String(imageProviderKey || "").trim(),
+                  imageProviderPresets,
+                  String(imageProviderKey || "").trim() || "服务商未设",
+                ),
+                modelLabelInput:
+                  String(imageConfig?.model || "").trim() || "模型未设",
+                sizeLabelInput: String(
+                  generationImageSizeLabel || generationImageSizeText || "",
+                ).trim(),
+                ratioLabelInput: String(
+                  normalizedGenerationAspectRatio || "",
+                ).trim(),
+                generationCountInput: parseGenerationCount(
+                  normalizedGenerationCount,
+                  defaultImageApiConfig.generationCount,
+                ),
+                timeoutMsInput: resolveRunQueueTaskTimeoutMs(runQueueItem?.options),
+                resultMessageInput: "任务在执行前被批量停止。",
+              }),
+            );
             clearRunQueueTaskOptionsInPlace(runQueueItem);
           },
           ),
@@ -28889,8 +34116,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           ? enqueuedTaskOptions.images
           : [],
         firstSourceImage = enqueuedSourceImages[0] || null,
-        firstSourceImageName = toSafeText(
-          firstSourceImage?.originName || firstSourceImage?.name,
+        firstSourceImageName = resolveAssetRecordDisplayName(
+          firstSourceImage,
           "未命名图片",
         ),
         firstSourceImageWidth = Number(firstSourceImage?.width),
@@ -28905,9 +34132,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         enqueuedSourcePreviewNames = enqueuedSourceImages
           .slice(0, 3)
           .map((enqueuedImageItem, enqueuedImageIndex) =>
-            toSafeText(
-              enqueuedImageItem?.originName ||
-                enqueuedImageItem?.name,
+            resolveAssetRecordDisplayName(
+              enqueuedImageItem,
               `image_${enqueuedImageIndex + 1}`,
             ),
           )
@@ -28920,20 +34146,16 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           enqueuedSourceImages.length - enqueuedSourcePreviewNames.length,
         ),
         enqueuedGenerationSizeLabel = String(
-          enqueuedTaskOptions.generationImageSizeLabelSnapshot ||
-            enqueuedTaskOptions.generationImageSizeTextSnapshot ||
-            "尺寸未设",
+          generationImageSizeLabel || generationImageSizeText || "尺寸未设",
         ).trim(),
         enqueuedGenerationAspectRatio = String(
-          enqueuedTaskOptions.generationAspectRatioSnapshot || "比例未设",
+          normalizedGenerationAspectRatio || "比例未设",
         ).trim(),
         enqueuedGenerationCount = parseGenerationCount(
-          enqueuedTaskOptions.generationCountSnapshot,
-          1,
+          normalizedGenerationCount,
+          defaultImageApiConfig.generationCount,
         ),
-        enqueuedSessionIdSnapshot = String(
-          enqueuedTaskOptions.sessionIdSnapshot || "",
-        ).trim(),
+        enqueuedSessionId = String(enqueuedTaskOptions.sessionId || "").trim(),
         enqueuedSourceLabel =
           String(enqueuedTaskOptions.imageSource || "upload").trim() ===
           "assistant-prev-user"
@@ -28944,11 +34166,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         `已提交跑图任务：${enqueuedGenerationSizeLabel || "尺寸未设"} / ${enqueuedGenerationAspectRatio || "比例未设"} / x${enqueuedGenerationCount}，来源 ${enqueuedSourceLabel}，共 ${enqueuedSourceImages.length} 张，首张 ${firstSourceImageSizeLabel} | ${firstSourceImageName}，样例=[${enqueuedSourcePreviewText}]${enqueuedSourceOverflowCount > 0 ? ` +${enqueuedSourceOverflowCount}` : ""}`,
         "api",
       );
-      enqueuedSessionIdSnapshot &&
+      enqueuedSessionId &&
         setChatSessions((previousChatSessionsState) =>
           touchSessionUpdatedAtById(
             previousChatSessionsState,
-            enqueuedSessionIdSnapshot,
+            enqueuedSessionId,
           ),
         );
       runQueueItemsRef.current.push(runQueueTaskCandidate);
@@ -29025,35 +34247,13 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           assistantMessageId: String(
             matchedTaskOptions.assistantMessageId || "",
           ).trim(),
-          sessionIdSnapshot: String(
-            matchedTaskOptions.sessionIdSnapshot ||
+          sessionId: String(
+            matchedTaskOptions.sessionId ||
+              matchedTaskOptions.sessionIdSnapshot ||
               activeSessionIdRef.current ||
               activeChatSession?.id ||
               "",
           ).trim(),
-          providerKeySnapshot: String(
-            matchedTaskOptions.providerKeySnapshot || imageProviderKey || "",
-          ).trim(),
-          imageApiConfigSnapshot:
-            matchedTaskOptions.imageApiConfigSnapshot &&
-            typeof matchedTaskOptions.imageApiConfigSnapshot === "object"
-              ? {
-                  ...matchedTaskOptions.imageApiConfigSnapshot,
-                }
-              : null,
-          generationImageSizeLabelSnapshot: String(
-            matchedTaskOptions.generationImageSizeLabelSnapshot || "",
-          ).trim(),
-          generationImageSizeTextSnapshot: String(
-            matchedTaskOptions.generationImageSizeTextSnapshot || "",
-          ).trim(),
-          generationAspectRatioSnapshot: String(
-            matchedTaskOptions.generationAspectRatioSnapshot || "",
-          ).trim(),
-          generationCountSnapshot: parseGenerationCount(
-            matchedTaskOptions.generationCountSnapshot,
-            normalizedGenerationCount,
-          ),
           images: rerunTaskImageList,
         },
         rerunSuccess = await enqueueRunTask(rerunTaskPayload);
@@ -29071,21 +34271,17 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         1e3,
         Math.round(Number(extendTimeoutMsInput) || CONST_RUN_QUEUE_TIMEOUT_EXTEND_MS),
       );
-      const ensureTaskTimeoutSnapshot = (taskRecordInput, timeoutMsInput) => {
+      const ensureTaskTimeoutOverride = (taskRecordInput, timeoutMsInput) => {
         if (!taskRecordInput || typeof taskRecordInput !== "object") return 0;
         const taskRecord = taskRecordInput;
         taskRecord.options && typeof taskRecord.options === "object" ||
           (taskRecord.options = {});
         const taskOptions = taskRecord.options;
-        taskOptions.imageApiConfigSnapshot &&
-          typeof taskOptions.imageApiConfigSnapshot === "object" ||
-          (taskOptions.imageApiConfigSnapshot = {});
-        const taskImageApiConfigSnapshot = taskOptions.imageApiConfigSnapshot;
         const normalizedTimeoutMs = Math.max(
           5e3,
           Math.round(Number(timeoutMsInput) || defaultImageApiConfig.timeoutMs),
         );
-        taskImageApiConfigSnapshot.timeoutMs = normalizedTimeoutMs;
+        taskOptions.timeoutOverrideMs = normalizedTimeoutMs;
         return normalizedTimeoutMs;
       };
       const runningTaskRecord =
@@ -29105,9 +34301,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               : nowTimestamp,
           currentRunningTimeoutMs = Math.max(
             5e3,
-            Number(
-              runningTaskRecord?.options?.imageApiConfigSnapshot?.timeoutMs,
-            ) || defaultImageApiConfig.timeoutMs,
+            Number(runningTaskRecord?.options?.timeoutOverrideMs) ||
+              Number(imageConfig?.timeoutMs) ||
+              defaultImageApiConfig.timeoutMs,
           ),
           currentDeadlineMs =
             Number.isFinite(Number(runQueueTimeoutDeadlineRef.current)) &&
@@ -29115,7 +34311,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               ? Number(runQueueTimeoutDeadlineRef.current)
               : runningTaskStartedAtMs + currentRunningTimeoutMs,
           nextDeadlineMs = currentDeadlineMs + normalizedExtendTimeoutMs,
-          nextRunningTimeoutMs = ensureTaskTimeoutSnapshot(
+          nextRunningTimeoutMs = ensureTaskTimeoutOverride(
             runningTaskRecord,
             Math.max(5e3, nextDeadlineMs - runningTaskStartedAtMs),
           );
@@ -29137,10 +34333,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       if (!pendingTaskRecord) return false;
       const currentPendingTimeoutMs = Math.max(
           5e3,
-          Number(pendingTaskRecord?.options?.imageApiConfigSnapshot?.timeoutMs) ||
+          Number(pendingTaskRecord?.options?.timeoutOverrideMs) ||
+            Number(imageConfig?.timeoutMs) ||
             defaultImageApiConfig.timeoutMs,
         ),
-        nextPendingTimeoutMs = ensureTaskTimeoutSnapshot(
+        nextPendingTimeoutMs = ensureTaskTimeoutOverride(
           pendingTaskRecord,
           currentPendingTimeoutMs + normalizedExtendTimeoutMs,
         );
@@ -29151,6 +34348,12 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         "api",
       );
       return true;
+    },
+    refreshRunQueueTaskListForLiveSettings = () => {
+      const hasQueueTasks =
+        !!runQueueCurrentTaskRef.current ||
+        (Array.isArray(runQueueItemsRef.current) && runQueueItemsRef.current.length > 0);
+      hasQueueTasks && syncRunQueueBadgeState();
     },
     applyGenerationCount = (nextGenerationCountInput) => {
       const generationCountApplyPlan = buildGenerationCountApplyPlan({
@@ -29175,7 +34378,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           uploadSizeInputSource,
           minSizePx: CONST_UPLOAD_SIZE_MIN_PX,
           sliderMaxSizePx: CONST_UPLOAD_SIZE_SLIDER_MAX_PX,
-          hardMaxSizePx: Number.POSITIVE_INFINITY,
+          hardMaxSizePx: CONST_UPLOAD_SIZE_HARD_MAX_PX,
           outOfRangeWarned: uploadSizeOutOfRangeWarnedRef.current,
           hardLimitWarned: uploadSizeHardLimitWarnedRef.current,
         });
@@ -29227,13 +34430,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         CONST_UPLOAD_IMAGE_FORMAT_DEFAULT,
       );
       (setUploadImageFormat(normalizedUploadImageFormat),
-        normalizedUploadImageFormat === "png" &&
-          (setUploadQualityPercent(CONST_UPLOAD_QUALITY_DEFAULT_PERCENT),
-          (uploadQualityClampWarnedRef.current = false)));
+        (uploadQualityClampWarnedRef.current = false));
     },
     handleUploadQualitySliderInput = (uploadQualitySliderValue) => {
-      if (normalizeUploadImageFormat(uploadImageFormat, CONST_UPLOAD_IMAGE_FORMAT_DEFAULT) === "png")
-        return;
       const normalizedUploadQualityFromSlider =
         normalizeUploadQualityPercent(
           uploadQualitySliderValue,
@@ -29243,8 +34442,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         setUploadQualityPercent(normalizedUploadQualityFromSlider);
     },
     handleUploadQualityNumberInput = (uploadQualityInputValue) => {
-      if (normalizeUploadImageFormat(uploadImageFormat, CONST_UPLOAD_IMAGE_FORMAT_DEFAULT) === "png")
-        return;
       const normalizedUploadQualityFromInput =
         normalizeUploadQualityPercent(
           uploadQualityInputValue,
@@ -29557,11 +34754,47 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       forceHorizontalDock = false,
       preferVertical = "bottom",
       preferHorizontal = "right",
+      uiScale,
+      lengthUnit = "layout",
+      outputOffsetUnit = "layout",
     } = {}) => {
-      const normalizedGap = Math.max(0, Math.round(Number(gap) || 0)),
+      const normalizedUiScale = resolveOverlayUiScaleFactor({
+          uiScale,
+        }),
+        normalizedLengthUnit = resolveOverlayLengthUnit(lengthUnit),
+        normalizedOutputOffsetUnit = resolveOverlayLengthUnit(outputOffsetUnit),
+        toViewportLength = (
+          lengthValueInput,
+          sourceLengthUnit = normalizedLengthUnit,
+        ) =>
+          normalizeOverlayLengthToViewport(
+            lengthValueInput,
+            normalizedUiScale,
+            sourceLengthUnit,
+          ),
+        toOutputOffsetLength = (lengthValueInput) =>
+          normalizedOutputOffsetUnit === "viewport"
+            ? lengthValueInput
+            : normalizeOverlayLengthToLayout(
+                lengthValueInput,
+                normalizedUiScale,
+                "viewport",
+              ),
+        normalizedGap = Math.max(
+          0,
+          Math.round(
+            toViewportLength(
+              Number(gap) || 0,
+            ),
+          ),
+        ),
         normalizedViewportPaddingFallback = Math.max(
           0,
-          Math.round(Number(viewportPadding) || 0),
+          Math.round(
+            toViewportLength(
+              Number(viewportPadding) || 0,
+            ),
+          ),
         ),
         hasViewportPaddingLeft = Number.isFinite(Number(viewportPaddingLeft)),
         hasViewportPaddingRight = Number.isFinite(Number(viewportPaddingRight)),
@@ -29570,33 +34803,45 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         normalizedViewportPaddingLeft = Math.max(
           0,
           Math.round(
-            hasViewportPaddingLeft
-              ? Number(viewportPaddingLeft)
-              : normalizedViewportPaddingFallback,
+            toViewportLength(
+              hasViewportPaddingLeft
+                ? Number(viewportPaddingLeft)
+                : normalizedViewportPaddingFallback,
+              hasViewportPaddingLeft ? normalizedLengthUnit : "viewport",
+            ),
           ),
         ),
         normalizedViewportPaddingRight = Math.max(
           0,
           Math.round(
-            hasViewportPaddingRight
-              ? Number(viewportPaddingRight)
-              : normalizedViewportPaddingFallback,
+            toViewportLength(
+              hasViewportPaddingRight
+                ? Number(viewportPaddingRight)
+                : normalizedViewportPaddingFallback,
+              hasViewportPaddingRight ? normalizedLengthUnit : "viewport",
+            ),
           ),
         ),
         normalizedViewportPaddingTop = Math.max(
           0,
           Math.round(
-            hasViewportPaddingTop
-              ? Number(viewportPaddingTop)
-              : normalizedViewportPaddingFallback,
+            toViewportLength(
+              hasViewportPaddingTop
+                ? Number(viewportPaddingTop)
+                : normalizedViewportPaddingFallback,
+              hasViewportPaddingTop ? normalizedLengthUnit : "viewport",
+            ),
           ),
         ),
         normalizedViewportPaddingBottom = Math.max(
           0,
           Math.round(
-            hasViewportPaddingBottom
-              ? Number(viewportPaddingBottom)
-              : normalizedViewportPaddingFallback,
+            toViewportLength(
+              hasViewportPaddingBottom
+                ? Number(viewportPaddingBottom)
+                : normalizedViewportPaddingFallback,
+              hasViewportPaddingBottom ? normalizedLengthUnit : "viewport",
+            ),
           ),
         ),
         normalizedViewportPaddingLeftWhenAlignLeft =
@@ -29610,8 +34855,22 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           ? normalizedViewportPaddingLeft
           : normalizedViewportPaddingRight,
         normalizedForceHorizontalDock = forceHorizontalDock === true,
-        normalizedOverlayWidth = Math.max(0, Math.round(Number(overlayWidth) || 0)),
-        normalizedOverlayHeight = Math.max(0, Math.round(Number(overlayHeight) || 0));
+        normalizedOverlayWidth = Math.max(
+          0,
+          Math.round(
+            toViewportLength(
+              Number(overlayWidth) || 0,
+            ),
+          ),
+        ),
+        normalizedOverlayHeight = Math.max(
+          0,
+          Math.round(
+            toViewportLength(
+              Number(overlayHeight) || 0,
+            ),
+          ),
+        );
       if (
         !anchorElement ||
         typeof anchorElement.getBoundingClientRect !== "function"
@@ -29734,7 +34993,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           Math.max(leftDockLeft, rightDockLeft),
         ),
         offsetX = shouldApplyHorizontalDock
-          ? desiredDockLeft - baseLeftPosition
+          ? toOutputOffsetLength(
+              desiredDockLeft - baseLeftPosition,
+            )
           : 0,
         vertical =
           verticalScoreBottom === verticalScoreTop
@@ -29772,15 +35033,34 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       const uploadCompressTriggerElement = uploadCompressTriggerRef.current;
       if (!uploadCompressTriggerElement) return "bottom";
       const triggerRect = uploadCompressTriggerElement.getBoundingClientRect(),
+        overlayUiScale = resolveOverlayUiScaleFactor(),
         viewportHeight = Math.round(
           window.visualViewport?.height ||
             window.innerHeight ||
             document.documentElement.clientHeight ||
             0,
         ),
-        estimatedPanelHeight = 248,
-        panelGap = 8,
-        viewportPadding = CONST_OVERLAY_VIEWPORT_PADDING_PX,
+        estimatedPanelHeight = Math.round(
+          normalizeOverlayLengthToViewport(
+            248,
+            overlayUiScale,
+            "layout",
+          ),
+        ),
+        panelGap = Math.round(
+          normalizeOverlayLengthToViewport(
+            8,
+            overlayUiScale,
+            "layout",
+          ),
+        ),
+        viewportPadding = Math.round(
+          normalizeOverlayLengthToViewport(
+            CONST_OVERLAY_VIEWPORT_PADDING_PX,
+            overlayUiScale,
+            "layout",
+          ),
+        ),
         canPlaceBottom =
           triggerRect.bottom + panelGap + estimatedPanelHeight <=
           viewportHeight - viewportPadding;
@@ -29851,7 +35131,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         setChatQuickPanelOpen(false),
         setImageQuickPanelOpen(false),
         closeImageQuickMenu(),
-        clearImageQuickEditId());
+        cancelImageQuickEdit());
     },
     closeControlDropdown = () => {
       setControlDropdownState((prevControlDropdownState) =>
@@ -30284,9 +35564,21 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       });
     },
     beginEditIdentityPreset = (editingIdentityPresetIdInput) => {
+      const presetEditTargetId = String(
+          editingIdentityPresetIdInput || "",
+        ).trim(),
+        pendingIdentityPresetCleanupPlan = stripPendingCreatedPresetItem({
+          presetScopeInput: "identity",
+          presetItemsInput: identityPresets,
+          preservePresetIdInput: presetEditTargetId,
+        });
+      pendingIdentityPresetCleanupPlan.removedPresetId &&
+        (setIdentityPresets(pendingIdentityPresetCleanupPlan.nextPresetItems),
+        setPendingCreatedPresetId("identity", ""));
       beginPresetEditById({
         targetPresetIdInput: editingIdentityPresetIdInput,
-        presetItemsInput: identityPresets,
+        presetItemsInput:
+          pendingIdentityPresetCleanupPlan.nextPresetItems,
         setEditingPresetDraftState: setEditingIdentityPresetDraft,
         setEditingPresetIdState: setEditingIdentityPresetId,
         resetPresetSelectionState: resetIdentityPresetSelectionState,
@@ -30313,6 +35605,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           editingPresetId,
           presetEditPatch,
         }) => {
+          setPendingCreatedPresetId("identity", "");
           activeIdentityPresetId ===
             editingPresetId &&
             handleConfigField(
@@ -30327,14 +35620,23 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       });
     },
     createIdentityPreset = () => {
+      const pendingIdentityPresetCleanupPlan = stripPendingCreatedPresetItem({
+        presetScopeInput: "identity",
+        presetItemsInput: identityPresets,
+      });
+      pendingIdentityPresetCleanupPlan.removedPresetId &&
+        setPendingCreatedPresetId("identity", "");
       createPresetAndBeginEdit({
-        existingPresetItemsInput: identityPresets,
+        existingPresetItemsInput:
+          pendingIdentityPresetCleanupPlan.nextPresetItems,
         titlePrefix: "身份",
         setPresetItemsState: setIdentityPresets,
         setEditingPresetDraftState: setEditingIdentityPresetDraft,
         setEditingPresetIdState: setEditingIdentityPresetId,
         resetPresetSelectionState: resetIdentityPresetSelectionState,
         closePresetMenu: closeIdentityPresetMenu,
+        onCreatedPreset: (createdPresetId) =>
+          setPendingCreatedPresetId("identity", createdPresetId),
       });
     },
     executePresetPinToggle = ({
@@ -30581,6 +35883,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       setEditingPresetIdState,
       resetPresetSelectionState,
       closePresetMenu,
+      onCreatedPreset = null,
     }) => {
       const presetCreationState = buildPresetCreationState({
         existingPresetItemsInput,
@@ -30598,6 +35901,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         setEditingPresetIdState(
           presetCreationState.createdPresetItem.id,
         ),
+        typeof onCreatedPreset === "function" &&
+          onCreatedPreset(presetCreationState.createdPresetItem.id),
         resetPresetSelectionState(),
         closePresetMenu());
     },
@@ -30802,7 +36107,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         onApplyImportedPresets: (presetImportPlan) => {
           (setIdentityPresets(presetImportPlan.mergedPresetItems),
             resetIdentityPresetSelectionState(),
-            clearIdentityPresetEditingId(),
+            cancelIdentityPresetEdit(),
             closeIdentityPresetMenu());
         },
       });
@@ -31657,6 +36962,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 overlayHeight: 110,
                 gap: 4,
                 viewportPadding: CONST_OVERLAY_VIEWPORT_PADDING_PX,
+                viewportPaddingLeft: CONST_CHAT_QUICK_PANEL_LEFT_MARGIN_PX,
+                viewportPaddingRight: CONST_CHAT_QUICK_PANEL_RIGHT_MARGIN_PX,
+                mirrorHorizontalPadding: true,
                 preferVertical: "bottom",
                 preferHorizontal: "right",
               }),
@@ -31814,11 +37122,108 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         imageQuickMenuAnchorElement,
       );
     },
+    normalizePresetScopeKey = (presetScopeInput = "chat") =>
+      presetScopeInput === "image"
+        ? "image"
+        : presetScopeInput === "identity"
+          ? "identity"
+          : "chat",
+    resolvePendingCreatedPresetId = (presetScopeInput = "chat") =>
+      String(
+        pendingCreatedPresetIdsRef.current?.[
+          normalizePresetScopeKey(presetScopeInput)
+        ] || "",
+      ).trim(),
+    setPendingCreatedPresetId = (
+      presetScopeInput = "chat",
+      presetIdInput = "",
+    ) => {
+      const normalizedPresetScope = normalizePresetScopeKey(presetScopeInput);
+      pendingCreatedPresetIdsRef.current = {
+        ...(pendingCreatedPresetIdsRef.current || {}),
+        [normalizedPresetScope]: String(presetIdInput || "").trim(),
+      };
+    },
+    stripPendingCreatedPresetItem = ({
+      presetScopeInput = "chat",
+      presetItemsInput = [],
+      preservePresetIdInput = "",
+    } = {}) => {
+      const normalizedPresetScope = normalizePresetScopeKey(presetScopeInput),
+        pendingCreatedPresetId = resolvePendingCreatedPresetId(
+          normalizedPresetScope,
+        ),
+        preservePresetId = String(preservePresetIdInput || "").trim(),
+        presetItems = Array.isArray(presetItemsInput) ? presetItemsInput : [];
+      if (
+        !pendingCreatedPresetId ||
+        pendingCreatedPresetId === preservePresetId
+      ) {
+        return {
+          nextPresetItems: presetItems,
+          removedPresetId: "",
+        };
+      }
+      return {
+        nextPresetItems: removePresetById(
+          presetItems,
+          pendingCreatedPresetId,
+        ),
+        removedPresetId: pendingCreatedPresetId,
+      };
+    },
+    cancelPendingPresetEditByScope = ({
+      presetScopeInput = "chat",
+      editingPresetIdInput = "",
+      setPresetItemsState,
+      setEditingPresetIdState,
+    }) => {
+      const normalizedPresetScope = normalizePresetScopeKey(presetScopeInput),
+        editingPresetId = String(editingPresetIdInput || "").trim(),
+        pendingCreatedPresetId = resolvePendingCreatedPresetId(
+          normalizedPresetScope,
+        );
+      if (
+        editingPresetId &&
+        pendingCreatedPresetId &&
+        editingPresetId === pendingCreatedPresetId
+      ) {
+        setPresetItemsState((previousPresetItemsState) =>
+          removePresetById(previousPresetItemsState, editingPresetId),
+        );
+      }
+      (setPendingCreatedPresetId(normalizedPresetScope, ""),
+        setEditingPresetIdState(""));
+    },
     clearChatQuickEditId = () => {
       setEditingChatQuickPromptId("");
     },
     clearImageQuickEditId = () => {
       setEditingImageQuickPromptId("");
+    },
+    cancelChatQuickEdit = () => {
+      cancelPendingPresetEditByScope({
+        presetScopeInput: "chat",
+        editingPresetIdInput: editingChatQuickPromptId,
+        setPresetItemsState: setChatQuickPrompts,
+        setEditingPresetIdState: setEditingChatQuickPromptId,
+      });
+    },
+    cancelImageQuickEdit = () => {
+      cancelPendingPresetEditByScope({
+        presetScopeInput: "image",
+        editingPresetIdInput: editingImageQuickPromptId,
+        setPresetItemsState: setImageQuickPrompts,
+        setEditingPresetIdState: setEditingImageQuickPromptId,
+      });
+    },
+    cancelIdentityPresetEdit = () => {
+      cancelPendingPresetEditByScope({
+        presetScopeInput: "identity",
+        editingPresetIdInput: editingIdentityPresetId,
+        setPresetItemsState: setIdentityPresets,
+        setEditingPresetIdState: setEditingIdentityPresetId,
+      });
     },
     resetChatQuickBatchSelection = () => {
       (setChatQuickBatchSelectMode((previousBatchSelectModeState) =>
@@ -31841,11 +37246,13 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         (suppressInstructionTagClickRef.current = false),
         closeInstructionTagMenu(),
         closeInstructionGroupMenu(),
-        setDraggingInstructionTagId(""),
-        setDraggingInstructionTagPayloadIds([]),
-        setInstructionTagDragSourceGroupName(""),
-        setDraggingInstructionGroupName(""),
-        setDragOverInstructionGroupName(""),
+        finishInstructionGroupPointerDragRef.current?.(false),
+        setSelectedImageQuickGroupNames(
+          (previousSelectedInstructionGroupNamesState) =>
+            previousSelectedInstructionGroupNamesState.length
+              ? []
+              : previousSelectedInstructionGroupNamesState,
+        ),
         setSelectedImageQuickPromptIds((previousSelectedPromptIdsState) =>
           previousSelectedPromptIdsState.length
             ? []
@@ -31901,12 +37308,29 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       targetPresetIdInput,
     ) => {
       const quickPresetMutationScopeConfig =
-        resolveQuickPresetMutationScopeConfig(
-          presetScopeInput,
-        );
+          resolveQuickPresetMutationScopeConfig(
+            presetScopeInput,
+          ),
+        presetEditTargetId = String(targetPresetIdInput || "").trim(),
+        pendingQuickPresetCleanupPlan = stripPendingCreatedPresetItem({
+          presetScopeInput:
+            quickPresetMutationScopeConfig.normalizedPresetScope,
+          presetItemsInput:
+            quickPresetMutationScopeConfig.presetItems,
+          preservePresetIdInput: presetEditTargetId,
+        });
+      pendingQuickPresetCleanupPlan.removedPresetId &&
+        (quickPresetMutationScopeConfig.setPresetItemsState(
+          pendingQuickPresetCleanupPlan.nextPresetItems,
+        ),
+        setPendingCreatedPresetId(
+          quickPresetMutationScopeConfig.normalizedPresetScope,
+          "",
+        ));
       beginPresetEditById({
         targetPresetIdInput: targetPresetIdInput,
-        presetItemsInput: quickPresetMutationScopeConfig.presetItems,
+        presetItemsInput:
+          pendingQuickPresetCleanupPlan.nextPresetItems,
         setEditingPresetDraftState:
           quickPresetMutationScopeConfig.setEditingDraftState,
         setEditingPresetIdState:
@@ -31947,6 +37371,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           quickPresetMutationScopeConfig.draftGroup,
         setPresetItemsState:
           quickPresetMutationScopeConfig.setPresetItemsState,
+        onPresetSaved: () =>
+          setPendingCreatedPresetId(
+            quickPresetMutationScopeConfig.normalizedPresetScope,
+            "",
+          ),
         clearEditingPresetId:
           quickPresetMutationScopeConfig.clearEditingId,
         successMessage:
@@ -31963,12 +37392,23 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       presetScopeInput = "chat",
     ) => {
       const quickPresetMutationScopeConfig =
-        resolveQuickPresetMutationScopeConfig(
-          presetScopeInput,
+          resolveQuickPresetMutationScopeConfig(
+            presetScopeInput,
+          ),
+        pendingQuickPresetCleanupPlan = stripPendingCreatedPresetItem({
+          presetScopeInput:
+            quickPresetMutationScopeConfig.normalizedPresetScope,
+          presetItemsInput:
+            quickPresetMutationScopeConfig.presetItems,
+        });
+      pendingQuickPresetCleanupPlan.removedPresetId &&
+        setPendingCreatedPresetId(
+          quickPresetMutationScopeConfig.normalizedPresetScope,
+          "",
         );
       createPresetAndBeginEdit({
         existingPresetItemsInput:
-          quickPresetMutationScopeConfig.presetItems,
+          pendingQuickPresetCleanupPlan.nextPresetItems,
         titlePrefix:
           quickPresetMutationScopeConfig.titlePrefix,
         createdGroupNameInput:
@@ -31983,6 +37423,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           quickPresetMutationScopeConfig.resetSelectionState,
         closePresetMenu:
           quickPresetMutationScopeConfig.closeMenu,
+        onCreatedPreset: (createdPresetId) =>
+          setPendingCreatedPresetId(
+            quickPresetMutationScopeConfig.normalizedPresetScope,
+            createdPresetId,
+          ),
       });
     },
     createChatQuickPrompt = () => {
@@ -31997,7 +37442,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         group: "",
         content: "",
       });
-      clearImageQuickEditId();
+      cancelImageQuickEdit();
       closeInstructionTagMenu();
       closeInstructionGroupMenu();
       setImageQuickPanelToolsOpen(false);
@@ -32273,44 +37718,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     cancelInstructionGroupDeleteActionDialog = () => {
       setInstructionGroupDeleteActionDialogState(null);
     },
-    moveInstructionGroupItemsToLastGroup = () => {
-      const targetInstructionGroupName = String(
-        instructionGroupDeleteActionDialogState?.targetGroupName || "",
-      ).trim();
-      if (!targetInstructionGroupName) {
-        setInstructionGroupDeleteActionDialogState(null);
-        return;
-      }
-      const nextInstructionGroupsAfterDelete = normalizeInstructionGroupNameList(
-          imageQuickPromptGroups,
-        ).filter(
-          (instructionGroupNameCandidate) =>
-            instructionGroupNameCandidate !== targetInstructionGroupName,
-        ),
-        moveTargetInstructionGroupName =
-          nextInstructionGroupsAfterDelete[
-            nextInstructionGroupsAfterDelete.length - 1
-          ] || CONST_INSTRUCTION_DEFAULT_GROUP;
-      setImageQuickPrompts((previousImageQuickPromptsState) =>
-        previousImageQuickPromptsState.map((imageQuickPromptItem) => {
-          const normalizedInstructionPromptGroupName =
-            normalizeInstructionPresetGroupName(imageQuickPromptItem?.group) ||
-            CONST_INSTRUCTION_DEFAULT_GROUP;
-          return normalizedInstructionPromptGroupName ===
-            targetInstructionGroupName
-            ? {
-                ...imageQuickPromptItem,
-                group:
-                  moveTargetInstructionGroupName === CONST_INSTRUCTION_DEFAULT_GROUP
-                    ? ""
-                    : moveTargetInstructionGroupName,
-              }
-            : imageQuickPromptItem;
-        }),
-      );
-      setImageQuickPromptGroups(nextInstructionGroupsAfterDelete);
-      setInstructionGroupDeleteActionDialogState(null);
-    },
     deleteInstructionGroupWithItems = () => {
       const targetInstructionGroupName = String(
         instructionGroupDeleteActionDialogState?.targetGroupName || "",
@@ -32335,6 +37742,198 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       );
       setImageQuickPromptGroups(nextInstructionGroupsAfterDelete);
       setInstructionGroupDeleteActionDialogState(null);
+    },
+    resolveImageQuickBatchSelectionState = () => {
+      const selectedInstructionGroupNames = normalizeInstructionGroupNameList(
+          selectedImageQuickGroupNames,
+        ).filter(
+          (instructionGroupName) =>
+            instructionGroupName &&
+            instructionGroupName !== CONST_INSTRUCTION_FAVORITES_GROUP,
+        ),
+        selectedInstructionGroupNameSet = new Set(
+          selectedInstructionGroupNames,
+        ),
+        selectedInstructionPromptIds = Array.from(
+          new Set(
+            selectedImageQuickPromptIds
+              .map((selectedInstructionPromptId) =>
+                String(selectedInstructionPromptId || "").trim(),
+              )
+              .filter(Boolean),
+          ),
+        ),
+        selectedInstructionPromptIdSet = new Set(
+          selectedInstructionPromptIds,
+        ),
+        promptIdsCoveredBySelectedGroups = imageQuickPrompts
+          .map((imageQuickPromptItem) => ({
+            id: String(imageQuickPromptItem?.id || "").trim(),
+            group:
+              normalizeInstructionPresetGroupName(
+                imageQuickPromptItem?.group,
+              ) || CONST_INSTRUCTION_DEFAULT_GROUP,
+          }))
+          .filter(
+            (instructionPromptItem) =>
+              instructionPromptItem.id &&
+              selectedInstructionGroupNameSet.has(
+                instructionPromptItem.group,
+              ),
+          )
+          .map((instructionPromptItem) => instructionPromptItem.id),
+        effectiveSelectedInstructionPromptIds = Array.from(
+          new Set([
+            ...selectedInstructionPromptIds,
+            ...promptIdsCoveredBySelectedGroups,
+          ]),
+        ),
+        selectableInstructionGroupNames = getAllInstructionGroupNames().filter(
+          (instructionGroupName) =>
+            instructionGroupName &&
+            instructionGroupName !== CONST_INSTRUCTION_FAVORITES_GROUP,
+        ),
+        selectableInstructionPromptIds = imageQuickPrompts
+          .map((imageQuickPromptItem) =>
+            String(imageQuickPromptItem?.id || "").trim(),
+          )
+          .filter(Boolean),
+        allSelectableInstructionGroupNamesSelected =
+          !!selectableInstructionGroupNames.length &&
+          selectableInstructionGroupNames.every((instructionGroupName) =>
+            selectedInstructionGroupNameSet.has(instructionGroupName),
+          ),
+        allSelectableInstructionPromptIdsSelected =
+          !!selectableInstructionPromptIds.length &&
+          selectableInstructionPromptIds.every((instructionPromptId) =>
+            selectedInstructionPromptIdSet.has(instructionPromptId),
+          ),
+        selectedEntityCount =
+          selectedInstructionGroupNames.length +
+          selectedInstructionPromptIds.length,
+        totalSelectableEntityCount =
+          selectableInstructionGroupNames.length +
+          selectableInstructionPromptIds.length;
+      return {
+        selectedInstructionGroupNames,
+        selectedInstructionGroupNameSet,
+        selectedInstructionPromptIds,
+        selectedInstructionPromptIdSet,
+        effectiveSelectedInstructionPromptIds,
+        selectableInstructionGroupNames,
+        selectableInstructionPromptIds,
+        selectedEntityCount,
+        totalSelectableEntityCount,
+        hasSelection: selectedEntityCount > 0,
+        allSelected:
+          totalSelectableEntityCount > 0 &&
+          allSelectableInstructionGroupNamesSelected &&
+          allSelectableInstructionPromptIdsSelected,
+      };
+    },
+    toggleInstructionGroupBatchSelection = (
+      targetInstructionGroupNameInput,
+    ) => {
+      const normalizedTargetInstructionGroupName = String(
+        targetInstructionGroupNameInput || "",
+      ).trim();
+      if (
+        !normalizedTargetInstructionGroupName ||
+        normalizedTargetInstructionGroupName ===
+          CONST_INSTRUCTION_FAVORITES_GROUP
+      ) {
+        return;
+      }
+      setSelectedImageQuickGroupNames(
+        (previousSelectedInstructionGroupNamesState) => {
+          const nextSelectedInstructionGroupNameSet = new Set(
+            normalizeInstructionGroupNameList(
+              previousSelectedInstructionGroupNamesState,
+            ).filter(
+              (instructionGroupName) =>
+                instructionGroupName &&
+                instructionGroupName !==
+                  CONST_INSTRUCTION_FAVORITES_GROUP,
+            ),
+          );
+          nextSelectedInstructionGroupNameSet.has(
+            normalizedTargetInstructionGroupName,
+          )
+            ? nextSelectedInstructionGroupNameSet.delete(
+                normalizedTargetInstructionGroupName,
+              )
+            : nextSelectedInstructionGroupNameSet.add(
+                normalizedTargetInstructionGroupName,
+              );
+          return Array.from(nextSelectedInstructionGroupNameSet);
+        },
+      );
+    },
+    toggleAllInstructionBatchSelections = () => {
+      const instructionBatchSelectionState =
+        resolveImageQuickBatchSelectionState();
+      instructionBatchSelectionState.allSelected
+        ? (setSelectedImageQuickGroupNames([]),
+          setSelectedImageQuickPromptIds([]))
+        : (setSelectedImageQuickGroupNames(
+            instructionBatchSelectionState.selectableInstructionGroupNames,
+          ),
+          setSelectedImageQuickPromptIds(
+            instructionBatchSelectionState.selectableInstructionPromptIds,
+          ));
+    },
+    exportSelectedImageQuickBatchEntities = () => {
+      const instructionBatchSelectionState =
+        resolveImageQuickBatchSelectionState();
+      exportImageQuickPrompts(
+        instructionBatchSelectionState.effectiveSelectedInstructionPromptIds,
+      );
+    },
+    deleteSelectedImageQuickBatchEntities = () => {
+      const instructionBatchSelectionState =
+          resolveImageQuickBatchSelectionState(),
+        selectedInstructionPromptIdSet = new Set(
+          instructionBatchSelectionState.effectiveSelectedInstructionPromptIds,
+        ),
+        selectedInstructionGroupNameSet =
+          instructionBatchSelectionState.selectedInstructionGroupNameSet;
+      if (
+        !selectedInstructionPromptIdSet.size &&
+        !selectedInstructionGroupNameSet.size
+      ) {
+        return;
+      }
+      setImageQuickPrompts((previousImageQuickPromptsState) =>
+        previousImageQuickPromptsState.filter((imageQuickPromptItem) => {
+          const normalizedInstructionPromptId = String(
+              imageQuickPromptItem?.id || "",
+            ).trim(),
+            normalizedInstructionPromptGroupName =
+              normalizeInstructionPresetGroupName(
+                imageQuickPromptItem?.group,
+              ) || CONST_INSTRUCTION_DEFAULT_GROUP;
+          if (
+            selectedInstructionGroupNameSet.has(
+              normalizedInstructionPromptGroupName,
+            )
+          ) {
+            return false;
+          }
+          return !selectedInstructionPromptIdSet.has(
+            normalizedInstructionPromptId,
+          );
+        }),
+      );
+      setImageQuickPromptGroups((previousInstructionGroups) =>
+        normalizeInstructionGroupNameList(previousInstructionGroups).filter(
+          (instructionGroupName) =>
+            !selectedInstructionGroupNameSet.has(
+              String(instructionGroupName || "").trim(),
+            ),
+        ),
+      );
+      setSelectedImageQuickGroupNames([]);
+      setSelectedImageQuickPromptIds([]);
     },
     createInstructionGroupByPrompt = () => {
       openInstructionGroupCreateDialog();
@@ -32709,6 +38308,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       onToggleTools,
       toolsActions = [],
       toolsOverlayPlacementClassName = "is-bottom align-right",
+      toolsOverlayPlacementStyle = void 0,
       toolsAlt = "tools",
     }) => {
       if (isBatchSelectMode) {
@@ -32802,6 +38402,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               <div
                 ref={toolsPopupRef}
                 className={`chat-history-tools-panel floating-layer ${toolsOverlayPlacementClassName}`}
+                style={toolsOverlayPlacementStyle}
               >
                 {toolsActions.map((toolActionItem) => {
                   const normalizedToolActionKey = String(
@@ -32845,7 +38446,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               editingPresetId: editingImageQuickPromptId,
               draftState: editingImageQuickPromptDraft,
               setDraftState: setEditingImageQuickPromptDraft,
-              clearEditingId: clearImageQuickEditId,
+              clearEditingId: cancelImageQuickEdit,
               saveEdit: saveImageQuickPromptEdit,
               itemClassNamePrefix:
                 "chat-history-item chat-quick-history-item chat-instruction-history-item",
@@ -32875,7 +38476,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               editingPresetId: editingChatQuickPromptId,
               draftState: editingChatQuickPromptDraft,
               setDraftState: setEditingChatQuickPromptDraft,
-              clearEditingId: clearChatQuickEditId,
+              clearEditingId: cancelChatQuickEdit,
               saveEdit: saveChatQuickPromptEdit,
               itemClassNamePrefix:
                 "chat-history-item chat-quick-history-item",
@@ -33068,6 +38669,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             : scopeInput === "identity"
               ? "identity"
               : "chat",
+        instructionBatchSelectionState =
+          normalizedScope === "image"
+            ? resolveImageQuickBatchSelectionState()
+            : null,
         quickPresetPanelScopeConfig =
           normalizedScope === "image"
             ? {
@@ -33080,12 +38685,17 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 panelEstimatedHeight: 560,
                 headActionsConfig: {
                   isBatchSelectMode: isImageQuickBatchSelectMode,
-                  selectedCount: selectedImageQuickPromptIds.length,
-                  totalCount: sortedImageQuickPrompts.length,
-                  onToggleSelectAll: toggleAllImageQuickSelections,
-                  onExportSelected: () =>
-                    exportImageQuickPrompts(selectedImageQuickPromptIds),
-                  onDeleteSelected: deleteSelectedImageQuickPrompts,
+                  selectedCount:
+                    instructionBatchSelectionState?.selectedEntityCount || 0,
+                  totalCount:
+                    instructionBatchSelectionState?.totalSelectableEntityCount ||
+                    0,
+                  onToggleSelectAll:
+                    toggleAllInstructionBatchSelections,
+                  onExportSelected:
+                    exportSelectedImageQuickBatchEntities,
+                  onDeleteSelected:
+                    deleteSelectedImageQuickBatchEntities,
                   onToggleBatchMode: toggleImageQuickBatchSelectMode,
                   onCreate: createImageQuickPrompt,
                   toolsTriggerRef: imageQuickPanelToolsTriggerRef,
@@ -33216,7 +38826,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           importPresetItems,
         } = quickPresetPanelScopeConfig;
       if (!isPanelOpen) return null;
-      const quickPresetPanelViewportWidth = Math.round(
+      const quickPresetPanelUiScale = resolveOverlayUiScaleFactor(),
+        quickPresetPanelViewportWidth = Math.round(
           window.visualViewport?.width ||
             window.innerWidth ||
             document.documentElement.clientWidth ||
@@ -33224,13 +38835,22 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         ),
         quickPresetPanelWidth = Math.max(
           1,
-          quickPresetPanelViewportWidth -
+          Math.round(
+            normalizeOverlayLengthToLayout(
+              quickPresetPanelViewportWidth,
+              quickPresetPanelUiScale,
+              "viewport",
+            ),
+          ) -
             CONST_CHAT_QUICK_PANEL_VIEWPORT_WIDTH_OFFSET_PX,
         ),
         panelPlacement = resolveRelativeOverlayPlacement({
           anchorElement,
           overlayWidth: quickPresetPanelWidth,
           overlayHeight: panelEstimatedHeight,
+          uiScale: quickPresetPanelUiScale,
+          lengthUnit: "layout",
+          outputOffsetUnit: "layout",
           gap: 6,
           viewportPadding: CONST_OVERLAY_VIEWPORT_PADDING_PX,
           viewportPaddingLeft: CONST_CHAT_QUICK_PANEL_LEFT_MARGIN_PX,
@@ -33248,17 +38868,27 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           ...(buildRelativeOverlayPlacementStyle(panelPlacement) || {}),
           width: quickPresetPanelWidth,
         },
-        toolsPlacementClassName = buildRelativeOverlayPlacementClassName(
-          resolveRelativeOverlayPlacement({
+        toolsPlacement = resolveRelativeOverlayPlacement({
             anchorElement: headActionsConfig?.toolsTriggerRef?.current,
             overlayWidth: CONST_SESSION_TOOLS_PANEL_WIDTH,
             overlayHeight: 110,
+            uiScale: quickPresetPanelUiScale,
+            lengthUnit: "layout",
+            outputOffsetUnit: "layout",
             gap: 6,
             viewportPadding: CONST_OVERLAY_VIEWPORT_PADDING_PX,
+            viewportPaddingLeft: CONST_CHAT_QUICK_PANEL_LEFT_MARGIN_PX,
+            viewportPaddingRight: CONST_CHAT_QUICK_PANEL_RIGHT_MARGIN_PX,
+            mirrorHorizontalPadding: true,
             preferVertical: "bottom",
-            preferHorizontal: "right",
+            preferHorizontal:
+              panelPlacement?.horizontal === "left" ? "left" : "right",
+            allowWideDock: false,
+            forceHorizontalDock: true,
           }),
-        ),
+        toolsPlacementClassName =
+          buildRelativeOverlayPlacementClassName(toolsPlacement),
+        toolsPlacementStyle = buildRelativeOverlayPlacementStyle(toolsPlacement),
         quickPresetPanelClassName = [
         "chat-quick-config-panel",
         "floating-layer",
@@ -33283,6 +38913,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               {renderPresetPanelHeadActions({
                 ...headActionsConfig,
                 toolsOverlayPlacementClassName: toolsPlacementClassName,
+                toolsOverlayPlacementStyle: toolsPlacementStyle,
               })}
             </div>
           </div>
@@ -33478,6 +39109,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     },
     clearInstructionTagPointerDragVisual = () => {
       clearInstructionTagGapShiftAnimationStyles();
+      clearInstructionPointerDragOverVisual();
       const previousVisualState =
           instructionTagPointerDragVisualRef.current || {},
         previousAnchorElement = previousVisualState.anchorEl,
@@ -33493,8 +39125,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         previousAnchorElement.style.removeProperty("--instruction-drag-gap-size"),
         previousAnchorElement.style.removeProperty("--instruction-drag-gap-height"));
       previousButtonElement &&
-        (previousButtonElement.classList.remove("is-pointer-dragging"),
-        previousButtonElement.style.removeProperty("position"),
+        (previousButtonElement.style.removeProperty("position"),
         previousButtonElement.style.removeProperty("left"),
         previousButtonElement.style.removeProperty("top"),
         previousButtonElement.style.removeProperty("width"),
@@ -33558,20 +39189,48 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             "--instruction-drag-gap-height",
           ) || "0",
         );
+      const directAnchorElementCandidate =
+        instructionTagDropTargetInput?.anchorEl || null;
       let nextAnchorElement = null;
+      if (
+        directAnchorElementCandidate instanceof Element &&
+        directAnchorElementCandidate.isConnected
+      ) {
+        const directAnchorGroupName = String(
+            directAnchorElementCandidate.getAttribute(
+              "data-instruction-group-name",
+            ) || "",
+          ).trim(),
+          directAnchorPromptId = String(
+            directAnchorElementCandidate.getAttribute(
+              "data-instruction-prompt-id",
+            ) || "",
+          ).trim(),
+          directAnchorSegmentType = String(
+            directAnchorElementCandidate.getAttribute(
+              "data-instruction-segment",
+            ) || "",
+          ).trim();
+        directAnchorGroupName === normalizedInstructionGroupName &&
+          directAnchorPromptId === normalizedInstructionPromptId &&
+          directAnchorSegmentType === normalizedInstructionSegmentType &&
+          (nextAnchorElement = directAnchorElementCandidate);
+      }
       if (normalizedInstructionGroupName && normalizedInstructionPromptId) {
-        const normalizedInstructionGroupNameSelectorSafe =
-            typeof CSS !== "undefined" && typeof CSS.escape === "function"
-              ? CSS.escape(normalizedInstructionGroupName)
-              : normalizedInstructionGroupName.replace(/[\\"]/g, "\\$&"),
-          normalizedInstructionPromptIdSelectorSafe =
-            typeof CSS !== "undefined" && typeof CSS.escape === "function"
-              ? CSS.escape(normalizedInstructionPromptId)
-              : normalizedInstructionPromptId.replace(/[\\"]/g, "\\$&");
-        nextAnchorElement =
-          instructionPanelGroupsRef.current?.querySelector?.(
-            `.instruction-tag-menu-anchor[data-instruction-group-name="${normalizedInstructionGroupNameSelectorSafe}"][data-instruction-prompt-id="${normalizedInstructionPromptIdSelectorSafe}"]`,
-          ) || null;
+        if (!nextAnchorElement) {
+          const normalizedInstructionGroupNameSelectorSafe =
+              typeof CSS !== "undefined" && typeof CSS.escape === "function"
+                ? CSS.escape(normalizedInstructionGroupName)
+                : normalizedInstructionGroupName.replace(/[\\"]/g, "\\$&"),
+            normalizedInstructionPromptIdSelectorSafe =
+              typeof CSS !== "undefined" && typeof CSS.escape === "function"
+                ? CSS.escape(normalizedInstructionPromptId)
+                : normalizedInstructionPromptId.replace(/[\\"]/g, "\\$&");
+          nextAnchorElement =
+            instructionPanelGroupsRef.current?.querySelector?.(
+              `.instruction-tag-menu-anchor[data-instruction-group-name="${normalizedInstructionGroupNameSelectorSafe}"][data-instruction-prompt-id="${normalizedInstructionPromptIdSelectorSafe}"]`,
+            ) || null;
+        }
       }
       if (
         previousAnchorElement &&
@@ -33586,23 +39245,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         };
         return;
       }
-      const previousInstructionGroupBodyElement =
-          previousAnchorElement?.closest?.(".instruction-group-body") || null,
-        nextInstructionGroupBodyElement =
-          nextAnchorElement?.closest?.(".instruction-group-body") || null,
-        affectedInstructionGroupBodyElements = [
-          previousInstructionGroupBodyElement,
-          nextInstructionGroupBodyElement,
-        ].filter(
-          (instructionGroupBodyElement, instructionGroupBodyIndex, instructionGroupBodyList) =>
-            !!instructionGroupBodyElement &&
-            instructionGroupBodyList.indexOf(instructionGroupBodyElement) ===
-              instructionGroupBodyIndex,
-        ),
-        previousAnchorRectSnapshot = collectInstructionTagAnchorRectSnapshot(
-          affectedInstructionGroupBodyElements,
-          normalizedInstructionSegmentType,
-        );
       if (previousAnchorElement && previousAnchorElement !== nextAnchorElement) {
         previousAnchorElement.classList.remove("is-pointer-drag-gap-target");
         previousAnchorElement.classList.remove("is-pointer-drag-gap-after");
@@ -33611,11 +39253,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         previousAnchorElement.style.removeProperty("--instruction-drag-gap-height");
       }
       if (!nextAnchorElement) {
-        animateInstructionTagAnchorLayoutShift(
-          previousAnchorRectSnapshot,
-          affectedInstructionGroupBodyElements,
-          normalizedInstructionSegmentType,
-        );
         instructionTagPointerDragVisualRef.current = {
           ...currentInstructionTagPointerDragVisualState,
           anchorEl: null,
@@ -33636,24 +39273,96 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         "--instruction-drag-gap-height",
         `${nextGapHeight}px`,
       );
-      animateInstructionTagAnchorLayoutShift(
-        previousAnchorRectSnapshot,
-        affectedInstructionGroupBodyElements,
-        normalizedInstructionSegmentType,
-      );
       instructionTagPointerDragVisualRef.current = {
         ...currentInstructionTagPointerDragVisualState,
         anchorEl: nextAnchorElement,
       };
+    },
+    cancelScheduledInstructionTagGapAnchorVisual = () => {
+      instructionTagGapAnchorVisualRafRef.current &&
+        (cancelAnimationFrame(instructionTagGapAnchorVisualRafRef.current),
+        (instructionTagGapAnchorVisualRafRef.current = 0));
+      instructionTagGapAnchorVisualPendingRef.current = {
+        dropTarget: null,
+        dragState: null,
+      };
+    },
+    scheduleInstructionTagGapAnchorVisual = (
+      instructionTagDropTargetInput = null,
+      instructionTagPointerDragStateInput = null,
+    ) => {
+      if (instructionTagDragPerfEnabledRef.current) {
+        const currentInstructionTagDragPerfSampleState =
+          instructionTagDragPerfSampleRef.current ||
+          createIdleInstructionTagDragPerfSampleState();
+        currentInstructionTagDragPerfSampleState.gapVisualScheduleCount += 1;
+        instructionTagDragPerfSampleRef.current =
+          currentInstructionTagDragPerfSampleState;
+      }
+      instructionTagGapAnchorVisualPendingRef.current = {
+        dropTarget: instructionTagDropTargetInput,
+        dragState: instructionTagPointerDragStateInput,
+      };
+      instructionTagGapAnchorVisualRafRef.current ||
+        (instructionTagGapAnchorVisualRafRef.current = requestAnimationFrame(() => {
+          instructionTagGapAnchorVisualRafRef.current = 0;
+          const pendingGapAnchorVisualState =
+              instructionTagGapAnchorVisualPendingRef.current || {},
+            pendingInstructionTagDropTarget =
+              pendingGapAnchorVisualState.dropTarget || null,
+            pendingInstructionTagPointerDragState =
+              pendingGapAnchorVisualState.dragState ||
+              instructionTagPointerDragRef.current ||
+              null;
+          instructionTagGapAnchorVisualPendingRef.current = {
+            dropTarget: null,
+            dragState: null,
+          };
+          if (!pendingInstructionTagPointerDragState?.active) {
+            return;
+          }
+          const gapVisualStartAt = performance.now();
+          writeInstructionTagGapAnchorVisual(
+            pendingInstructionTagDropTarget,
+            pendingInstructionTagPointerDragState,
+          );
+          if (instructionTagDragPerfEnabledRef.current) {
+            const nextInstructionTagDragPerfSampleState =
+                instructionTagDragPerfSampleRef.current ||
+                createIdleInstructionTagDragPerfSampleState(),
+              gapVisualDurationMs = Math.max(
+                0,
+                performance.now() - gapVisualStartAt,
+              );
+            nextInstructionTagDragPerfSampleState.gapVisualCommitCount += 1;
+            nextInstructionTagDragPerfSampleState.gapVisualCostMsTotal +=
+              gapVisualDurationMs;
+            instructionTagDragPerfSampleRef.current =
+              nextInstructionTagDragPerfSampleState;
+          }
+        }));
     },
     ensureInstructionTagPointerDragOverlayElement = (
       instructionTagSourceButtonElementInput = null,
     ) => {
       const currentInstructionTagPointerDragVisualState =
           instructionTagPointerDragVisualRef.current || {},
+        currentInstructionTagPointerDragState =
+          instructionTagPointerDragRef.current || {},
+        instructionTagDragPayloadCount = Math.max(
+          1,
+          Array.isArray(currentInstructionTagPointerDragState?.promptIds)
+            ? currentInstructionTagPointerDragState.promptIds.filter(Boolean)
+                .length
+            : 0,
+        ),
         existingInstructionTagOverlayElement =
           currentInstructionTagPointerDragVisualState.overlayEl || null;
       if (existingInstructionTagOverlayElement?.isConnected) {
+        existingInstructionTagOverlayElement.classList.toggle(
+          "is-multi-drag",
+          instructionTagDragPayloadCount > 1,
+        );
         return existingInstructionTagOverlayElement;
       }
       const instructionTagSourceButtonElement =
@@ -33666,19 +39375,71 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       ) {
         return null;
       }
-      const nextInstructionTagOverlayElement =
-        instructionTagSourceButtonElement.cloneNode(true);
-      nextInstructionTagOverlayElement.classList.add("is-pointer-dragging");
-      nextInstructionTagOverlayElement.removeAttribute("id");
-      nextInstructionTagOverlayElement.removeAttribute("data-tip-text");
-      nextInstructionTagOverlayElement
+      const nextInstructionTagOverlayElement = document.createElement("div");
+      nextInstructionTagOverlayElement.className = "instruction-tag-drag-overlay";
+      nextInstructionTagOverlayElement.classList.toggle(
+        "is-multi-drag",
+        instructionTagDragPayloadCount > 1,
+      );
+      const nextInstructionTagOverlayWidth = Math.max(
+          1,
+          Number(currentInstructionTagPointerDragState?.width) || 0,
+        ),
+        nextInstructionTagOverlayHeight = Math.max(
+          1,
+          Number(currentInstructionTagPointerDragState?.height) || 0,
+        ),
+        nextInstructionTagOverlayInitialLeft = Number.isFinite(
+          Number(currentInstructionTagPointerDragState?.sourceLeft),
+        )
+          ? Number(currentInstructionTagPointerDragState.sourceLeft)
+          : 0,
+        nextInstructionTagOverlayInitialTop = Number.isFinite(
+          Number(currentInstructionTagPointerDragState?.sourceTop),
+        )
+          ? Number(currentInstructionTagPointerDragState.sourceTop)
+          : 0;
+      nextInstructionTagOverlayElement.setAttribute("aria-hidden", "true");
+      const nextInstructionTagOverlayBackdropElement =
+          document.createElement("div"),
+        nextInstructionTagOverlayFrontElement =
+          instructionTagSourceButtonElement.cloneNode(true);
+      nextInstructionTagOverlayBackdropElement.className =
+        "instruction-tag-drag-overlay-backdrop";
+      nextInstructionTagOverlayFrontElement.classList.add(
+        "instruction-tag-drag-overlay-front",
+      );
+      nextInstructionTagOverlayFrontElement.removeAttribute("id");
+      nextInstructionTagOverlayFrontElement.removeAttribute("data-tip-text");
+      nextInstructionTagOverlayFrontElement
         .querySelectorAll?.("[data-tip-text]")
         ?.forEach((instructionTagOverlayTipElement) =>
           instructionTagOverlayTipElement.removeAttribute("data-tip-text"),
         );
-      nextInstructionTagOverlayElement.setAttribute("aria-hidden", "true");
-      nextInstructionTagOverlayElement.setAttribute("tabindex", "-1");
-      nextInstructionTagOverlayElement.setAttribute("draggable", "false");
+      nextInstructionTagOverlayFrontElement.setAttribute("aria-hidden", "true");
+      nextInstructionTagOverlayFrontElement.setAttribute("tabindex", "-1");
+      nextInstructionTagOverlayFrontElement.setAttribute(
+        "draggable",
+        "false",
+      );
+      nextInstructionTagOverlayElement.appendChild(
+        nextInstructionTagOverlayBackdropElement,
+      );
+      nextInstructionTagOverlayElement.appendChild(
+        nextInstructionTagOverlayFrontElement,
+      );
+      nextInstructionTagOverlayElement.style.setProperty(
+        "width",
+        `${nextInstructionTagOverlayWidth}px`,
+      );
+      nextInstructionTagOverlayElement.style.setProperty(
+        "height",
+        `${nextInstructionTagOverlayHeight}px`,
+      );
+      nextInstructionTagOverlayElement.style.setProperty(
+        "transform",
+        `translate3d(${nextInstructionTagOverlayInitialLeft}px, ${nextInstructionTagOverlayInitialTop}px, 0)`,
+      );
       document.body.appendChild(nextInstructionTagOverlayElement);
       instructionTagPointerDragVisualRef.current = {
         ...currentInstructionTagPointerDragVisualState,
@@ -33687,10 +39448,383 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       };
       return nextInstructionTagOverlayElement;
     },
+    appendInstructionTagDragPerfLog = (
+      perfEventInput = "sample",
+      perfPayloadInput = null,
+    ) => {
+      if (!instructionTagDragPerfEnabledRef.current) {
+        return;
+      }
+      const appendPerfLogInvoker =
+        typeof window !== "undefined" ? window?.shell?.appendPerfLog : null;
+      if (typeof appendPerfLogInvoker !== "function") {
+        return;
+      }
+      const normalizedPerfEvent =
+          String(perfEventInput || "sample").trim() || "sample",
+        normalizedPerfPayload =
+          perfPayloadInput && typeof perfPayloadInput === "object"
+            ? perfPayloadInput
+            : {};
+      try {
+        appendPerfLogInvoker({
+          scope: "instruction-drag",
+          event: normalizedPerfEvent,
+          data: normalizedPerfPayload,
+        }).catch((ignoredError) => {
+          void ignoredError;
+        });
+      } catch (ignoredError) {
+        void ignoredError;
+      }
+    },
+    buildInstructionTagDragPerfSnapshot = () => {
+      const currentInstructionTagPointerDragState =
+          instructionTagPointerDragRef.current ||
+          createIdleInstructionTagPointerDragState(),
+        currentInstructionTagDragPerfSampleState =
+          instructionTagDragPerfSampleRef.current ||
+          createIdleInstructionTagDragPerfSampleState();
+      return {
+        phase: String(currentInstructionTagPointerDragState.phase || "idle"),
+        active: !!currentInstructionTagPointerDragState.active,
+        pending: !!currentInstructionTagPointerDragState.pending,
+        sourceGroupName: String(
+          currentInstructionTagPointerDragState.sourceGroupName || "",
+        ).trim(),
+        hoveredGroupName: String(
+          currentInstructionTagPointerDragState.hoveredGroupNameAtPointer || "",
+        ).trim(),
+        dropTargetGroup: String(
+          currentInstructionTagPointerDragState.dropTarget?.groupName || "",
+        ).trim(),
+        dropTargetPromptId: String(
+          currentInstructionTagPointerDragState.dropTarget?.promptId || "",
+        ).trim(),
+        pointerClientX: Number(
+          currentInstructionTagPointerDragState.pointerClientX || 0,
+        ),
+        pointerClientY: Number(
+          currentInstructionTagPointerDragState.pointerClientY || 0,
+        ),
+        pointerMoves: Number(
+          currentInstructionTagDragPerfSampleState.pointerMoveIntervalSamples || 0,
+        ),
+        overlaySyncCount: Number(
+          currentInstructionTagDragPerfSampleState.overlaySyncCount || 0,
+        ),
+        tickCount: Number(currentInstructionTagDragPerfSampleState.tickCount || 0),
+      };
+    },
+    appendInstructionTagDragPerfDetailLog = (
+      perfEventInput = "",
+      perfPayloadInput = null,
+    ) => {
+      if (!instructionTagDragPerfEnabledRef.current) {
+        return;
+      }
+      const normalizedPerfEvent = String(perfEventInput || "").trim();
+      if (!normalizedPerfEvent) {
+        return;
+      }
+      const currentInstructionTagDragPerfMonitorState =
+          instructionTagDragPerfMonitorRef.current ||
+          createIdleInstructionTagDragPerfMonitorState(),
+        detailPayload =
+          perfPayloadInput && typeof perfPayloadInput === "object"
+            ? perfPayloadInput
+            : {};
+      appendInstructionTagDragPerfLog(normalizedPerfEvent, {
+        sessionId: Number(
+          currentInstructionTagDragPerfMonitorState.sessionId || 0,
+        ),
+        ...detailPayload,
+        snapshot: buildInstructionTagDragPerfSnapshot(),
+      });
+    },
+    updateInstructionTagDragPerfSample = (updaterInput) => {
+      if (!instructionTagDragPerfEnabledRef.current) {
+        return;
+      }
+      if (typeof updaterInput !== "function") {
+        return;
+      }
+      const currentInstructionTagDragPerfSampleState =
+        instructionTagDragPerfSampleRef.current ||
+        createIdleInstructionTagDragPerfSampleState();
+      updaterInput(currentInstructionTagDragPerfSampleState);
+      instructionTagDragPerfSampleRef.current =
+        currentInstructionTagDragPerfSampleState;
+    },
+    stopInstructionTagDragPerfMonitor = () => {
+      const currentInstructionTagDragPerfMonitorState =
+        instructionTagDragPerfMonitorRef.current ||
+        createIdleInstructionTagDragPerfMonitorState();
+      currentInstructionTagDragPerfMonitorState.active = false;
+      currentInstructionTagDragPerfMonitorState.rafId &&
+        (cancelAnimationFrame(currentInstructionTagDragPerfMonitorState.rafId),
+        (currentInstructionTagDragPerfMonitorState.rafId = 0));
+      currentInstructionTagDragPerfMonitorState.eventLoopIntervalId &&
+        (clearInterval(
+          currentInstructionTagDragPerfMonitorState.eventLoopIntervalId,
+        ),
+        (currentInstructionTagDragPerfMonitorState.eventLoopIntervalId = 0));
+      currentInstructionTagDragPerfMonitorState.longTaskObserver?.disconnect?.();
+      currentInstructionTagDragPerfMonitorState.longTaskObserver = null;
+      instructionTagDragPerfMonitorRef.current =
+        createIdleInstructionTagDragPerfMonitorState();
+    },
+    startInstructionTagDragPerfMonitor = () => {
+      if (!instructionTagDragPerfEnabledRef.current) {
+        return;
+      }
+      stopInstructionTagDragPerfMonitor();
+      const nextInstructionTagDragPerfMonitorState =
+        createIdleInstructionTagDragPerfMonitorState();
+      const currentInstructionTagDragDebugState =
+        instructionTagDragDebugRef.current ||
+        createIdleInstructionTagDragDebugState();
+      nextInstructionTagDragPerfMonitorState.active = true;
+      nextInstructionTagDragPerfMonitorState.sessionId = Number(
+        currentInstructionTagDragDebugState.sessionId || 0,
+      );
+      nextInstructionTagDragPerfMonitorState.eventLoopLastAt = performance.now();
+      const sampleInstructionTagDragRaf = (frameTimestampInput) => {
+        const currentInstructionTagDragPerfMonitorState =
+          instructionTagDragPerfMonitorRef.current ||
+          createIdleInstructionTagDragPerfMonitorState();
+        if (!currentInstructionTagDragPerfMonitorState.active) {
+          return;
+        }
+        const normalizedFrameTimestamp = Number(frameTimestampInput);
+        if (Number.isFinite(normalizedFrameTimestamp)) {
+          const previousRafTimestamp = Number(
+            currentInstructionTagDragPerfMonitorState.rafLastAt,
+          );
+          if (Number.isFinite(previousRafTimestamp) && previousRafTimestamp > 0) {
+            const rafDeltaMs = Math.max(
+              0,
+              normalizedFrameTimestamp - previousRafTimestamp,
+            );
+            updateInstructionTagDragPerfSample(
+              (nextInstructionTagDragPerfSampleState) => {
+                nextInstructionTagDragPerfSampleState.rafSamples += 1;
+                nextInstructionTagDragPerfSampleState.rafDeltaTotalMs +=
+                  rafDeltaMs;
+                nextInstructionTagDragPerfSampleState.rafDeltaMaxMs = Math.max(
+                  Number(
+                    nextInstructionTagDragPerfSampleState.rafDeltaMaxMs || 0,
+                  ),
+                  rafDeltaMs,
+                );
+                rafDeltaMs >= 16 &&
+                  (nextInstructionTagDragPerfSampleState.rafGapOver16Count +=
+                    1);
+                rafDeltaMs >= 33 &&
+                  (nextInstructionTagDragPerfSampleState.rafGapOver33Count +=
+                    1);
+                rafDeltaMs >= 50 &&
+                  (nextInstructionTagDragPerfSampleState.rafGapOver50Count +=
+                    1);
+              },
+            );
+            if (rafDeltaMs >= 33) {
+              const nowTimestampMs = Date.now();
+              if (
+                nowTimestampMs -
+                  Number(
+                    currentInstructionTagDragPerfMonitorState.lastRafGapLogAt ||
+                      0,
+                  ) >=
+                300
+              ) {
+                currentInstructionTagDragPerfMonitorState.lastRafGapLogAt =
+                  nowTimestampMs;
+                appendInstructionTagDragPerfDetailLog("raf-gap", {
+                  deltaMs: Number(rafDeltaMs.toFixed(3)),
+                  thresholdMs: 33,
+                });
+              }
+            }
+          }
+          currentInstructionTagDragPerfMonitorState.rafLastAt =
+            normalizedFrameTimestamp;
+        }
+        currentInstructionTagDragPerfMonitorState.rafId =
+          requestAnimationFrame(sampleInstructionTagDragRaf);
+        instructionTagDragPerfMonitorRef.current =
+          currentInstructionTagDragPerfMonitorState;
+      };
+      nextInstructionTagDragPerfMonitorState.rafId = requestAnimationFrame(
+        sampleInstructionTagDragRaf,
+      );
+      nextInstructionTagDragPerfMonitorState.eventLoopIntervalId = setInterval(
+        () => {
+          const currentInstructionTagDragPerfMonitorState =
+            instructionTagDragPerfMonitorRef.current ||
+            createIdleInstructionTagDragPerfMonitorState();
+          if (!currentInstructionTagDragPerfMonitorState.active) {
+            return;
+          }
+          const nowTimestamp = performance.now(),
+            previousEventLoopTimestamp = Number(
+              currentInstructionTagDragPerfMonitorState.eventLoopLastAt || 0,
+            );
+          if (Number.isFinite(previousEventLoopTimestamp) && previousEventLoopTimestamp > 0) {
+            const eventLoopLagMs = Math.max(
+              0,
+              nowTimestamp - previousEventLoopTimestamp - 50,
+            );
+            updateInstructionTagDragPerfSample(
+              (nextInstructionTagDragPerfSampleState) => {
+                nextInstructionTagDragPerfSampleState.eventLoopLagSamples += 1;
+                nextInstructionTagDragPerfSampleState.eventLoopLagTotalMs +=
+                  eventLoopLagMs;
+                nextInstructionTagDragPerfSampleState.eventLoopLagMaxMs =
+                  Math.max(
+                    Number(
+                      nextInstructionTagDragPerfSampleState.eventLoopLagMaxMs ||
+                        0,
+                    ),
+                    eventLoopLagMs,
+                  );
+                eventLoopLagMs >= 16 &&
+                  (nextInstructionTagDragPerfSampleState.eventLoopLagOver16Count +=
+                    1);
+                eventLoopLagMs >= 33 &&
+                  (nextInstructionTagDragPerfSampleState.eventLoopLagOver33Count +=
+                    1);
+                eventLoopLagMs >= 50 &&
+                  (nextInstructionTagDragPerfSampleState.eventLoopLagOver50Count +=
+                    1);
+              },
+            );
+            if (eventLoopLagMs >= 33) {
+              const nowTimestampMs = Date.now();
+              if (
+                nowTimestampMs -
+                  Number(
+                    currentInstructionTagDragPerfMonitorState.lastEventLoopLagLogAt ||
+                      0,
+                  ) >=
+                300
+              ) {
+                currentInstructionTagDragPerfMonitorState.lastEventLoopLagLogAt =
+                  nowTimestampMs;
+                appendInstructionTagDragPerfDetailLog("event-loop-lag", {
+                  lagMs: Number(eventLoopLagMs.toFixed(3)),
+                  thresholdMs: 33,
+                });
+              }
+            }
+          }
+          currentInstructionTagDragPerfMonitorState.eventLoopLastAt =
+            nowTimestamp;
+          instructionTagDragPerfMonitorRef.current =
+            currentInstructionTagDragPerfMonitorState;
+        },
+        50,
+      );
+      if (
+        typeof PerformanceObserver === "function" &&
+        Array.isArray(PerformanceObserver?.supportedEntryTypes) &&
+        PerformanceObserver.supportedEntryTypes.includes("longtask")
+      ) {
+        try {
+          const longTaskObserver = new PerformanceObserver((entryList) => {
+            const currentInstructionTagDragPerfMonitorState =
+              instructionTagDragPerfMonitorRef.current ||
+              createIdleInstructionTagDragPerfMonitorState();
+            if (!currentInstructionTagDragPerfMonitorState.active) {
+              return;
+            }
+            const longTaskEntries = Array.isArray(entryList?.getEntries?.())
+              ? entryList.getEntries()
+              : [];
+            longTaskEntries.forEach((longTaskEntry) => {
+              const longTaskDurationMs = Math.max(
+                0,
+                Number(longTaskEntry?.duration) || 0,
+              );
+              updateInstructionTagDragPerfSample(
+                (nextInstructionTagDragPerfSampleState) => {
+                  nextInstructionTagDragPerfSampleState.longTaskCount += 1;
+                  nextInstructionTagDragPerfSampleState.longTaskTotalMs +=
+                    longTaskDurationMs;
+                  nextInstructionTagDragPerfSampleState.longTaskMaxMs =
+                    Math.max(
+                      Number(
+                        nextInstructionTagDragPerfSampleState.longTaskMaxMs || 0,
+                      ),
+                      longTaskDurationMs,
+                    );
+                },
+              );
+              currentInstructionTagDragPerfMonitorState.longTaskSerial += 1;
+              const rawLongTaskAttributionList = longTaskEntry?.attribution,
+                normalizedLongTaskAttributionList =
+                  rawLongTaskAttributionList &&
+                  typeof rawLongTaskAttributionList.length === "number"
+                    ? Array.from(rawLongTaskAttributionList).map(
+                        (longTaskAttributionItem, longTaskAttributionIndex) => ({
+                          index: longTaskAttributionIndex,
+                          name: String(
+                            longTaskAttributionItem?.name || "",
+                          ).trim(),
+                          entryType: String(
+                            longTaskAttributionItem?.entryType || "",
+                          ).trim(),
+                          containerType: String(
+                            longTaskAttributionItem?.containerType || "",
+                          ).trim(),
+                          containerName: String(
+                            longTaskAttributionItem?.containerName || "",
+                          ).trim(),
+                          containerSrc: String(
+                            longTaskAttributionItem?.containerSrc || "",
+                          ).trim(),
+                          containerId: String(
+                            longTaskAttributionItem?.containerId || "",
+                          ).trim(),
+                        }),
+                      )
+                    : [];
+              appendInstructionTagDragPerfDetailLog("longtask", {
+                serial: Number(
+                  currentInstructionTagDragPerfMonitorState.longTaskSerial || 0,
+                ),
+                durationMs: Number(longTaskDurationMs.toFixed(3)),
+                startTimeMs: Number(
+                  Number(longTaskEntry?.startTime || 0).toFixed(3),
+                ),
+                entryType: String(longTaskEntry?.entryType || "").trim(),
+                name: String(longTaskEntry?.name || "").trim(),
+                attribution: normalizedLongTaskAttributionList,
+              });
+            });
+            instructionTagDragPerfMonitorRef.current =
+              currentInstructionTagDragPerfMonitorState;
+          });
+          longTaskObserver.observe({
+            entryTypes: ["longtask"],
+          });
+          nextInstructionTagDragPerfMonitorState.longTaskObserver =
+            longTaskObserver;
+          nextInstructionTagDragPerfMonitorState.longTaskSupported = true;
+        } catch (ignoredError) {
+          void ignoredError;
+        }
+      }
+      instructionTagDragPerfMonitorRef.current =
+        nextInstructionTagDragPerfMonitorState;
+    },
     flushInstructionTagDragDebugLog = (
       flushReasonInput = "sample",
       forceFlush = false,
     ) => {
+      if (!instructionTagDragPerfEnabledRef.current) {
+        return;
+      }
       const instructionTagDragDebugState =
         instructionTagDragDebugRef.current || createIdleInstructionTagDragDebugState();
       if (!instructionTagDragDebugState.sessionId) {
@@ -33716,32 +39850,375 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         ...currentCounts,
       };
       instructionTagDragDebugRef.current = instructionTagDragDebugState;
-      appendConsoleLogEntry(
-        "debug",
-        `[指令拖拽调试#${instructionTagDragDebugState.sessionId}] ${flushReason} phase=${instructionTagDragDebugState.lastPhase || "idle"} ${Object.entries(currentCounts)
-          .map(([counterKey, counterValue]) => `${counterKey}=${Number(counterValue || 0)}`)
-          .join(" ")}`,
-        "dev",
-      );
+      const currentInstructionTagDragPerfSampleState =
+          instructionTagDragPerfSampleRef.current ||
+          createIdleInstructionTagDragPerfSampleState(),
+        elapsedMs = Math.max(
+          0,
+          currentInstructionTagDragPerfSampleState.startedAt > 0
+            ? performance.now() -
+                Number(currentInstructionTagDragPerfSampleState.startedAt || 0)
+            : 0,
+        ),
+        normalizedTickCount = Number(
+          currentInstructionTagDragPerfSampleState.tickCount || 0,
+        ),
+        normalizedTickCostMsTotal = Number(
+          currentInstructionTagDragPerfSampleState.tickCostMsTotal || 0,
+        ),
+        normalizedGapVisualCommitCount = Number(
+          currentInstructionTagDragPerfSampleState.gapVisualCommitCount || 0,
+        ),
+        normalizedGapVisualCostMsTotal = Number(
+          currentInstructionTagDragPerfSampleState.gapVisualCostMsTotal || 0,
+        ),
+        normalizedOverlayLagSamples = Number(
+          currentInstructionTagDragPerfSampleState.overlayLagSamples || 0,
+        ),
+        normalizedOverlayLagTotalPx = Number(
+          currentInstructionTagDragPerfSampleState.overlayLagTotalPx || 0,
+        ),
+        normalizedOverlayLagMaxPx = Number(
+          currentInstructionTagDragPerfSampleState.overlayLagMaxPx || 0,
+        ),
+        normalizedPointerMoveIntervalSamples = Number(
+          currentInstructionTagDragPerfSampleState.pointerMoveIntervalSamples || 0,
+        ),
+        normalizedPointerMoveIntervalTotalMs = Number(
+          currentInstructionTagDragPerfSampleState.pointerMoveIntervalTotalMs || 0,
+        ),
+        normalizedPointerMoveHandlerSamples = Number(
+          currentInstructionTagDragPerfSampleState.pointerMoveHandlerSamples || 0,
+        ),
+        normalizedPointerMoveHandlerCostMsTotal = Number(
+          currentInstructionTagDragPerfSampleState.pointerMoveHandlerCostMsTotal ||
+            0,
+        ),
+        normalizedRafSamples = Number(
+          currentInstructionTagDragPerfSampleState.rafSamples || 0,
+        ),
+        normalizedRafDeltaTotalMs = Number(
+          currentInstructionTagDragPerfSampleState.rafDeltaTotalMs || 0,
+        ),
+        normalizedEventLoopLagSamples = Number(
+          currentInstructionTagDragPerfSampleState.eventLoopLagSamples || 0,
+        ),
+        normalizedEventLoopLagTotalMs = Number(
+          currentInstructionTagDragPerfSampleState.eventLoopLagTotalMs || 0,
+        ),
+        normalizedLongTaskCount = Number(
+          currentInstructionTagDragPerfSampleState.longTaskCount || 0,
+        ),
+        normalizedLongTaskTotalMs = Number(
+          currentInstructionTagDragPerfSampleState.longTaskTotalMs || 0,
+        );
+      appendInstructionTagDragPerfLog("sample", {
+        reason: flushReason,
+        sessionId: Number(instructionTagDragDebugState.sessionId || 0),
+        phase: String(instructionTagDragDebugState.lastPhase || "idle"),
+        phaseDetail: String(instructionTagDragDebugState.lastPhaseDetail || ""),
+        elapsedMs: Math.round(elapsedMs),
+        counts: { ...currentCounts },
+        perf: {
+          overlaySyncCount: Number(
+            currentInstructionTagDragPerfSampleState.overlaySyncCount || 0,
+          ),
+          pointerMoveIntervalAvgMs:
+            normalizedPointerMoveIntervalSamples > 0
+              ? Number(
+                  (
+                    normalizedPointerMoveIntervalTotalMs /
+                    normalizedPointerMoveIntervalSamples
+                  ).toFixed(3),
+                )
+              : 0,
+          pointerMoveIntervalMaxMs: Number(
+            Number(
+              currentInstructionTagDragPerfSampleState.pointerMoveIntervalMaxMs ||
+                0,
+            ).toFixed(3),
+          ),
+          pointerMoveGapOver16Count: Number(
+            currentInstructionTagDragPerfSampleState.pointerMoveGapOver16Count ||
+              0,
+          ),
+          pointerMoveGapOver33Count: Number(
+            currentInstructionTagDragPerfSampleState.pointerMoveGapOver33Count ||
+              0,
+          ),
+          pointerMoveGapOver50Count: Number(
+            currentInstructionTagDragPerfSampleState.pointerMoveGapOver50Count ||
+              0,
+          ),
+          pointerMoveHandlerAvgMs:
+            normalizedPointerMoveHandlerSamples > 0
+              ? Number(
+                  (
+                    normalizedPointerMoveHandlerCostMsTotal /
+                    normalizedPointerMoveHandlerSamples
+                  ).toFixed(3),
+                )
+              : 0,
+          pointerMoveHandlerMaxMs: Number(
+            Number(
+              currentInstructionTagDragPerfSampleState.pointerMoveHandlerCostMaxMs ||
+                0,
+            ).toFixed(3),
+          ),
+          tickCount: normalizedTickCount,
+          tickCostMsTotal: normalizedTickCostMsTotal,
+          tickCostAvgMs:
+            normalizedTickCount > 0
+              ? Number(
+                  (normalizedTickCostMsTotal / normalizedTickCount).toFixed(3),
+                )
+              : 0,
+          gapVisualScheduleCount: Number(
+            currentInstructionTagDragPerfSampleState.gapVisualScheduleCount || 0,
+          ),
+          gapVisualCommitCount: normalizedGapVisualCommitCount,
+          gapVisualCostMsTotal: normalizedGapVisualCostMsTotal,
+          gapVisualCostAvgMs:
+            normalizedGapVisualCommitCount > 0
+              ? Number(
+                  (
+                    normalizedGapVisualCostMsTotal /
+                    normalizedGapVisualCommitCount
+                  ).toFixed(3),
+                )
+              : 0,
+          overlayLagAvgPx:
+            normalizedOverlayLagSamples > 0
+              ? Number(
+                  (
+                    normalizedOverlayLagTotalPx / normalizedOverlayLagSamples
+                  ).toFixed(3),
+                )
+              : 0,
+          overlayLagMaxPx: Number(normalizedOverlayLagMaxPx.toFixed(3)),
+          rafDeltaAvgMs:
+            normalizedRafSamples > 0
+              ? Number(
+                  (normalizedRafDeltaTotalMs / normalizedRafSamples).toFixed(3),
+                )
+              : 0,
+          rafDeltaMaxMs: Number(
+            Number(
+              currentInstructionTagDragPerfSampleState.rafDeltaMaxMs || 0,
+            ).toFixed(3),
+          ),
+          rafGapOver16Count: Number(
+            currentInstructionTagDragPerfSampleState.rafGapOver16Count || 0,
+          ),
+          rafGapOver33Count: Number(
+            currentInstructionTagDragPerfSampleState.rafGapOver33Count || 0,
+          ),
+          rafGapOver50Count: Number(
+            currentInstructionTagDragPerfSampleState.rafGapOver50Count || 0,
+          ),
+          eventLoopLagAvgMs:
+            normalizedEventLoopLagSamples > 0
+              ? Number(
+                  (
+                    normalizedEventLoopLagTotalMs /
+                    normalizedEventLoopLagSamples
+                  ).toFixed(3),
+                )
+              : 0,
+          eventLoopLagMaxMs: Number(
+            Number(
+              currentInstructionTagDragPerfSampleState.eventLoopLagMaxMs || 0,
+            ).toFixed(3),
+          ),
+          eventLoopLagOver16Count: Number(
+            currentInstructionTagDragPerfSampleState.eventLoopLagOver16Count || 0,
+          ),
+          eventLoopLagOver33Count: Number(
+            currentInstructionTagDragPerfSampleState.eventLoopLagOver33Count || 0,
+          ),
+          eventLoopLagOver50Count: Number(
+            currentInstructionTagDragPerfSampleState.eventLoopLagOver50Count || 0,
+          ),
+          longTaskCount: normalizedLongTaskCount,
+          longTaskAvgMs:
+            normalizedLongTaskCount > 0
+              ? Number(
+                  (normalizedLongTaskTotalMs / normalizedLongTaskCount).toFixed(3),
+                )
+              : 0,
+          longTaskMaxMs: Number(
+            Number(
+              currentInstructionTagDragPerfSampleState.longTaskMaxMs || 0,
+            ).toFixed(3),
+          ),
+          longTaskSupported: !!instructionTagDragPerfMonitorRef.current
+            ?.longTaskSupported,
+        },
+      });
     },
-    scheduleInstructionTagDragDebugFlush = () => {
-      return;
+    scheduleInstructionTagDragDebugFlush = (delayMsInput = 220) => {
+      if (!instructionTagDragPerfEnabledRef.current) {
+        return;
+      }
+      const normalizedDelayMs = Math.max(80, Number(delayMsInput) || 220);
+      instructionTagDragDebugTimerRef.current ||
+        (instructionTagDragDebugTimerRef.current = window.setTimeout(() => {
+          (instructionTagDragDebugTimerRef.current = 0),
+            flushInstructionTagDragDebugLog("timer", false);
+        }, normalizedDelayMs));
     },
     bumpInstructionTagDragDebugCounter = (
       counterKeyInput,
       incrementByInput = 1,
     ) => {
-      void counterKeyInput;
-      void incrementByInput;
-      return;
+      if (!instructionTagDragPerfEnabledRef.current) {
+        return;
+      }
+      const normalizedCounterKey = String(counterKeyInput || "").trim();
+      if (!normalizedCounterKey) {
+        return;
+      }
+      const normalizedIncrementBy = Math.max(
+        1,
+        Math.floor(Number(incrementByInput) || 1),
+      );
+      const instructionTagDragDebugState =
+        instructionTagDragDebugRef.current ||
+        createIdleInstructionTagDragDebugState();
+      instructionTagDragDebugState.counts = {
+        ...(instructionTagDragDebugState.counts || {}),
+      };
+      instructionTagDragDebugState.counts[normalizedCounterKey] =
+        Number(instructionTagDragDebugState.counts[normalizedCounterKey] || 0) +
+        normalizedIncrementBy;
+      instructionTagDragDebugRef.current = instructionTagDragDebugState;
+      scheduleInstructionTagDragDebugFlush(220);
     },
     noteInstructionTagDragDebugPhase = (
       nextPhaseInput,
       detailTextInput = "",
     ) => {
-      void nextPhaseInput;
-      void detailTextInput;
-      return;
+      if (!instructionTagDragPerfEnabledRef.current) {
+        return;
+      }
+      const normalizedNextPhase = String(nextPhaseInput || "").trim();
+      if (!normalizedNextPhase) {
+        return;
+      }
+      const normalizedDetailText = String(detailTextInput || "").trim();
+      const instructionTagDragDebugState =
+        instructionTagDragDebugRef.current ||
+        createIdleInstructionTagDragDebugState();
+      if (
+        instructionTagDragDebugState.lastPhase === normalizedNextPhase &&
+        instructionTagDragDebugState.lastPhaseDetail === normalizedDetailText
+      ) {
+        return;
+      }
+      instructionTagDragDebugState.lastPhase = normalizedNextPhase;
+      instructionTagDragDebugState.lastPhaseDetail = normalizedDetailText;
+      instructionTagDragDebugRef.current = instructionTagDragDebugState;
+      flushInstructionTagDragDebugLog(`phase:${normalizedNextPhase}`, true);
+    },
+    clearInstructionPointerDragOverVisual = () => {
+      const previousInstructionPointerDragOverSection =
+        instructionPointerDragOverSectionRef.current;
+      previousInstructionPointerDragOverSection?.classList?.remove(
+        "is-drop-target",
+      );
+      instructionPointerDragOverSectionRef.current = null;
+      instructionPointerDragOverGroupNameRef.current = "";
+    },
+    writeInstructionPointerDragOverVisual = (
+      nextInstructionGroupNameInput,
+    ) => {
+      const normalizedInstructionGroupName = String(
+        nextInstructionGroupNameInput || "",
+      ).trim();
+      if (
+        instructionPointerDragOverGroupNameRef.current ===
+        normalizedInstructionGroupName
+      ) {
+        return;
+      }
+      const previousInstructionPointerDragOverSection =
+        instructionPointerDragOverSectionRef.current;
+      previousInstructionPointerDragOverSection?.classList?.remove(
+        "is-drop-target",
+      );
+      let nextInstructionPointerDragOverSection = null;
+      if (
+        normalizedInstructionGroupName &&
+        instructionPanelGroupsRef.current?.querySelector
+      ) {
+        const normalizedInstructionGroupNameSelectorSafe =
+          typeof CSS !== "undefined" && typeof CSS.escape === "function"
+            ? CSS.escape(normalizedInstructionGroupName)
+            : normalizedInstructionGroupName.replace(/[\\"]/g, "\\$&");
+        nextInstructionPointerDragOverSection =
+          instructionPanelGroupsRef.current.querySelector(
+            `.instruction-group[data-instruction-group-name="${normalizedInstructionGroupNameSelectorSafe}"]`,
+          ) || null;
+        nextInstructionPointerDragOverSection?.classList?.add("is-drop-target");
+      }
+      instructionPointerDragOverSectionRef.current =
+        nextInstructionPointerDragOverSection;
+      instructionPointerDragOverGroupNameRef.current =
+        normalizedInstructionGroupName;
+    },
+    writeInstructionTagPointerDragUiActive = (
+      nextActiveInput = false,
+      sourceGroupNameInput = "",
+    ) => {
+      const nextActive = !!nextActiveInput,
+        normalizedSourceGroupName = nextActive
+          ? String(sourceGroupNameInput || "").trim()
+          : "",
+        previousSourceGroupName = String(
+          instructionTagPointerDragUiSourceGroupRef.current || "",
+        ).trim(),
+        instructionPanelGroupsElement = instructionPanelGroupsRef.current;
+      const toggleInstructionTagListActiveByGroupName = (
+        instructionGroupNameInput,
+        shouldActivateInput,
+      ) => {
+        const normalizedInstructionGroupName = String(
+          instructionGroupNameInput || "",
+        ).trim();
+        if (!normalizedInstructionGroupName) {
+          return;
+        }
+        const normalizedInstructionGroupNameSelectorSafe =
+            typeof CSS !== "undefined" && typeof CSS.escape === "function"
+              ? CSS.escape(normalizedInstructionGroupName)
+              : normalizedInstructionGroupName.replace(/[\\"]/g, "\\$&"),
+          instructionTagListElement =
+            instructionPanelGroupsElement?.querySelector?.(
+              `.instruction-group[data-instruction-group-name="${normalizedInstructionGroupNameSelectorSafe}"] .instruction-tag-list`,
+            ) || null;
+        instructionTagListElement?.classList?.toggle(
+          "is-pointer-drag-active",
+          !!shouldActivateInput,
+        );
+      };
+      instructionPanelGroupsElement?.classList?.toggle(
+        "is-pointer-drag-active",
+        nextActive,
+      );
+      if (
+        previousSourceGroupName &&
+        previousSourceGroupName !== normalizedSourceGroupName
+      ) {
+        toggleInstructionTagListActiveByGroupName(previousSourceGroupName, false);
+      }
+      if (nextActive && normalizedSourceGroupName) {
+        toggleInstructionTagListActiveByGroupName(normalizedSourceGroupName, true);
+      } else if (previousSourceGroupName) {
+        toggleInstructionTagListActiveByGroupName(previousSourceGroupName, false);
+      }
+      instructionTagPointerDragUiActiveRef.current = nextActive;
+      instructionTagPointerDragUiSourceGroupRef.current =
+        normalizedSourceGroupName;
     },
     writeInstructionTagDragOverGroupName = (
       nextInstructionGroupNameInput,
@@ -33761,84 +40238,203 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       ) {
         return;
       }
-      bumpInstructionTagDragDebugCounter("dragOverWrites");
-      setDragOverInstructionGroupName(normalizedInstructionGroupName);
+      instructionTagDragPerfEnabledRef.current &&
+        bumpInstructionTagDragDebugCounter("dragOverWrites");
+      if (writeReason === "pointer") {
+        writeInstructionPointerDragOverVisual(normalizedInstructionGroupName);
+      } else {
+        clearInstructionPointerDragOverVisual();
+      }
       instructionTagDragDebugState.lastDragOverGroupName =
         normalizedInstructionGroupName;
       instructionTagDragDebugState.lastDragOverReason = writeReason;
       instructionTagDragDebugRef.current = instructionTagDragDebugState;
     },
-    collectInstructionTagGroupHitRects = () => {
-      bumpInstructionTagDragDebugCounter("groupRectBuilds");
-      const instructionPanelElement = instructionPanelGroupsRef.current;
-      if (!instructionPanelElement) {
-        return [];
-      }
-      return Array.from(
-        instructionPanelElement.querySelectorAll(
-          ".instruction-group[data-instruction-group-name]",
-        ),
-      )
-        .map((instructionGroupElement) => {
-          const normalizedInstructionGroupName = String(
-              instructionGroupElement.getAttribute(
-                "data-instruction-group-name",
-              ) || "",
-            ).trim(),
-            instructionGroupRect =
-              instructionGroupElement.getBoundingClientRect?.();
-          if (!normalizedInstructionGroupName || !instructionGroupRect) {
-            return null;
-          }
-          return {
-            name: normalizedInstructionGroupName,
-            left: instructionGroupRect.left,
-            top: instructionGroupRect.top,
-            right: instructionGroupRect.right,
-            bottom: instructionGroupRect.bottom,
-          };
-        })
-        .filter(Boolean);
-    },
     resolveInstructionTagGroupNameAtPoint = (
       pointerClientX,
       pointerClientY,
+      pointerEventTargetInput = null,
     ) => {
-      bumpInstructionTagDragDebugCounter("groupHitResolves");
+      instructionTagDragPerfEnabledRef.current &&
+        bumpInstructionTagDragDebugCounter("groupHitResolves");
+      if (pointerEventTargetInput instanceof Element) {
+        const eventTargetInstructionGroupElement =
+            pointerEventTargetInput.closest?.(
+              ".instruction-group[data-instruction-group-name]",
+            ) || null,
+          normalizedEventTargetInstructionGroupName = String(
+            eventTargetInstructionGroupElement?.getAttribute?.(
+              "data-instruction-group-name",
+            ) || "",
+          ).trim();
+        if (normalizedEventTargetInstructionGroupName) {
+          return normalizedEventTargetInstructionGroupName;
+        }
+      }
       const normalizedPointerClientX = Number(pointerClientX),
         normalizedPointerClientY = Number(pointerClientY);
       if (
         !Number.isFinite(normalizedPointerClientX) ||
-        !Number.isFinite(normalizedPointerClientY)
+        !Number.isFinite(normalizedPointerClientY) ||
+        !document?.elementFromPoint
       ) {
         return "";
       }
-      const cachedInstructionTagGroupHitRects = Array.isArray(
-          instructionTagGroupRectCacheRef.current,
-        ) && instructionTagGroupRectCacheRef.current.length
-          ? instructionTagGroupRectCacheRef.current
-          : collectInstructionTagGroupHitRects();
-      instructionTagGroupRectCacheRef.current = cachedInstructionTagGroupHitRects;
-      const hoveredInstructionGroupRectEntry =
-        cachedInstructionTagGroupHitRects.find(
-          (instructionGroupRectEntry) =>
-            normalizedPointerClientX >=
-              Number(instructionGroupRectEntry?.left) &&
-            normalizedPointerClientX <=
-              Number(instructionGroupRectEntry?.right) &&
-            normalizedPointerClientY >=
-              Number(instructionGroupRectEntry?.top) &&
-            normalizedPointerClientY <=
-              Number(instructionGroupRectEntry?.bottom),
-        ) || null;
-      return String(hoveredInstructionGroupRectEntry?.name || "").trim();
+      const hitElement = document.elementFromPoint(
+          normalizedPointerClientX,
+          normalizedPointerClientY,
+        ),
+        instructionGroupElement = hitElement?.closest?.(
+          ".instruction-group[data-instruction-group-name]",
+        ),
+        normalizedInstructionGroupName = String(
+          instructionGroupElement?.getAttribute?.("data-instruction-group-name") ||
+            "",
+        ).trim();
+      return normalizedInstructionGroupName;
+    },
+    resolveInstructionTagAnchorAtPoint = (
+      pointerClientX,
+      pointerClientY,
+      instructionGroupNameInput,
+      instructionSegmentTypeInput = "normal",
+      pointerEventTargetInput = null,
+    ) => {
+      const normalizedInstructionGroupName = String(
+          instructionGroupNameInput || "",
+        ).trim(),
+        normalizedInstructionSegmentType =
+          instructionSegmentTypeInput === "common" ? "common" : "normal",
+        normalizedPointerClientX = Number(pointerClientX),
+        normalizedPointerClientY = Number(pointerClientY);
+      if (pointerEventTargetInput instanceof Element) {
+        const eventTargetInstructionAnchorElement =
+            pointerEventTargetInput.closest?.(
+              ".instruction-tag-menu-anchor[data-instruction-prompt-id][data-instruction-group-name][data-instruction-segment]",
+            ) || null,
+          eventTargetAnchorGroupName = String(
+            eventTargetInstructionAnchorElement?.getAttribute?.(
+              "data-instruction-group-name",
+            ) || "",
+          ).trim(),
+          eventTargetAnchorSegmentType = String(
+            eventTargetInstructionAnchorElement?.getAttribute?.(
+              "data-instruction-segment",
+            ) || "",
+          ).trim();
+        if (
+          eventTargetInstructionAnchorElement &&
+          eventTargetAnchorGroupName === normalizedInstructionGroupName &&
+          eventTargetAnchorSegmentType === normalizedInstructionSegmentType
+        ) {
+          return eventTargetInstructionAnchorElement;
+        }
+      }
+      if (
+        !normalizedInstructionGroupName ||
+        !Number.isFinite(normalizedPointerClientX) ||
+        !Number.isFinite(normalizedPointerClientY) ||
+        !document?.elementFromPoint
+      ) {
+        return null;
+      }
+      const probeOffsets = [
+        [0, 0],
+        [-24, 0],
+        [24, 0],
+        [-48, 0],
+        [48, 0],
+        [0, -8],
+        [0, 8],
+        [-24, -8],
+        [24, -8],
+        [-24, 8],
+        [24, 8],
+      ];
+      let nextAnchorElement = null,
+        nextProbeDistance = Number.POSITIVE_INFINITY;
+      for (const [offsetX, offsetY] of probeOffsets) {
+        const probeElement = document.elementFromPoint(
+            normalizedPointerClientX + Number(offsetX || 0),
+            normalizedPointerClientY + Number(offsetY || 0),
+          ),
+          instructionAnchorElement = probeElement?.closest?.(
+            ".instruction-tag-menu-anchor[data-instruction-prompt-id][data-instruction-group-name][data-instruction-segment]",
+          );
+        if (!instructionAnchorElement) continue;
+        const anchorGroupName = String(
+            instructionAnchorElement.getAttribute("data-instruction-group-name") || "",
+          ).trim(),
+          anchorSegmentType = String(
+            instructionAnchorElement.getAttribute("data-instruction-segment") || "",
+          ).trim(),
+          probeDistance = Math.hypot(
+            Number(offsetX || 0),
+            Number(offsetY || 0),
+          );
+        if (
+          anchorGroupName !== normalizedInstructionGroupName ||
+          anchorSegmentType !== normalizedInstructionSegmentType
+        ) {
+          continue;
+        }
+        if (probeDistance <= 0) {
+          return instructionAnchorElement;
+        }
+        if (!nextAnchorElement || probeDistance < nextProbeDistance) {
+          nextAnchorElement = instructionAnchorElement;
+          nextProbeDistance = probeDistance;
+        }
+      }
+      return nextAnchorElement;
     },
     scheduleInstructionTagPointerDragTick = () => {
       instructionTagPointerDragRafRef.current ||
-        (instructionTagPointerDragRafRef.current = requestAnimationFrame(() => {
+        (instructionTagPointerDragRafRef.current = window.setTimeout(() => {
           (instructionTagPointerDragRafRef.current = 0),
             applyInstructionTagPointerDragTick();
-        }));
+        }, CONST_INSTRUCTION_TAG_DRAG_REORDER_TICK_MS));
+    },
+    cancelInstructionTagPointerOverlaySync = () => {
+      instructionTagPointerOverlaySyncRafRef.current &&
+        (cancelAnimationFrame(instructionTagPointerOverlaySyncRafRef.current),
+        (instructionTagPointerOverlaySyncRafRef.current = 0));
+      instructionTagPointerOverlaySyncAccelerateRef.current = false;
+    },
+    scheduleInstructionTagPointerOverlaySync = (
+      shouldAccelerateFollow = false,
+    ) => {
+      shouldAccelerateFollow &&
+        (instructionTagPointerOverlaySyncAccelerateRef.current = true);
+      instructionTagPointerOverlaySyncRafRef.current ||
+        (instructionTagPointerOverlaySyncRafRef.current = requestAnimationFrame(
+          () => {
+            instructionTagPointerOverlaySyncRafRef.current = 0;
+            const currentInstructionTagPointerDragState =
+              instructionTagPointerDragRef.current;
+            if (!currentInstructionTagPointerDragState?.active) {
+              instructionTagPointerOverlaySyncAccelerateRef.current = false;
+              return;
+            }
+            const shouldUseAccelerateFollow =
+              !!instructionTagPointerOverlaySyncAccelerateRef.current;
+            instructionTagPointerOverlaySyncAccelerateRef.current = false;
+            syncInstructionTagPointerDragOverlayVisual(
+              currentInstructionTagPointerDragState,
+              {
+                shouldAccelerateFollow: shouldUseAccelerateFollow,
+              },
+            );
+            if (instructionTagDragPerfEnabledRef.current) {
+              const currentInstructionTagDragPerfSampleState =
+                instructionTagDragPerfSampleRef.current ||
+                createIdleInstructionTagDragPerfSampleState();
+              currentInstructionTagDragPerfSampleState.overlaySyncCount += 1;
+              instructionTagDragPerfSampleRef.current =
+                currentInstructionTagDragPerfSampleState;
+            }
+          },
+        ));
     },
     syncInstructionTagPointerDragOverlayVisual = (
       instructionTagPointerDragStateInput = null,
@@ -33870,201 +40466,61 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           desiredVisualTop,
           shouldAccelerateFollow,
         ),
-        draggingInstructionOverlayElement =
-          ensureInstructionTagPointerDragOverlayElement();
+        nextOverlayWidth = Math.max(
+          1,
+          Number(currentInstructionTagPointerDragState.width) || 0,
+        ),
+        nextOverlayHeight = Math.max(
+          1,
+          Number(currentInstructionTagPointerDragState.height) || 0,
+        );
+      let draggingInstructionOverlayElement =
+        instructionTagPointerDragVisualRef.current?.overlayEl || null;
+      draggingInstructionOverlayElement?.isConnected ||
+        (draggingInstructionOverlayElement =
+          ensureInstructionTagPointerDragOverlayElement());
       if (!draggingInstructionOverlayElement) {
         return false;
       }
-      draggingInstructionOverlayElement.style.setProperty(
-        "left",
-        `${nextVisualClientX}px`,
+      draggingInstructionOverlayElement.style.transform = `translate3d(${nextVisualClientX}px, ${nextVisualClientY}px, 0)`;
+      const overlayLagDistancePx = Math.hypot(
+        desiredVisualLeft - nextVisualClientX,
+        desiredVisualTop - nextVisualClientY,
       );
-      draggingInstructionOverlayElement.style.setProperty(
-        "top",
-        `${nextVisualClientY}px`,
-      );
-      draggingInstructionOverlayElement.style.setProperty(
-        "width",
-        `${Math.max(1, Number(currentInstructionTagPointerDragState.width) || 0)}px`,
-      );
-      draggingInstructionOverlayElement.style.setProperty(
-        "height",
-        `${Math.max(1, Number(currentInstructionTagPointerDragState.height) || 0)}px`,
-      );
-      draggingInstructionOverlayElement.style.setProperty(
-        "transform",
-        "translate3d(0, 0, 0)",
-      );
+      if (
+        instructionTagDragPerfEnabledRef.current &&
+        Number.isFinite(overlayLagDistancePx)
+      ) {
+        const currentInstructionTagDragPerfSampleState =
+          instructionTagDragPerfSampleRef.current ||
+          createIdleInstructionTagDragPerfSampleState();
+        currentInstructionTagDragPerfSampleState.overlayLagSamples += 1;
+        currentInstructionTagDragPerfSampleState.overlayLagTotalPx +=
+          overlayLagDistancePx;
+        currentInstructionTagDragPerfSampleState.overlayLagMaxPx = Math.max(
+          Number(currentInstructionTagDragPerfSampleState.overlayLagMaxPx || 0),
+          overlayLagDistancePx,
+        );
+        instructionTagDragPerfSampleRef.current =
+          currentInstructionTagDragPerfSampleState;
+      }
+      Math.abs(
+        nextOverlayWidth -
+          Number(currentInstructionTagPointerDragState.overlayWidth),
+      ) >= 0.5 &&
+        ((draggingInstructionOverlayElement.style.width =
+          `${nextOverlayWidth}px`),
+        (currentInstructionTagPointerDragState.overlayWidth = nextOverlayWidth));
+      Math.abs(
+        nextOverlayHeight -
+          Number(currentInstructionTagPointerDragState.overlayHeight),
+      ) >= 0.5 &&
+        ((draggingInstructionOverlayElement.style.height =
+          `${nextOverlayHeight}px`),
+        (currentInstructionTagPointerDragState.overlayHeight = nextOverlayHeight));
       currentInstructionTagPointerDragState.visualClientX = nextVisualClientX;
       currentInstructionTagPointerDragState.visualClientY = nextVisualClientY;
       return true;
-    },
-    collectInstructionTagGapDropZones = (
-      instructionGroupNameInput,
-      instructionSegmentTypeInput = "normal",
-    ) => {
-      const normalizedInstructionGroupName = String(
-          instructionGroupNameInput || "",
-        ).trim(),
-        normalizedInstructionSegmentType =
-          instructionSegmentTypeInput === "common" ? "common" : "normal";
-      if (!normalizedInstructionGroupName) {
-        return [];
-      }
-      const normalizedInstructionGroupNameSelectorSafe =
-          typeof CSS !== "undefined" && typeof CSS.escape === "function"
-            ? CSS.escape(normalizedInstructionGroupName)
-            : normalizedInstructionGroupName.replace(/[\\"]/g, "\\$&"),
-        instructionGroupBodyElement =
-          instructionPanelGroupsRef.current?.querySelector?.(
-            `.instruction-group-body[data-instruction-group-name="${normalizedInstructionGroupNameSelectorSafe}"]`,
-          ) || null;
-      if (!instructionGroupBodyElement || !normalizedInstructionGroupName) {
-        return [];
-      }
-      const instructionGroupBodyRect =
-          instructionGroupBodyElement.getBoundingClientRect?.() || null,
-        rowEndDropZoneRightLimit = Number(instructionGroupBodyRect?.right),
-        instructionTagAnchorElements = Array.from(
-        instructionGroupBodyElement.querySelectorAll(
-          ".instruction-tag-menu-anchor[data-instruction-prompt-id][data-instruction-group-name][data-instruction-segment]",
-        ),
-      ).filter(
-        (instructionTagAnchorElement) =>
-          String(
-            instructionTagAnchorElement.getAttribute(
-              "data-instruction-group-name",
-            ) || "",
-          ).trim() === normalizedInstructionGroupName &&
-          String(
-            instructionTagAnchorElement.getAttribute(
-              "data-instruction-segment",
-            ) || "",
-          ).trim() === normalizedInstructionSegmentType,
-      );
-      if (!instructionTagAnchorElements.length) {
-        return [];
-      }
-      const instructionTagAnchorEntries = instructionTagAnchorElements
-        .map((instructionTagAnchorElement) => {
-          const normalizedInstructionPromptId = String(
-              instructionTagAnchorElement.getAttribute(
-                "data-instruction-prompt-id",
-              ) || "",
-            ).trim(),
-            instructionTagRect =
-              instructionTagAnchorElement.getBoundingClientRect?.();
-          if (!normalizedInstructionPromptId || !instructionTagRect) return null;
-          return {
-            promptId: normalizedInstructionPromptId,
-            rect: instructionTagRect,
-          };
-        })
-        .filter(Boolean);
-      if (!instructionTagAnchorEntries.length) {
-        return [];
-      }
-      const areInstructionTagsOnSameRow = (
-          previousInstructionTagEntry,
-          nextInstructionTagEntry,
-        ) => {
-          if (
-            !previousInstructionTagEntry?.rect ||
-            !nextInstructionTagEntry?.rect
-          ) {
-            return false;
-          }
-          const previousInstructionTagRect = previousInstructionTagEntry.rect,
-            nextInstructionTagRect = nextInstructionTagEntry.rect,
-            overlapHeight =
-              Math.min(
-                previousInstructionTagRect.bottom,
-                nextInstructionTagRect.bottom,
-              ) -
-              Math.max(
-                previousInstructionTagRect.top,
-                nextInstructionTagRect.top,
-              );
-          return overlapHeight >=
-            Math.min(
-              previousInstructionTagRect.height,
-              nextInstructionTagRect.height,
-            ) *
-              0.5;
-        },
-        nextInstructionTagDropZones = [];
-      instructionTagAnchorEntries.forEach(
-        (instructionTagAnchorEntry, instructionTagIndex) => {
-          const previousInstructionTagEntry =
-              instructionTagAnchorEntries[instructionTagIndex - 1] || null,
-            nextInstructionTagEntry =
-              instructionTagAnchorEntries[instructionTagIndex + 1] || null,
-            instructionTagRect = instructionTagAnchorEntry.rect,
-            isRowStart =
-              !previousInstructionTagEntry ||
-              !areInstructionTagsOnSameRow(
-                previousInstructionTagEntry,
-                instructionTagAnchorEntry,
-              ),
-            isRowEnd =
-              !nextInstructionTagEntry ||
-              !areInstructionTagsOnSameRow(
-                instructionTagAnchorEntry,
-                nextInstructionTagEntry,
-              );
-          if (isRowStart) {
-            nextInstructionTagDropZones.push({
-              key: buildInstructionTagDropTargetKey({
-                groupName: normalizedInstructionGroupName,
-                promptId: instructionTagAnchorEntry.promptId,
-                insertAfter: false,
-              }),
-              groupName: normalizedInstructionGroupName,
-              promptId: instructionTagAnchorEntry.promptId,
-              insertAfter: false,
-              left: instructionTagRect.left - 24,
-              right: instructionTagRect.left + 24,
-              top: instructionTagRect.top - 6,
-              bottom: instructionTagRect.bottom + 6,
-            });
-          }
-          nextInstructionTagDropZones.push({
-            key: buildInstructionTagDropTargetKey({
-              groupName: normalizedInstructionGroupName,
-              promptId: instructionTagAnchorEntry.promptId,
-              insertAfter: true,
-            }),
-            groupName: normalizedInstructionGroupName,
-            promptId: instructionTagAnchorEntry.promptId,
-            insertAfter: true,
-            left: instructionTagRect.right - 24,
-            right: isRowEnd
-              ? Math.max(
-                  instructionTagRect.right + 24,
-                  Number.isFinite(rowEndDropZoneRightLimit)
-                    ? rowEndDropZoneRightLimit - 6
-                    : instructionTagRect.right + 24,
-                )
-              : Number(nextInstructionTagEntry?.rect?.left || instructionTagRect.right) +
-                24,
-            top: (isRowEnd
-              ? instructionTagRect.top
-              : Math.min(
-                  instructionTagRect.top,
-                  Number(nextInstructionTagEntry?.rect?.top || instructionTagRect.top),
-                )) - 6,
-            bottom: (isRowEnd
-              ? instructionTagRect.bottom
-              : Math.max(
-                  instructionTagRect.bottom,
-                  Number(
-                    nextInstructionTagEntry?.rect?.bottom || instructionTagRect.bottom,
-                  ),
-                )) + 6,
-          });
-        },
-      );
-      return nextInstructionTagDropZones;
     },
     resolveInstructionTagGapDropZoneAtPoint = (
       pointerClientX,
@@ -34072,76 +40528,121 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       instructionGroupNameInput,
       instructionSegmentTypeInput = "normal",
       activeInstructionGapZoneKeyInput = "",
+      instructionTagPointerDragStateInput = null,
+      nowTimestampInput = Date.now(),
+      pointerEventTargetInput = null,
     ) => {
+      instructionTagDragPerfEnabledRef.current &&
+        bumpInstructionTagDragDebugCounter("zoneResolves");
       const normalizedInstructionGroupName = String(
           instructionGroupNameInput || "",
         ).trim(),
         normalizedInstructionSegmentType =
           instructionSegmentTypeInput === "common" ? "common" : "normal",
-        normalizedDropZoneLayoutVersion = Number(
-          instructionTagDropZoneLayoutVersionRef.current || 0,
-        ),
         normalizedActiveInstructionGapZoneKey = String(
           activeInstructionGapZoneKeyInput || "",
         ).trim();
       if (!normalizedInstructionGroupName) {
         return null;
       }
-      const cachedInstructionTagDropZones =
-          instructionTagDropZoneCacheRef.current || {},
-        shouldReuseCachedInstructionTagDropZones =
-          cachedInstructionTagDropZones.groupName ===
-            normalizedInstructionGroupName &&
-          cachedInstructionTagDropZones.segmentType ===
-            normalizedInstructionSegmentType &&
-          Number(cachedInstructionTagDropZones.layoutVersion || 0) ===
-            normalizedDropZoneLayoutVersion &&
-          Array.isArray(cachedInstructionTagDropZones.zones) &&
-          cachedInstructionTagDropZones.zones.length,
-        nextInstructionTagDropZones =
-          shouldReuseCachedInstructionTagDropZones
-            ? cachedInstructionTagDropZones.zones
-            : collectInstructionTagGapDropZones(
-                normalizedInstructionGroupName,
-                normalizedInstructionSegmentType,
-              );
-      instructionTagDropZoneCacheRef.current = {
-        groupName: normalizedInstructionGroupName,
-        segmentType: normalizedInstructionSegmentType,
-        layoutVersion: normalizedDropZoneLayoutVersion,
-        zones: nextInstructionTagDropZones,
-      };
-      if (!nextInstructionTagDropZones.length) {
+      const normalizedPointerClientX = Number(pointerClientX),
+        normalizedPointerClientY = Number(pointerClientY);
+      if (
+        !Number.isFinite(normalizedPointerClientX) ||
+        !Number.isFinite(normalizedPointerClientY)
+      ) {
         return null;
       }
-      const activeInstructionGapDropZone = normalizedActiveInstructionGapZoneKey
-          ? nextInstructionTagDropZones.find(
-              (instructionTagDropZone) =>
-                instructionTagDropZone?.key ===
-                normalizedActiveInstructionGapZoneKey,
-            ) || null
-          : null,
-        stickyPaddingPx = 16;
-      if (
-        activeInstructionGapDropZone &&
-        isPointInsideInstructionTagDropZone(
-          activeInstructionGapDropZone,
-          pointerClientX,
-          pointerClientY,
-          stickyPaddingPx,
-        )
-      ) {
-        return activeInstructionGapDropZone;
-      }
-      return (
-        nextInstructionTagDropZones.find((instructionTagDropZone) =>
-          isPointInsideInstructionTagDropZone(
-            instructionTagDropZone,
-            pointerClientX,
-            pointerClientY,
-          ),
-        ) || null
+      const instructionAnchorElement = resolveInstructionTagAnchorAtPoint(
+        normalizedPointerClientX,
+        normalizedPointerClientY,
+        normalizedInstructionGroupName,
+        normalizedInstructionSegmentType,
+        pointerEventTargetInput,
       );
+      if (!instructionAnchorElement) {
+        return null;
+      }
+      const normalizedNowTimestamp = Number(nowTimestampInput),
+        isNowTimestampFinite = Number.isFinite(normalizedNowTimestamp);
+      let instructionAnchorRect = null;
+      if (
+        instructionTagPointerDragStateInput &&
+        instructionTagPointerDragStateInput.anchorRectCache instanceof WeakMap &&
+        isNowTimestampFinite &&
+        normalizedNowTimestamp -
+          Number(instructionTagPointerDragStateInput.anchorRectCacheAt || 0) <=
+          48
+      ) {
+        instructionAnchorRect =
+          instructionTagPointerDragStateInput.anchorRectCache.get(
+            instructionAnchorElement,
+          ) || null;
+      } else if (instructionTagPointerDragStateInput) {
+        instructionTagPointerDragStateInput.anchorRectCache = new WeakMap();
+        instructionTagPointerDragStateInput.anchorRectCacheAt = isNowTimestampFinite
+          ? normalizedNowTimestamp
+          : Date.now();
+      }
+      instructionAnchorRect ||
+        (instructionAnchorRect = instructionAnchorElement.getBoundingClientRect?.());
+      instructionAnchorRect &&
+        instructionTagPointerDragStateInput?.anchorRectCache instanceof WeakMap &&
+        instructionTagPointerDragStateInput.anchorRectCache.set(
+          instructionAnchorElement,
+          instructionAnchorRect,
+        );
+      if (!instructionAnchorRect) {
+        return null;
+      }
+      const normalizedInstructionPromptId = String(
+          instructionAnchorElement.getAttribute("data-instruction-prompt-id") || "",
+        ).trim(),
+        anchorWidth = Math.max(
+          1,
+          Number(instructionAnchorRect.width) || 0,
+        );
+      if (!normalizedInstructionPromptId) {
+        return null;
+      }
+      const edgeHotZoneSize = Math.max(
+          8,
+          Math.min(24, Math.round(anchorWidth * 0.45)),
+        ),
+        beforeZoneBoundary = Number(instructionAnchorRect.left) + edgeHotZoneSize,
+        afterZoneBoundary = Number(instructionAnchorRect.right) - edgeHotZoneSize,
+        centerBoundary =
+          Number(instructionAnchorRect.left) + anchorWidth / 2;
+      let shouldInsertAfter = normalizedPointerClientX >= centerBoundary;
+      normalizedPointerClientX <= beforeZoneBoundary
+        ? (shouldInsertAfter = false)
+        : normalizedPointerClientX >= afterZoneBoundary &&
+          (shouldInsertAfter = true);
+      const nextInstructionGapZone = {
+        key: buildInstructionTagDropTargetKey({
+          groupName: normalizedInstructionGroupName,
+          promptId: normalizedInstructionPromptId,
+          insertAfter: shouldInsertAfter,
+        }),
+        groupName: normalizedInstructionGroupName,
+        promptId: normalizedInstructionPromptId,
+        insertAfter: shouldInsertAfter,
+        anchorEl: instructionAnchorElement,
+        left: Number(instructionAnchorRect.left) - 24,
+        right: Number(instructionAnchorRect.right) + 24,
+        top: Number(instructionAnchorRect.top) - 8,
+        bottom: Number(instructionAnchorRect.bottom) + 8,
+        beforeZoneBoundary,
+        afterZoneBoundary,
+        centerBoundary,
+      };
+      if (
+        normalizedActiveInstructionGapZoneKey &&
+        normalizedActiveInstructionGapZoneKey === nextInstructionGapZone.key
+      ) {
+        return nextInstructionGapZone;
+      }
+      return nextInstructionGapZone;
     },
     applyInstructionTagPointerDragTick = () => {
       const currentInstructionTagPointerDragState =
@@ -34149,6 +40650,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       if (!currentInstructionTagPointerDragState?.active) {
         return;
       }
+      instructionTagDragPerfEnabledRef.current &&
+        bumpInstructionTagDragDebugCounter("ticks");
       const pointerClientX = Number(
           currentInstructionTagPointerDragState.pointerClientX,
         ),
@@ -34159,6 +40662,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         return;
       }
       const nowTimestamp = performance.now(),
+        tickStartAt = nowTimestamp,
         sourceInstructionGroupName = String(
           currentInstructionTagPointerDragState.sourceGroupName || "",
         ).trim(),
@@ -34173,68 +40677,15 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       if (!sourceInstructionGroupName || !draggingInstructionPromptIds.length) {
         return;
       }
-      const previousDropEvalClientX = Number(
-          currentInstructionTagPointerDragState.lastDropEvalClientX,
-        ),
-        previousDropEvalClientY = Number(
-          currentInstructionTagPointerDragState.lastDropEvalClientY,
-        ),
-        previousDropEvalAt = Number(
-          currentInstructionTagPointerDragState.lastDropEvalAt || 0,
-        ),
-        pointerMoveDistance =
-          Number.isFinite(previousDropEvalClientX) &&
-          Number.isFinite(previousDropEvalClientY)
-            ? Math.hypot(
-                pointerClientX - previousDropEvalClientX,
-                pointerClientY - previousDropEvalClientY,
-              )
-            : Number.POSITIVE_INFINITY;
-      const shouldReevaluateDropTarget =
-        pointerMoveDistance >= 2.5 ||
-        !Number.isFinite(previousDropEvalAt) ||
-        nowTimestamp - previousDropEvalAt >= 22;
-      if (!shouldReevaluateDropTarget) {
-        instructionTagPointerDragRef.current = currentInstructionTagPointerDragState;
-        return;
-      }
       currentInstructionTagPointerDragState.lastDropEvalClientX = pointerClientX;
       currentInstructionTagPointerDragState.lastDropEvalClientY = pointerClientY;
-      currentInstructionTagPointerDragState.lastDropEvalAt = nowTimestamp;
-      const previousHoveredInstructionGroupName = String(
-          currentInstructionTagPointerDragState.hoveredGroupNameAtPointer || "",
-        ).trim(),
-        cachedHoveredInstructionGroupRect = previousHoveredInstructionGroupName
-          ? (Array.isArray(instructionTagGroupRectCacheRef.current)
-              ? instructionTagGroupRectCacheRef.current
-              : []
-            ).find(
-              (instructionGroupRectEntry) =>
-                String(instructionGroupRectEntry?.name || "").trim() ===
-                previousHoveredInstructionGroupName,
-            ) || null
-          : null,
-        isPointerStillInsideCachedHoveredGroup =
-          !!cachedHoveredInstructionGroupRect &&
-          isPointInsideInstructionTagDropZone(
-            cachedHoveredInstructionGroupRect,
+      const pointerEventTargetAtTick = null;
+      const hoveredInstructionGroupNameAtPointer =
+          resolveInstructionTagGroupNameAtPoint(
             pointerClientX,
             pointerClientY,
-            12,
-          );
-      const shouldRefreshInstructionGroupHitRects =
-        nowTimestamp >=
-          Number(currentInstructionTagPointerDragState.nextGroupRectRefreshAt || 0) &&
-          !isPointerStillInsideCachedHoveredGroup ||
-        !Array.isArray(instructionTagGroupRectCacheRef.current) ||
-        !instructionTagGroupRectCacheRef.current.length;
-      if (shouldRefreshInstructionGroupHitRects) {
-        instructionTagGroupRectCacheRef.current = [];
-        currentInstructionTagPointerDragState.nextGroupRectRefreshAt =
-          nowTimestamp + 180;
-      }
-      const hoveredInstructionGroupNameAtPointer =
-          resolveInstructionTagGroupNameAtPoint(pointerClientX, pointerClientY),
+            pointerEventTargetAtTick,
+          ),
         normalizedInstructionSegmentType = String(
           currentInstructionTagPointerDragState.segmentType || "normal",
         ).trim() === "common"
@@ -34243,6 +40694,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       let nextInstructionTagDropTarget = createIdleInstructionTagDropTarget(),
         nextInstructionTagGapDropZone = null;
       if (hoveredInstructionGroupNameAtPointer) {
+        const previousActiveInstructionTagGapZone =
+          currentInstructionTagPointerDragState.activeGapZone || null;
         const previousPreviewDropTarget = {
           groupName: String(
             currentInstructionTagPointerDragState.previewDropTarget?.groupName || "",
@@ -34253,14 +40706,53 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           insertAfter:
             currentInstructionTagPointerDragState.previewDropTarget?.insertAfter !==
             false,
+          anchorEl:
+            currentInstructionTagPointerDragState.previewDropTarget?.anchorEl ||
+            null,
         };
-        nextInstructionTagGapDropZone = resolveInstructionTagGapDropZoneAtPoint(
-          pointerClientX,
-          pointerClientY,
-          hoveredInstructionGroupNameAtPointer,
-          normalizedInstructionSegmentType,
-          currentInstructionTagPointerDragState.activeGapZoneKey,
-        );
+        const canReusePreviousActiveInstructionTagGapZone =
+          !!previousActiveInstructionTagGapZone &&
+          String(previousActiveInstructionTagGapZone.groupName || "").trim() ===
+            hoveredInstructionGroupNameAtPointer &&
+          !draggingInstructionPromptIdSet.has(
+            String(previousActiveInstructionTagGapZone.promptId || "").trim(),
+          ) &&
+          isPointInsideInstructionTagDropZone(
+            previousActiveInstructionTagGapZone,
+            pointerClientX,
+            pointerClientY,
+            2,
+          );
+        if (canReusePreviousActiveInstructionTagGapZone) {
+          const nextInsertAfter = resolveInstructionTagInsertAfterByBoundaries(
+            pointerClientX,
+            previousActiveInstructionTagGapZone,
+          );
+          nextInstructionTagGapDropZone =
+            !!previousActiveInstructionTagGapZone.insertAfter ===
+            !!nextInsertAfter
+              ? previousActiveInstructionTagGapZone
+              : {
+                  ...previousActiveInstructionTagGapZone,
+                  insertAfter: !!nextInsertAfter,
+                  key: buildInstructionTagDropTargetKey({
+                    groupName: previousActiveInstructionTagGapZone.groupName,
+                    promptId: previousActiveInstructionTagGapZone.promptId,
+                    insertAfter: !!nextInsertAfter,
+                  }),
+                };
+        } else {
+          nextInstructionTagGapDropZone = resolveInstructionTagGapDropZoneAtPoint(
+              pointerClientX,
+              pointerClientY,
+              hoveredInstructionGroupNameAtPointer,
+              normalizedInstructionSegmentType,
+              currentInstructionTagPointerDragState.activeGapZoneKey,
+              currentInstructionTagPointerDragState,
+              nowTimestamp,
+              pointerEventTargetAtTick,
+            );
+        }
         nextInstructionTagDropTarget = nextInstructionTagGapDropZone
           ? {
               groupName: String(
@@ -34270,6 +40762,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 nextInstructionTagGapDropZone.promptId || "",
               ).trim(),
               insertAfter: !!nextInstructionTagGapDropZone.insertAfter,
+              anchorEl: nextInstructionTagGapDropZone.anchorEl || null,
             }
           : previousPreviewDropTarget.groupName ===
                 hoveredInstructionGroupNameAtPointer &&
@@ -34284,33 +40777,25 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               currentInstructionTagPointerDragState.snapshotPrompts,
             )
               ? currentInstructionTagPointerDragState.snapshotPrompts
-              : imageQuickPrompts,
-            hasSegmentPromptInHoveredGroup = snapshotInstructionPrompts.some(
-              (instructionPromptItem) => {
-                const normalizedInstructionPromptGroupName =
-                  normalizeInstructionPresetGroupName(
-                    instructionPromptItem?.group,
-                  ) || CONST_INSTRUCTION_DEFAULT_GROUP;
-                if (
-                  normalizedInstructionPromptGroupName !==
-                  hoveredInstructionGroupNameAtPointer
-                ) {
-                  return false;
-                }
-                const isCommonInHoveredGroup = resolveInstructionPromptCommonInGroup(
-                  instructionPromptItem,
-                  hoveredInstructionGroupNameAtPointer,
-                );
-                return normalizedInstructionSegmentType === "common"
-                  ? isCommonInHoveredGroup
-                  : !isCommonInHoveredGroup;
-              },
-            );
+              : imageQuickPrompts;
+          let instructionGroupSegmentAvailabilityMap =
+            currentInstructionTagPointerDragState.groupSegmentAvailabilityMap;
+          instructionGroupSegmentAvailabilityMap instanceof Map ||
+            (instructionGroupSegmentAvailabilityMap =
+              buildInstructionGroupSegmentAvailabilityMap(
+                snapshotInstructionPrompts,
+              ),
+            (currentInstructionTagPointerDragState.groupSegmentAvailabilityMap =
+              instructionGroupSegmentAvailabilityMap));
+          const hasSegmentPromptInHoveredGroup = !!instructionGroupSegmentAvailabilityMap.get(
+            `${hoveredInstructionGroupNameAtPointer}|${normalizedInstructionSegmentType}`,
+          );
           if (!hasSegmentPromptInHoveredGroup) {
             nextInstructionTagDropTarget = {
               groupName: hoveredInstructionGroupNameAtPointer,
               promptId: "",
               insertAfter: true,
+              anchorEl: null,
             };
           }
         }
@@ -34318,26 +40803,13 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           String(nextInstructionTagDropTarget?.promptId || "").trim(),
         ) && (nextInstructionTagDropTarget.promptId = "");
       }
-      const previousActiveInstructionTagGapZoneKey = String(
-          currentInstructionTagPointerDragState.activeGapZoneKey || "",
-        ).trim(),
-        nextActiveInstructionTagGapZoneKey = String(
+      const nextActiveInstructionTagGapZoneKey = String(
           nextInstructionTagGapDropZone?.key || "",
         ).trim();
       currentInstructionTagPointerDragState.activeGapZoneKey =
         nextActiveInstructionTagGapZoneKey;
-      if (
-        previousActiveInstructionTagGapZoneKey !==
-        nextActiveInstructionTagGapZoneKey
-      ) {
-        instructionTagDropZoneLayoutVersionRef.current += 1;
-        instructionTagDropZoneCacheRef.current = {
-          groupName: "",
-          segmentType: "normal",
-          layoutVersion: 0,
-          zones: [],
-        };
-      }
+      currentInstructionTagPointerDragState.activeGapZone =
+        nextInstructionTagGapDropZone || null;
       currentInstructionTagPointerDragState.previewDropTarget =
         nextInstructionTagDropTarget;
       currentInstructionTagPointerDragState.dropTarget = nextInstructionTagDropTarget;
@@ -34345,17 +40817,90 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       currentInstructionTagPointerDragState.hoveredGroupNameAtPointer =
         hoveredInstructionGroupNameAtPointer;
       currentInstructionTagPointerDragState.lastTickAt = nowTimestamp;
-      instructionTagPointerDragRef.current = currentInstructionTagPointerDragState;
       writeInstructionTagDragOverGroupName(
         hoveredInstructionGroupNameAtPointer,
         "pointer",
       );
-      writeInstructionTagGapAnchorVisual(
+      scheduleInstructionTagGapAnchorVisual(
         String(nextInstructionTagDropTarget?.groupName || "").trim()
           ? nextInstructionTagDropTarget
           : null,
         currentInstructionTagPointerDragState,
       );
+      if (instructionTagDragPerfEnabledRef.current) {
+        const currentInstructionTagDragPerfSampleState =
+            instructionTagDragPerfSampleRef.current ||
+            createIdleInstructionTagDragPerfSampleState(),
+          tickDurationMs = Math.max(0, performance.now() - tickStartAt);
+        currentInstructionTagDragPerfSampleState.tickCount += 1;
+        currentInstructionTagDragPerfSampleState.tickCostMsTotal += tickDurationMs;
+        instructionTagDragPerfSampleRef.current =
+          currentInstructionTagDragPerfSampleState;
+      }
+    },
+    clearInstructionTagBatchDragHiddenAnchors = () => {
+      document
+        ?.querySelectorAll?.(
+          ".instruction-tag-menu-anchor.is-pointer-drag-batch-hidden",
+        )
+        ?.forEach?.((instructionTagAnchorElement) => {
+          instructionTagAnchorElement.classList.remove(
+            "is-pointer-drag-batch-hidden",
+          );
+        });
+    },
+    syncInstructionTagBatchDragHiddenAnchors = (
+      instructionTagPointerDragStateInput = null,
+    ) => {
+      clearInstructionTagBatchDragHiddenAnchors();
+      const currentInstructionTagPointerDragState =
+          instructionTagPointerDragStateInput || instructionTagPointerDragRef.current,
+        normalizedInstructionDragPromptIds = (
+          Array.isArray(currentInstructionTagPointerDragState?.promptIds)
+            ? currentInstructionTagPointerDragState.promptIds
+            : []
+        )
+          .map((instructionPromptId) => String(instructionPromptId || "").trim())
+          .filter(Boolean);
+      if (
+        !currentInstructionTagPointerDragState?.active ||
+        normalizedInstructionDragPromptIds.length <= 1
+      ) {
+        return;
+      }
+      const normalizedInstructionDragPromptIdSet = new Set(
+          normalizedInstructionDragPromptIds,
+        ),
+        normalizedInstructionSourceAnchorKey = String(
+          currentInstructionTagPointerDragState?.sourceAnchorKey || "",
+        ).trim();
+      document
+        ?.querySelectorAll?.(
+          ".instruction-tag-menu-anchor[data-instruction-prompt-id][data-instruction-anchor-key]",
+        )
+        ?.forEach?.((instructionTagAnchorElement) => {
+          const normalizedInstructionPromptId = String(
+              instructionTagAnchorElement.getAttribute(
+                "data-instruction-prompt-id",
+              ) || "",
+            ).trim(),
+            normalizedInstructionAnchorKey = String(
+              instructionTagAnchorElement.getAttribute(
+                "data-instruction-anchor-key",
+              ) || "",
+            ).trim();
+          if (
+            !normalizedInstructionDragPromptIdSet.has(
+              normalizedInstructionPromptId,
+            ) ||
+            normalizedInstructionAnchorKey === normalizedInstructionSourceAnchorKey
+          ) {
+            return;
+          }
+          instructionTagAnchorElement.classList.add(
+            "is-pointer-drag-batch-hidden",
+          );
+        });
     },
     finishInstructionTagPointerDrag = (shouldCommitDrag = true) => {
       const currentInstructionTagPointerDragState =
@@ -34367,12 +40912,35 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       if (!hadPendingOrActiveDrag) {
         return;
       }
+      cancelInstructionTagPointerOverlaySync();
+      const pointerCaptureElement =
+          currentInstructionTagPointerDragState?.pointerCaptureEl,
+        pointerCaptureId = Number(
+          currentInstructionTagPointerDragState?.pointerId,
+        );
+      if (
+        pointerCaptureElement &&
+        pointerCaptureId >= 0 &&
+        typeof pointerCaptureElement.releasePointerCapture === "function"
+      ) {
+        try {
+          pointerCaptureElement.releasePointerCapture(pointerCaptureId);
+        } catch (ignoredError) {
+          void ignoredError;
+        }
+      }
       typeof clearInstructionTagPointerListenersRef.current === "function" &&
         (clearInstructionTagPointerListenersRef.current(),
         (clearInstructionTagPointerListenersRef.current = null));
       instructionTagPointerDragRafRef.current &&
-        (cancelAnimationFrame(instructionTagPointerDragRafRef.current),
+        (clearTimeout(instructionTagPointerDragRafRef.current),
         (instructionTagPointerDragRafRef.current = 0));
+      cancelScheduledInstructionTagGapAnchorVisual();
+      stopInstructionTagDragPerfMonitor();
+      instructionTagDragPerfEnabledRef.current = false;
+      document?.body?.classList?.remove("instruction-pointer-dragging");
+      clearInstructionTagBatchDragHiddenAnchors();
+      suspendScrollbarHoverRef.current = false;
       if (hadActiveDrag && shouldCommitDrag) {
         const normalizedDraggingPromptIds = (
             Array.isArray(currentInstructionTagPointerDragState?.promptIds)
@@ -34410,19 +40978,14 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             committedDropTarget?.promptId || "",
           ).trim();
         if (normalizedDraggingPromptIds.length && normalizedCommittedDropGroupName) {
-          setImageQuickPrompts(
-            reorderInstructionPromptsByDrag(
-              Array.isArray(currentInstructionTagPointerDragState?.snapshotPrompts)
-                ? currentInstructionTagPointerDragState.snapshotPrompts
-                : imageQuickPrompts,
-              {
-                dragPromptIdsInput: normalizedDraggingPromptIds,
-                targetGroupNameInput: normalizedCommittedDropGroupName,
-                sourceGroupNameInput: normalizedSourceInstructionGroupName,
-                targetPromptIdInput: normalizedCommittedDropPromptId,
-                insertAfter: !!committedDropTarget?.insertAfter,
-              },
-            ),
+          setImageQuickPrompts((previousImageQuickPromptsState) =>
+            reorderInstructionPromptsByDrag(previousImageQuickPromptsState, {
+              dragPromptIdsInput: normalizedDraggingPromptIds,
+              targetGroupNameInput: normalizedCommittedDropGroupName,
+              sourceGroupNameInput: normalizedSourceInstructionGroupName,
+              targetPromptIdInput: normalizedCommittedDropPromptId,
+              insertAfter: !!committedDropTarget?.insertAfter,
+            }),
           );
           normalizedCommittedDropGroupName &&
             normalizedCommittedDropGroupName !==
@@ -34433,13 +40996,24 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             }));
         }
       }
-      instructionTagDropZoneLayoutVersionRef.current = 0;
-      instructionTagDropZoneCacheRef.current = {
-        groupName: "",
-        segmentType: "normal",
-        layoutVersion: 0,
-        zones: [],
-      };
+      const finalizedDropTargetGroupName = String(
+          currentInstructionTagPointerDragState?.dropTarget?.groupName ||
+            currentInstructionTagPointerDragState?.previewDropTarget?.groupName ||
+            "",
+        ).trim(),
+        finalizedDropTargetPromptId = String(
+          currentInstructionTagPointerDragState?.dropTarget?.promptId ||
+            currentInstructionTagPointerDragState?.previewDropTarget?.promptId ||
+            "",
+        ).trim(),
+        finalizedPhase = shouldCommitDrag ? "finish" : "cancel";
+      noteInstructionTagDragDebugPhase(
+        finalizedPhase,
+        `target=${finalizedDropTargetGroupName || "__none__"}:${finalizedDropTargetPromptId || "__end__"}`,
+      );
+      flushInstructionTagDragDebugLog(finalizedPhase, true);
+      instructionTagDragPerfSampleRef.current =
+        createIdleInstructionTagDragPerfSampleState();
       instructionTagGroupRectCacheRef.current = [];
       clearInstructionTagPointerDragVisual();
       instructionTagDragDebugTimerRef.current &&
@@ -34449,11 +41023,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         createIdleInstructionTagDragDebugState();
       instructionTagPointerDragRef.current =
         createIdleInstructionTagPointerDragState();
-      setInstructionTagPointerDragActive(false);
-      setDraggingInstructionTagId("");
-      setDraggingInstructionTagPayloadIds([]);
-      setInstructionTagDragSourceGroupName("");
-      writeInstructionTagDragOverGroupName("", "finish");
+      writeInstructionTagPointerDragUiActive(false, "");
+      writeInstructionTagDragOverGroupName("", "pointer");
       if (hadActiveDrag) {
         suppressInstructionTagClickRef.current = true;
         suppressInstructionTagClickTimerRef.current &&
@@ -34496,27 +41067,32 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               String(instructionPromptItem?.id || "").trim() ===
               normalizedInstructionPromptId,
           ) || null,
-        selectedInstructionPromptIdSet = new Set(
-          selectedImageQuickPromptIds
-            .map((selectedInstructionPromptId) =>
-              String(selectedInstructionPromptId || "").trim(),
+        selectedInstructionPromptIdSet = isImageQuickBatchSelectMode
+          ? new Set(
+              selectedImageQuickPromptIds
+                .map((selectedInstructionPromptId) =>
+                  String(selectedInstructionPromptId || "").trim(),
+                )
+                .filter(Boolean),
             )
-            .filter(Boolean),
-        ),
-        dragPayloadPromptIdSet =
+          : new Set(),
+        isBatchDragPayload =
           isImageQuickBatchSelectMode &&
-          selectedInstructionPromptIdSet.has(normalizedInstructionPromptId)
-            ? selectedInstructionPromptIdSet
-            : new Set([normalizedInstructionPromptId]),
-        normalizedInstructionDragPayloadIds = imageQuickPrompts
-          .map((instructionPromptItem) =>
-            String(instructionPromptItem?.id || "").trim(),
-          )
-          .filter(
-            (instructionPromptId) =>
-              instructionPromptId &&
-              dragPayloadPromptIdSet.has(instructionPromptId),
-          );
+          selectedInstructionPromptIdSet.has(normalizedInstructionPromptId),
+        dragPayloadPromptIdSet = isBatchDragPayload
+          ? selectedInstructionPromptIdSet
+          : new Set([normalizedInstructionPromptId]),
+        normalizedInstructionDragPayloadIds = isBatchDragPayload
+          ? imageQuickPrompts
+              .map((instructionPromptItem) =>
+                String(instructionPromptItem?.id || "").trim(),
+              )
+              .filter(
+                (instructionPromptId) =>
+                  instructionPromptId &&
+                  dragPayloadPromptIdSet.has(instructionPromptId),
+              )
+          : [normalizedInstructionPromptId];
       if (
         !normalizedInstructionPromptId ||
         !normalizedInstructionSourceGroupName ||
@@ -34529,22 +41105,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         return;
       }
       finishInstructionTagPointerDrag(false);
-      closeInstructionTagMenu();
-      instructionTagDragDebugTimerRef.current &&
-        (clearTimeout(instructionTagDragDebugTimerRef.current),
-        (instructionTagDragDebugTimerRef.current = 0));
-      instructionTagDragDebugRef.current = {
-        ...createIdleInstructionTagDragDebugState(),
-        sessionId: Date.now(),
-        promptId: normalizedInstructionPromptId,
-        sourceGroupName: normalizedInstructionSourceGroupName,
-        dragMode: "pointer",
-        startedAt: Date.now(),
-      };
-      noteInstructionTagDragDebugPhase(
-        "pending",
-        `prompt=${normalizedInstructionPromptId} group=${normalizedInstructionSourceGroupName}`,
-      );
+      suspendScrollbarHoverRef.current = true;
       instructionTagPointerDragRef.current = {
         ...createIdleInstructionTagPointerDragState(),
         pending: true,
@@ -34561,11 +41122,14 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           : "normal",
         sourceGroupName: normalizedInstructionSourceGroupName,
         sourceAnchorKey: normalizedInstructionAnchorKey,
+        pointerCaptureEl: null,
         snapshotPrompts: imageQuickPrompts,
+        groupSegmentAvailabilityMap: null,
         startClientX: pointerStartClientX,
         startClientY: pointerStartClientY,
         pointerClientX: pointerStartClientX,
         pointerClientY: pointerStartClientY,
+        lastPointerMoveAt: performance.now(),
         visualClientX: NaN,
         visualClientY: NaN,
         lastTickAt: performance.now(),
@@ -34577,19 +41141,15 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         sourceTop: instructionTagButtonRect.top,
         sourceRight: instructionTagButtonRect.right,
         sourceBottom: instructionTagButtonRect.bottom,
+        activeGapZone: null,
+        anchorRectCache: new WeakMap(),
+        anchorRectCacheAt: performance.now(),
         nextGroupRectRefreshAt: 0,
       };
       instructionTagPointerDragVisualRef.current = {
         anchorEl: null,
         buttonEl: null,
         overlayEl: null,
-      };
-      instructionTagDropZoneLayoutVersionRef.current = 0;
-      instructionTagDropZoneCacheRef.current = {
-        groupName: "",
-        segmentType: "normal",
-        layoutVersion: 0,
-        zones: [],
       };
       instructionTagGroupRectCacheRef.current = [];
       suppressInstructionTagClickRef.current = false;
@@ -34617,38 +41177,190 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           ) {
             return;
           }
+          instructionTagPointerMoveEvent?.stopPropagation?.();
+          instructionTagPointerMoveEvent?.stopImmediatePropagation?.();
           if (
             !Number.isFinite(nextPointerClientX) ||
             !Number.isFinite(nextPointerClientY)
           ) {
             return;
           }
-          bumpInstructionTagDragDebugCounter("pointerMoves");
-          if (currentInstructionTagPointerDragState.pending) {
-            const pointerMoveDistance = Math.hypot(
-              nextPointerClientX -
-                Number(currentInstructionTagPointerDragState.startClientX || 0),
-              nextPointerClientY -
-                Number(currentInstructionTagPointerDragState.startClientY || 0),
+          const isInstructionTagDragPerfEnabled =
+              !!instructionTagDragPerfEnabledRef.current,
+            previousPointerClientX = Number(
+              currentInstructionTagPointerDragState.pointerClientX,
+            ),
+            previousPointerClientY = Number(
+              currentInstructionTagPointerDragState.pointerClientY,
             );
-            if (pointerMoveDistance < 4) {
+          if (
+            currentInstructionTagPointerDragState.active &&
+            Number.isFinite(previousPointerClientX) &&
+            Number.isFinite(previousPointerClientY) &&
+            previousPointerClientX === nextPointerClientX &&
+            previousPointerClientY === nextPointerClientY
+          ) {
+            return;
+          }
+          if (
+            currentInstructionTagPointerDragState.pending &&
+            !isInstructionTagDragPerfEnabled
+          ) {
+            const pendingMoveDeltaX =
+                nextPointerClientX -
+                Number(currentInstructionTagPointerDragState.startClientX || 0),
+              pendingMoveDeltaY =
+                nextPointerClientY -
+                Number(currentInstructionTagPointerDragState.startClientY || 0);
+            if (pendingMoveDeltaX * pendingMoveDeltaX + pendingMoveDeltaY * pendingMoveDeltaY < 16) {
               return;
+            }
+          }
+          if (
+            currentInstructionTagPointerDragState.active &&
+            !isInstructionTagDragPerfEnabled
+          ) {
+            currentInstructionTagPointerDragState.pointerClientX = nextPointerClientX;
+            currentInstructionTagPointerDragState.pointerClientY = nextPointerClientY;
+            scheduleInstructionTagPointerOverlaySync(true);
+            scheduleInstructionTagPointerDragTick();
+            return;
+          }
+          const previousPointerMoveTimestamp = Number(
+              currentInstructionTagPointerDragState.lastPointerMoveAt || 0,
+            ),
+            nowPointerMoveTimestamp = performance.now(),
+            pointerMoveHandlerStartAt = isInstructionTagDragPerfEnabled
+              ? nowPointerMoveTimestamp
+              : 0;
+          if (
+            isInstructionTagDragPerfEnabled &&
+            Number.isFinite(previousPointerMoveTimestamp) &&
+            previousPointerMoveTimestamp > 0
+          ) {
+            const pointerMoveIntervalMs = Math.max(
+              0,
+              nowPointerMoveTimestamp - previousPointerMoveTimestamp,
+            );
+            updateInstructionTagDragPerfSample(
+              (nextInstructionTagDragPerfSampleState) => {
+                nextInstructionTagDragPerfSampleState.pointerMoveIntervalSamples +=
+                  1;
+                nextInstructionTagDragPerfSampleState.pointerMoveIntervalTotalMs +=
+                  pointerMoveIntervalMs;
+                nextInstructionTagDragPerfSampleState.pointerMoveIntervalMaxMs =
+                  Math.max(
+                    Number(
+                      nextInstructionTagDragPerfSampleState.pointerMoveIntervalMaxMs ||
+                        0,
+                    ),
+                    pointerMoveIntervalMs,
+                  );
+                pointerMoveIntervalMs >= 16 &&
+                  (nextInstructionTagDragPerfSampleState.pointerMoveGapOver16Count +=
+                    1);
+                pointerMoveIntervalMs >= 33 &&
+                  (nextInstructionTagDragPerfSampleState.pointerMoveGapOver33Count +=
+                    1);
+                pointerMoveIntervalMs >= 50 &&
+                  (nextInstructionTagDragPerfSampleState.pointerMoveGapOver50Count +=
+                    1);
+              },
+            );
+            if (pointerMoveIntervalMs >= 33) {
+              const currentInstructionTagDragPerfMonitorState =
+                  instructionTagDragPerfMonitorRef.current ||
+                  createIdleInstructionTagDragPerfMonitorState(),
+                nowTimestampMs = Date.now();
+              if (
+                nowTimestampMs -
+                  Number(
+                    currentInstructionTagDragPerfMonitorState.lastPointerGapLogAt ||
+                      0,
+                  ) >=
+                300
+              ) {
+                currentInstructionTagDragPerfMonitorState.lastPointerGapLogAt =
+                  nowTimestampMs;
+                instructionTagDragPerfMonitorRef.current =
+                  currentInstructionTagDragPerfMonitorState;
+                appendInstructionTagDragPerfDetailLog("pointer-gap", {
+                  gapMs: Number(pointerMoveIntervalMs.toFixed(3)),
+                  thresholdMs: 33,
+                });
+              }
+            }
+          }
+          currentInstructionTagPointerDragState.lastPointerMoveAt =
+            nowPointerMoveTimestamp;
+          isInstructionTagDragPerfEnabled &&
+            bumpInstructionTagDragDebugCounter("pointerMoves");
+          if (currentInstructionTagPointerDragState.pending) {
+            const pointerMoveDeltaX =
+                nextPointerClientX -
+                Number(currentInstructionTagPointerDragState.startClientX || 0),
+              pointerMoveDeltaY =
+                nextPointerClientY -
+                Number(currentInstructionTagPointerDragState.startClientY || 0);
+            if (pointerMoveDeltaX * pointerMoveDeltaX + pointerMoveDeltaY * pointerMoveDeltaY < 16) {
+              return;
+            }
+            closeInstructionTagMenu();
+            let pointerCaptureElement = null;
+            if (
+              pointerId >= 0 &&
+              instructionTagButtonElement &&
+              typeof instructionTagButtonElement.setPointerCapture === "function"
+            ) {
+              try {
+                instructionTagButtonElement.setPointerCapture(pointerId);
+                pointerCaptureElement = instructionTagButtonElement;
+              } catch (ignoredError) {
+                void ignoredError;
+              }
+            }
+            currentInstructionTagPointerDragState.pointerCaptureEl =
+              pointerCaptureElement;
+            instructionTagDragPerfEnabledRef.current =
+              resolveInstructionTagDragPerfEnabled();
+            if (instructionTagDragPerfEnabledRef.current) {
+              instructionTagDragDebugTimerRef.current &&
+                (clearTimeout(instructionTagDragDebugTimerRef.current),
+                (instructionTagDragDebugTimerRef.current = 0));
+              instructionTagDragDebugRef.current = {
+                ...createIdleInstructionTagDragDebugState(),
+                sessionId: Date.now(),
+                promptId: normalizedInstructionPromptId,
+                sourceGroupName: normalizedInstructionSourceGroupName,
+                dragMode: "pointer",
+                startedAt: Date.now(),
+              };
+              instructionTagDragPerfSampleRef.current = {
+                ...createIdleInstructionTagDragPerfSampleState(),
+                sessionId: Date.now(),
+                startedAt: performance.now(),
+              };
+              noteInstructionTagDragDebugPhase(
+                "pending",
+                `prompt=${normalizedInstructionPromptId} group=${normalizedInstructionSourceGroupName}`,
+              );
             }
             currentInstructionTagPointerDragState.pending = false;
             currentInstructionTagPointerDragState.active = true;
             currentInstructionTagPointerDragState.phase = "dragging";
-            setInstructionTagPointerDragActive(true);
-            hoveredTipTargetRef.current = null;
-            hideGlobalTip(0);
-            setDraggingInstructionTagId(normalizedInstructionPromptId);
-            setDraggingInstructionTagPayloadIds(
-              normalizedInstructionDragPayloadIds,
+            noteInstructionTagDragDebugPhase(
+              "dragging",
+              `group=${normalizedInstructionSourceGroupName}`,
             );
-            setInstructionTagDragSourceGroupName(
+            startInstructionTagDragPerfMonitor();
+            writeInstructionTagPointerDragUiActive(
+              true,
               normalizedInstructionSourceGroupName,
             );
-            setDraggingInstructionGroupName("");
-            setDragOverInstructionGroupName("");
+            document?.body?.classList?.add("instruction-pointer-dragging");
+            hoveredTipTargetRef.current = null;
+            hideGlobalTip(0);
+            finishInstructionGroupPointerDragRef.current?.(false);
             instructionTagPointerDragVisualRef.current = {
               ...instructionTagPointerDragVisualRef.current,
               buttonEl: instructionTagButtonElement,
@@ -34662,17 +41374,37 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               "pointer-events",
               "none",
             );
+            syncInstructionTagBatchDragHiddenAnchors(
+              currentInstructionTagPointerDragState,
+            );
             suppressInstructionTagClickRef.current = true;
           }
-          instructionTagPointerMoveEvent.preventDefault?.();
           currentInstructionTagPointerDragState.pointerClientX = nextPointerClientX;
           currentInstructionTagPointerDragState.pointerClientY = nextPointerClientY;
-          syncInstructionTagPointerDragOverlayVisual(
-            currentInstructionTagPointerDragState,
-            { shouldAccelerateFollow: true },
-          );
-          instructionTagPointerDragRef.current = currentInstructionTagPointerDragState;
+          scheduleInstructionTagPointerOverlaySync(true);
           scheduleInstructionTagPointerDragTick();
+          if (isInstructionTagDragPerfEnabled) {
+            const pointerMoveHandlerCostMs = Math.max(
+              0,
+              performance.now() - pointerMoveHandlerStartAt,
+            );
+            updateInstructionTagDragPerfSample(
+              (nextInstructionTagDragPerfSampleState) => {
+                nextInstructionTagDragPerfSampleState.pointerMoveHandlerSamples +=
+                  1;
+                nextInstructionTagDragPerfSampleState.pointerMoveHandlerCostMsTotal +=
+                  pointerMoveHandlerCostMs;
+                nextInstructionTagDragPerfSampleState.pointerMoveHandlerCostMaxMs =
+                  Math.max(
+                    Number(
+                      nextInstructionTagDragPerfSampleState.pointerMoveHandlerCostMaxMs ||
+                        0,
+                    ),
+                    pointerMoveHandlerCostMs,
+                );
+              },
+            );
+          }
         },
         handleInstructionTagPointerCommit = (instructionTagPointerUpEvent) => {
           if (
@@ -34683,8 +41415,24 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           ) {
             return;
           }
-          instructionTagPointerDragRef.current?.active &&
-            instructionTagPointerUpEvent?.preventDefault?.();
+          if (instructionTagPointerDragRef.current?.active) {
+            const commitPointerClientX = Number(
+                instructionTagPointerUpEvent?.clientX,
+              ),
+              commitPointerClientY = Number(
+                instructionTagPointerUpEvent?.clientY,
+              );
+            Number.isFinite(commitPointerClientX) &&
+              (instructionTagPointerDragRef.current.pointerClientX =
+                commitPointerClientX);
+            Number.isFinite(commitPointerClientY) &&
+              (instructionTagPointerDragRef.current.pointerClientY =
+                commitPointerClientY);
+            (instructionTagPointerUpEvent?.preventDefault?.(),
+              instructionTagPointerUpEvent?.stopPropagation?.(),
+              instructionTagPointerUpEvent?.stopImmediatePropagation?.());
+            applyInstructionTagPointerDragTick();
+          }
           finishInstructionTagPointerDrag(true);
         },
         handleInstructionTagPointerWindowBlur = () => {
@@ -34696,12 +41444,99 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           handlePointerMove: handleInstructionTagPointerMove,
           handlePointerUpOrCancel: handleInstructionTagPointerCommit,
           handleWindowBlur: handleInstructionTagPointerWindowBlur,
+          pointerMovePassive: true,
         },
       );
-      scheduleInstructionTagPointerDragTick();
       instructionTagPointerDownEvent.stopPropagation?.();
     },
     renderInstructionPanelInline = () => {
+      const isInstructionPointerDragRunning =
+        !!instructionTagPointerDragRef.current?.pending ||
+        !!instructionTagPointerDragRef.current?.active;
+      if (
+        isInstructionPointerDragRunning &&
+        instructionPanelFrozenNodeRef.current
+      ) {
+        return instructionPanelFrozenNodeRef.current;
+      }
+      const nextInstructionPanelRenderSnapshot = {
+          promptsRef: imageQuickPrompts,
+          groupsRef: imageQuickPromptGroups,
+          sortSessionRef: instructionGroupSortSession,
+          sortExpandRevealActive: instructionGroupSortExpandRevealActive,
+          foldMapRef: instructionGroupFoldMap,
+          batchSelectMode: isImageQuickBatchSelectMode,
+          selectedGroupNamesRef: selectedImageQuickGroupNames,
+          selectedPromptIdsRef: selectedImageQuickPromptIds,
+          openGroupMenuId: openInstructionGroupMenuId,
+          groupMenuPlacementClassName:
+            instructionGroupMenuPlacementClassName,
+          groupMenuRectRef: instructionGroupMenuRect,
+          openTagMenuId: openInstructionTagMenuId,
+          activeTagMenuGroupName:
+            activeInstructionTagMenuGroupName,
+          activeTagMenuPromptId:
+            activeInstructionTagMenuPromptId,
+          tagMenuPlacementClassName:
+            instructionTagMenuPlacementClassName,
+          tagMenuRectRef: instructionTagMenuRect,
+          editingPromptId: editingImageQuickPromptId,
+          editingPromptDraftRef: editingImageQuickPromptDraft,
+        },
+        previousInstructionPanelNodeCache =
+          instructionPanelNodeCacheRef.current || {},
+        previousInstructionPanelRenderSnapshot =
+          previousInstructionPanelNodeCache.snapshot || null,
+        canReuseInstructionPanelNode =
+          !!previousInstructionPanelNodeCache.node &&
+          !!previousInstructionPanelRenderSnapshot &&
+          previousInstructionPanelRenderSnapshot.promptsRef ===
+            nextInstructionPanelRenderSnapshot.promptsRef &&
+          previousInstructionPanelRenderSnapshot.groupsRef ===
+            nextInstructionPanelRenderSnapshot.groupsRef &&
+          previousInstructionPanelRenderSnapshot.sortSessionRef ===
+            nextInstructionPanelRenderSnapshot.sortSessionRef &&
+          previousInstructionPanelRenderSnapshot.sortExpandRevealActive ===
+            nextInstructionPanelRenderSnapshot.sortExpandRevealActive &&
+          previousInstructionPanelRenderSnapshot.foldMapRef ===
+            nextInstructionPanelRenderSnapshot.foldMapRef &&
+          previousInstructionPanelRenderSnapshot.batchSelectMode ===
+            nextInstructionPanelRenderSnapshot.batchSelectMode &&
+          previousInstructionPanelRenderSnapshot.selectedGroupNamesRef ===
+            nextInstructionPanelRenderSnapshot.selectedGroupNamesRef &&
+          previousInstructionPanelRenderSnapshot.selectedPromptIdsRef ===
+            nextInstructionPanelRenderSnapshot.selectedPromptIdsRef &&
+          previousInstructionPanelRenderSnapshot.openGroupMenuId ===
+            nextInstructionPanelRenderSnapshot.openGroupMenuId &&
+          previousInstructionPanelRenderSnapshot
+            .groupMenuPlacementClassName ===
+            nextInstructionPanelRenderSnapshot
+              .groupMenuPlacementClassName &&
+          previousInstructionPanelRenderSnapshot.groupMenuRectRef ===
+            nextInstructionPanelRenderSnapshot.groupMenuRectRef &&
+          previousInstructionPanelRenderSnapshot.openTagMenuId ===
+            nextInstructionPanelRenderSnapshot.openTagMenuId &&
+          previousInstructionPanelRenderSnapshot
+            .activeTagMenuGroupName ===
+            nextInstructionPanelRenderSnapshot
+              .activeTagMenuGroupName &&
+          previousInstructionPanelRenderSnapshot
+            .activeTagMenuPromptId ===
+            nextInstructionPanelRenderSnapshot
+              .activeTagMenuPromptId &&
+          previousInstructionPanelRenderSnapshot
+            .tagMenuPlacementClassName ===
+            nextInstructionPanelRenderSnapshot
+              .tagMenuPlacementClassName &&
+          previousInstructionPanelRenderSnapshot.tagMenuRectRef ===
+            nextInstructionPanelRenderSnapshot.tagMenuRectRef &&
+          previousInstructionPanelRenderSnapshot.editingPromptId ===
+            nextInstructionPanelRenderSnapshot.editingPromptId &&
+          previousInstructionPanelRenderSnapshot.editingPromptDraftRef ===
+            nextInstructionPanelRenderSnapshot.editingPromptDraftRef;
+      if (canReuseInstructionPanelNode) {
+        return previousInstructionPanelNodeCache.node;
+      }
       const instructionRenderCacheSnapshot = (() => {
           const previousInstructionRenderCacheSnapshot =
             instructionTagRenderCacheRef.current || {};
@@ -34752,13 +41587,21 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 instructionGroupName !== CONST_INSTRUCTION_FAVORITES_GROUP &&
                 instructionGroupName !== CONST_INSTRUCTION_DEFAULT_GROUP,
             ),
+            shouldRenderInstructionDefaultGroup =
+              Array.isArray(
+                instructionGroupItemMap.get(CONST_INSTRUCTION_DEFAULT_GROUP),
+              ) &&
+              (instructionGroupItemMap.get(CONST_INSTRUCTION_DEFAULT_GROUP) || [])
+                .length > 0,
             orderedInstructionCustomGroups = normalizeInstructionGroupNameList([
               ...normalizedInstructionCustomGroups,
               ...instructionGroupNameListFromItems,
             ]),
             orderedInstructionGroupNames = [
               CONST_INSTRUCTION_FAVORITES_GROUP,
-              CONST_INSTRUCTION_DEFAULT_GROUP,
+              ...(shouldRenderInstructionDefaultGroup
+                ? [CONST_INSTRUCTION_DEFAULT_GROUP]
+                : []),
               ...orderedInstructionCustomGroups,
             ],
             orderedInstructionGroups = orderedInstructionGroupNames.map(
@@ -34805,53 +41648,117 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         })(),
         instructionPromptByIdMap =
           instructionRenderCacheSnapshot.promptByIdMap || new Map(),
+        orderedInstructionCustomGroups =
+          instructionRenderCacheSnapshot.orderedInstructionCustomGroups || [],
         orderedInstructionGroupNames =
           instructionRenderCacheSnapshot.orderedInstructionGroupNames || [],
-        normalizedDraggingInstructionPayloadIdSet = new Set(
-          (Array.isArray(draggingInstructionTagPayloadIds)
-            ? draggingInstructionTagPayloadIds
-            : []
-          )
-            .map((draggingInstructionPromptId) =>
-              String(draggingInstructionPromptId || "").trim(),
-            )
-            .filter(Boolean),
+        orderedInstructionGroups =
+          instructionRenderCacheSnapshot.orderedInstructionGroups || [],
+        isInstructionGroupSortVisible =
+          !!instructionGroupSortSession?.sourceGroupName,
+        isInstructionGroupSortDragging =
+          instructionGroupSortSession?.phase === "dragging" &&
+          !!instructionGroupSortSession?.sourceGroupName,
+        instructionGroupItemByNameMap = new Map(
+          orderedInstructionGroups.map((instructionGroupItem) => [
+            String(instructionGroupItem?.name || "").trim(),
+            instructionGroupItem,
+          ]),
         ),
-        normalizedInstructionTagDragSourceGroupName = String(
-          instructionTagDragSourceGroupName || "",
+        normalizedInstructionGroupSortPreviewOrder =
+          normalizeInstructionGroupNameList(
+            instructionGroupSortSession?.previewOrder,
+          ).filter((instructionGroupName) =>
+            orderedInstructionCustomGroups.includes(instructionGroupName),
+          ),
+        effectiveInstructionGroupSortPreviewOrder =
+          normalizedInstructionGroupSortPreviewOrder.length ===
+          orderedInstructionCustomGroups.length
+            ? normalizedInstructionGroupSortPreviewOrder
+            : orderedInstructionCustomGroups,
+        normalizedInstructionGroupSortSourceNames =
+          normalizeInstructionGroupNameList(
+            Array.isArray(instructionGroupSortSession?.sourceGroupNames)
+              ? instructionGroupSortSession.sourceGroupNames
+              : [instructionGroupSortSession?.sourceGroupName],
+          ),
+        normalizedInstructionGroupSortSourceName = String(
+          instructionGroupSortSession?.sourceGroupName || "",
         ).trim(),
-        shouldProjectInstructionDragPreview =
-          isInstructionTagPointerDragActive &&
-          normalizedDraggingInstructionPayloadIdSet.size > 0 &&
-          !!normalizedInstructionTagDragSourceGroupName,
-        orderedInstructionGroups = (
-          instructionRenderCacheSnapshot.orderedInstructionGroups || []
-        ).map((instructionGroupItem) => {
-          if (!shouldProjectInstructionDragPreview) {
-            return instructionGroupItem;
-          }
-          const normalizedInstructionGroupName = String(
-              instructionGroupItem?.name || "",
-            ).trim(),
-            instructionGroupItems = Array.isArray(instructionGroupItem?.items)
-              ? instructionGroupItem.items
-              : [];
-          if (
-            normalizedInstructionGroupName !==
-            normalizedInstructionTagDragSourceGroupName
-          ) {
-            return instructionGroupItem;
-          }
-          return {
-            ...instructionGroupItem,
-            items: instructionGroupItems.filter(
-              (instructionPromptItem) =>
-                !normalizedDraggingInstructionPayloadIdSet.has(
-                  String(instructionPromptItem?.id || "").trim(),
-                ),
+        normalizedInstructionGroupSortSourceNameSet = new Set(
+          normalizedInstructionGroupSortSourceNames,
+        ),
+        isInstructionGroupSortMultiDrag =
+          normalizedInstructionGroupSortSourceNames.length > 1,
+        instructionGroupSortCardNames = [
+          CONST_INSTRUCTION_FAVORITES_GROUP,
+          ...(orderedInstructionGroupNames.includes(CONST_INSTRUCTION_DEFAULT_GROUP)
+            ? [CONST_INSTRUCTION_DEFAULT_GROUP]
+            : []),
+          ...effectiveInstructionGroupSortPreviewOrder,
+        ],
+        instructionGroupSortCards = instructionGroupSortCardNames
+          .map((instructionGroupName) =>
+            instructionGroupItemByNameMap.get(
+              String(instructionGroupName || "").trim(),
             ),
-          };
-        }),
+          )
+          .filter(Boolean),
+        instructionGroupSortSourceItem =
+          instructionGroupItemByNameMap.get(
+            normalizedInstructionGroupSortSourceName,
+          ) || null,
+        instructionGroupSortOverlayVisible =
+          isInstructionGroupSortDragging && !!instructionGroupSortSourceItem,
+        instructionGroupSortOverlayStyle = instructionGroupSortOverlayVisible
+          ? {
+              top: "0px",
+              left: `${Math.round(
+                Number(instructionGroupSortSession?.overlayLeft || 0),
+              )}px`,
+              transform: `translate3d(0, ${Math.round(
+                Number(instructionGroupSortSession?.overlayTop || 0),
+              )}px, 0)`,
+              width: `${Math.round(
+                Math.max(
+                  1,
+                  Number(instructionGroupSortSession?.overlayWidth || 0),
+                ),
+              )}px`,
+              minHeight: `${Math.round(
+                Math.max(
+                  1,
+                  Number(instructionGroupSortSession?.overlayHeight || 0),
+                ),
+              )}px`,
+            }
+          : null,
+        renderInstructionGroupNames = [
+          CONST_INSTRUCTION_FAVORITES_GROUP,
+          ...(orderedInstructionGroupNames.includes(CONST_INSTRUCTION_DEFAULT_GROUP)
+            ? [CONST_INSTRUCTION_DEFAULT_GROUP]
+            : []),
+          ...orderedInstructionCustomGroups,
+        ],
+        renderInstructionGroups = renderInstructionGroupNames
+          .map((instructionGroupName) =>
+            instructionGroupItemByNameMap.get(
+              String(instructionGroupName || "").trim(),
+            ),
+          )
+          .filter(Boolean),
+        selectedInstructionGroupNameSet = isImageQuickBatchSelectMode
+          ? new Set(
+              normalizeInstructionGroupNameList(
+                selectedImageQuickGroupNames,
+              ).filter(
+                (instructionGroupName) =>
+                  instructionGroupName &&
+                  instructionGroupName !==
+                    CONST_INSTRUCTION_FAVORITES_GROUP,
+              ),
+            )
+          : new Set(),
         selectedInstructionPromptIdSet = new Set(
           selectedImageQuickPromptIds
             .map((selectedImagePromptId) =>
@@ -34948,6 +41855,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             );
             return;
           }
+          composerTextChangeSourceRef.current = "programmatic";
           setComposerTextWithDraftSync((previousComposerText) => {
             const normalizedPreviousComposerText = String(
               previousComposerText || "",
@@ -34959,8 +41867,13 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           requestAnimationFrame(() => {
             if (!composerTextareaRef.current) return;
             const composerTextareaElement = composerTextareaRef.current;
+            markComposerExpandedInteraction();
             composerTextareaElement.focus();
-            resizeComposerTextarea(composerTextareaElement);
+            requestComposerResize({
+              textareaElement: composerTextareaElement,
+              active: true,
+              scrollToBottom: true,
+            });
             const nextComposerTextLength = composerTextareaElement.value.length;
             composerTextareaElement.setSelectionRange(
               nextComposerTextLength,
@@ -35004,32 +41917,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 .filter(Boolean),
             ),
           ),
-        toggleInstructionGroupSelection = (instructionGroupItemsInput = []) => {
-          const instructionGroupItemIds =
-            resolveInstructionGroupItemIds(instructionGroupItemsInput);
-          if (!instructionGroupItemIds.length) return;
-          setSelectedImageQuickPromptIds((previousSelectedPromptIdsState) => {
-            const previousSelectedPromptIdSet = new Set(
-                previousSelectedPromptIdsState
-                  .map((selectedPromptId) =>
-                    String(selectedPromptId || "").trim(),
-                  )
-                  .filter(Boolean),
-              ),
-              isInstructionGroupFullySelected = instructionGroupItemIds.every(
-                (instructionGroupItemId) =>
-                  previousSelectedPromptIdSet.has(instructionGroupItemId),
-              );
-            isInstructionGroupFullySelected
-              ? instructionGroupItemIds.forEach((instructionGroupItemId) => {
-                  previousSelectedPromptIdSet.delete(instructionGroupItemId);
-                })
-              : instructionGroupItemIds.forEach((instructionGroupItemId) => {
-                  previousSelectedPromptIdSet.add(instructionGroupItemId);
-                });
-            return Array.from(previousSelectedPromptIdSet);
-          });
-        },
         renameInstructionGroup = (targetInstructionGroupNameInput) => {
           openInstructionGroupRenameDialog(targetInstructionGroupNameInput);
         },
@@ -35051,132 +41938,861 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             instructionAnchorKeyInput,
           );
         },
-        onInstructionGroupDragStart = (
-          instructionGroupDragStartEvent,
-          instructionGroupNameInput,
-        ) => {
-          if (!isImageQuickBatchSelectMode) return;
-          const instructionTagPointerDragState = instructionTagPointerDragRef.current;
-          if (
-            isInstructionTagPointerDragActive ||
-            instructionTagPointerDragState?.pending ||
-            instructionTagPointerDragState?.active ||
-            instructionGroupDragStartEvent?.target
-              ?.closest?.(".instruction-tag")
-          ) {
-            instructionGroupDragStartEvent.preventDefault?.();
-            return;
-          }
+        isInstructionGroupSortable = (instructionGroupNameInput) => {
           const normalizedInstructionGroupName = String(
             instructionGroupNameInput || "",
           ).trim();
-          if (
-            !normalizedInstructionGroupName ||
-            normalizedInstructionGroupName === CONST_INSTRUCTION_FAVORITES_GROUP
-          )
-            return;
-          finishInstructionTagPointerDrag(false);
-          setDraggingInstructionGroupName(normalizedInstructionGroupName);
-          setDraggingInstructionTagId("");
-          setDraggingInstructionTagPayloadIds([]);
-          setInstructionTagDragSourceGroupName("");
-          setDragOverInstructionGroupName(normalizedInstructionGroupName);
-          setInstructionGroupFoldMap(
-            orderedInstructionGroupNames.reduce(
-              (nextInstructionGroupFoldMap, instructionGroupName) => ({
-                ...nextInstructionGroupFoldMap,
-                [instructionGroupName]: true,
-              }),
-              {},
+          return (
+            !!normalizedInstructionGroupName &&
+            normalizedInstructionGroupName !==
+              CONST_INSTRUCTION_FAVORITES_GROUP &&
+            normalizedInstructionGroupName !== CONST_INSTRUCTION_DEFAULT_GROUP
+          );
+        },
+        moveInstructionGroupNameInOrder = (
+          instructionGroupOrderInput = [],
+          draggingInstructionGroupNameInput,
+          targetInstructionGroupNameInput,
+          insertAfterTarget = false,
+        ) => {
+          const normalizedInstructionGroupOrder = normalizeInstructionGroupNameList(
+              instructionGroupOrderInput,
             ),
+            normalizedRequestedDraggingInstructionGroupNames =
+              normalizeInstructionGroupNameList(
+                Array.isArray(draggingInstructionGroupNameInput)
+                  ? draggingInstructionGroupNameInput
+                  : [draggingInstructionGroupNameInput],
+              ),
+            normalizedDraggingInstructionGroupNames = normalizedInstructionGroupOrder.filter(
+              (instructionGroupName) =>
+                normalizedRequestedDraggingInstructionGroupNames.includes(
+                  instructionGroupName,
+                ),
+            ),
+            normalizedDraggingInstructionGroupNameSet = new Set(
+              normalizedDraggingInstructionGroupNames,
+            ),
+            normalizedTargetInstructionGroupName = String(
+              targetInstructionGroupNameInput || "",
+            ).trim();
+          if (
+            !normalizedInstructionGroupOrder.length ||
+            !normalizedDraggingInstructionGroupNames.length ||
+            !normalizedTargetInstructionGroupName ||
+            normalizedDraggingInstructionGroupNameSet.has(
+              normalizedTargetInstructionGroupName,
+            )
+          ) {
+            return normalizedInstructionGroupOrder;
+          }
+          const targetInstructionGroupIndex = normalizedInstructionGroupOrder.indexOf(
+              normalizedTargetInstructionGroupName,
+            );
+          if (targetInstructionGroupIndex < 0) {
+            return normalizedInstructionGroupOrder;
+          }
+          const nextInstructionGroupOrder = normalizedInstructionGroupOrder.filter(
+            (instructionGroupName) =>
+              !normalizedDraggingInstructionGroupNameSet.has(
+                instructionGroupName,
+              ),
           );
-          try {
-            if (instructionGroupDragStartEvent.dataTransfer) {
-              instructionGroupDragStartEvent.dataTransfer.effectAllowed = "move";
-              instructionGroupDragStartEvent.dataTransfer.setData(
-                "text/plain",
+          const nextTargetInstructionGroupIndex =
+            nextInstructionGroupOrder.indexOf(
+              normalizedTargetInstructionGroupName,
+            );
+          if (nextTargetInstructionGroupIndex < 0) {
+            return normalizedInstructionGroupOrder;
+          }
+          nextInstructionGroupOrder.splice(
+            Math.max(
+              0,
+              Math.min(
+                nextInstructionGroupOrder.length,
+                nextTargetInstructionGroupIndex + (insertAfterTarget ? 1 : 0),
+              ),
+            ),
+            0,
+            ...normalizedDraggingInstructionGroupNames,
+          );
+          return nextInstructionGroupOrder;
+        },
+        areInstructionGroupOrdersEqual = (
+          previousInstructionGroupOrderInput = [],
+          nextInstructionGroupOrderInput = [],
+        ) => {
+          const normalizedPreviousInstructionGroupOrder =
+              normalizeInstructionGroupNameList(
+                previousInstructionGroupOrderInput,
+              ),
+            normalizedNextInstructionGroupOrder = normalizeInstructionGroupNameList(
+              nextInstructionGroupOrderInput,
+            );
+          if (
+            normalizedPreviousInstructionGroupOrder.length !==
+            normalizedNextInstructionGroupOrder.length
+          ) {
+            return false;
+          }
+          return normalizedPreviousInstructionGroupOrder.every(
+            (instructionGroupName, instructionGroupIndex) =>
+              instructionGroupName ===
+              normalizedNextInstructionGroupOrder[instructionGroupIndex],
+          );
+        },
+        rebuildInstructionGroupSortItemRectCache = () => {
+          return measureInstructionGroupSortItemRects();
+        },
+        resolveInstructionGroupSortDropTargetByPointer = (
+          pointerClientYInput,
+          fallbackInstructionGroupNameInput,
+        ) => {
+          const pointerClientY = Number(pointerClientYInput),
+            normalizedFallbackInstructionGroupName = String(
+              fallbackInstructionGroupNameInput || "",
+            ).trim();
+          if (!Number.isFinite(pointerClientY)) {
+            return {
+              groupName: normalizedFallbackInstructionGroupName,
+              insertAfter: false,
+            };
+          }
+          const instructionGroupRectCache = Array.isArray(
+              instructionGroupSortItemRectCacheRef.current,
+            )
+              ? instructionGroupSortItemRectCacheRef.current
+              : [],
+            instructionGroupRectList = instructionGroupRectCache.length
+              ? instructionGroupRectCache
+              : rebuildInstructionGroupSortItemRectCache(),
+            currentInstructionGroupSortSession =
+              instructionGroupSortSessionRef.current || null,
+            currentInstructionGroupSortSourceNameSet = new Set(
+              normalizeInstructionGroupNameList(
+                Array.isArray(currentInstructionGroupSortSession?.sourceGroupNames)
+                  ? currentInstructionGroupSortSession.sourceGroupNames
+                  : [currentInstructionGroupSortSession?.sourceGroupName],
+              ),
+            );
+          let nearestInstructionGroupName = normalizedFallbackInstructionGroupName,
+            nearestInstructionGroupCenterY = pointerClientY,
+            nearestDistancePx = Number.POSITIVE_INFINITY;
+          instructionGroupRectList.forEach((instructionGroupRectItem) => {
+            const normalizedInstructionGroupName = String(
+                instructionGroupRectItem?.groupName || "",
+              ).trim(),
+              groupTopY = Number(instructionGroupRectItem?.top || 0),
+              groupBottomY = Number(instructionGroupRectItem?.bottom || 0),
+              groupCenterY = Number(instructionGroupRectItem?.center || 0),
+              distanceToGroupCenter = Math.abs(pointerClientY - groupCenterY);
+            if (
+              !normalizedInstructionGroupName ||
+              currentInstructionGroupSortSourceNameSet.has(
                 normalizedInstructionGroupName,
-              );
+              )
+            ) {
+              return;
             }
-          } catch (ignoredError) {
-            reportIgnoredError("app/empty-catch", ignoredError);
+            if (pointerClientY >= groupTopY && pointerClientY <= groupBottomY) {
+              nearestInstructionGroupName = normalizedInstructionGroupName;
+              nearestInstructionGroupCenterY = groupCenterY;
+              nearestDistancePx = 0;
+              return;
+            }
+            if (distanceToGroupCenter < nearestDistancePx) {
+              nearestDistancePx = distanceToGroupCenter;
+              nearestInstructionGroupName = normalizedInstructionGroupName;
+              nearestInstructionGroupCenterY = groupCenterY;
+            }
+          });
+          let nextInstructionGroupInsertAfter =
+            pointerClientY > Number(nearestInstructionGroupCenterY || 0);
+          const normalizedCurrentDropGroupName = String(
+              currentInstructionGroupSortSession?.dropGroupName || "",
+            ).trim(),
+            instructionGroupCenterDeltaY =
+              pointerClientY - Number(nearestInstructionGroupCenterY || 0);
+          if (
+            normalizedCurrentDropGroupName &&
+            normalizedCurrentDropGroupName === nearestInstructionGroupName &&
+            Math.abs(instructionGroupCenterDeltaY) <=
+              CONST_INSTRUCTION_GROUP_DRAG_INSERT_HYSTERESIS_PX
+          ) {
+            nextInstructionGroupInsertAfter =
+              !!currentInstructionGroupSortSession?.dropInsertAfter;
           }
+          return {
+            groupName: nearestInstructionGroupName,
+            insertAfter: nextInstructionGroupInsertAfter,
+          };
         },
-        onInstructionGroupDragEnd = () => {
-          (setDraggingInstructionGroupName(""),
-            setDragOverInstructionGroupName(""));
-        },
-        onInstructionGroupDragOver = (
-          instructionGroupDragOverEvent,
-          instructionGroupNameInput,
-        ) => {
-          if (!isImageQuickBatchSelectMode) return;
-          if (!draggingInstructionGroupName) return;
-          instructionGroupDragOverEvent.preventDefault();
-          try {
-            instructionGroupDragOverEvent.dataTransfer &&
-              (instructionGroupDragOverEvent.dataTransfer.dropEffect = "move");
-          } catch (ignoredError) {
-            reportIgnoredError("app/empty-catch", ignoredError);
+        applyInstructionGroupSortReorderTick = (forceCommit = false) => {
+          const latestInstructionGroupPointerDragState =
+              instructionGroupSortPointerStateRef.current || {},
+            latestInstructionGroupSortSession =
+                instructionGroupSortSessionRef.current || null;
+          if (
+            !latestInstructionGroupPointerDragState.active ||
+            latestInstructionGroupSortSession?.phase !== "dragging" ||
+            !latestInstructionGroupSortSession?.sourceGroupName
+          ) {
+            return;
           }
-          setDragOverInstructionGroupName(
-            String(instructionGroupNameInput || "").trim(),
-          );
+          const nextInstructionGroupDropTarget =
+              resolveInstructionGroupSortDropTargetByPointer(
+                latestInstructionGroupPointerDragState.pointerClientY,
+                latestInstructionGroupSortSession.dropGroupName ||
+                  latestInstructionGroupSortSession.sourceGroupName,
+              ),
+            normalizedDraggingInstructionGroupNames =
+              normalizeInstructionGroupNameList(
+                Array.isArray(latestInstructionGroupSortSession?.sourceGroupNames)
+                  ? latestInstructionGroupSortSession.sourceGroupNames
+                  : [latestInstructionGroupSortSession?.sourceGroupName],
+              ),
+            nextDragOverInstructionGroupName = String(
+              nextInstructionGroupDropTarget?.groupName || "",
+            ).trim(),
+            nextDragOverInsertAfter =
+              !!nextInstructionGroupDropTarget?.insertAfter;
+          if (!nextDragOverInstructionGroupName) {
+            return;
+          }
+          const normalizedCurrentPreviewOrder = normalizeInstructionGroupNameList(
+              latestInstructionGroupSortSession?.previewOrder,
+            ),
+            nextInstructionGroupPreviewOrder = moveInstructionGroupNameInOrder(
+              normalizedCurrentPreviewOrder,
+              normalizedDraggingInstructionGroupNames,
+              nextDragOverInstructionGroupName,
+              nextDragOverInsertAfter,
+            ),
+            previewOrderChanged = !areInstructionGroupOrdersEqual(
+              normalizedCurrentPreviewOrder,
+              nextInstructionGroupPreviewOrder,
+            );
+          if (!previewOrderChanged) {
+            return;
+          }
+          const currentTimestampMs =
+              typeof performance !== "undefined" &&
+              Number.isFinite(Number(performance.now?.()))
+                ? Number(performance.now())
+                : Date.now(),
+            reorderCommitLockRemainingMs = Math.max(
+              0,
+              CONST_INSTRUCTION_GROUP_DRAG_REORDER_COMMIT_LOCK_MS -
+                (currentTimestampMs -
+                  Number(instructionGroupSortLastCommitAtRef.current || 0)),
+            );
+          if (!forceCommit && reorderCommitLockRemainingMs > 0) {
+            instructionGroupSortReorderTimerRef.current &&
+              clearTimeout(instructionGroupSortReorderTimerRef.current);
+            instructionGroupSortReorderTimerRef.current = window.setTimeout(() => {
+              instructionGroupSortReorderTimerRef.current = 0;
+              applyInstructionGroupSortReorderTick();
+            }, reorderCommitLockRemainingMs);
+            return;
+          }
+          const nextInstructionGroupSortSession = {
+            ...latestInstructionGroupSortSession,
+            dropGroupName: nextDragOverInstructionGroupName,
+            dropInsertAfter: nextDragOverInsertAfter,
+            previewOrder: normalizeInstructionGroupNameList(
+              nextInstructionGroupPreviewOrder,
+            ),
+          };
+          instructionGroupSortLastCommitAtRef.current = currentTimestampMs;
+          instructionGroupSortSessionRef.current = nextInstructionGroupSortSession;
+          setInstructionGroupSortSession(nextInstructionGroupSortSession);
         },
-        onInstructionGroupDrop = (
-          instructionGroupDropEvent,
-          instructionTargetGroupNameInput,
+        scheduleInstructionGroupSortReorderTick = () => {
+          instructionGroupSortReorderTimerRef.current ||
+            (instructionGroupSortReorderTimerRef.current = window.setTimeout(() => {
+              instructionGroupSortReorderTimerRef.current = 0;
+              applyInstructionGroupSortReorderTick();
+            }, CONST_INSTRUCTION_GROUP_DRAG_REORDER_TICK_MS));
+        },
+        syncInstructionGroupSortOverlayPosition = (
+          shouldAccelerateFollow = false,
         ) => {
-          if (!isImageQuickBatchSelectMode) return;
-          instructionGroupDropEvent.preventDefault();
-          const normalizedInstructionTargetGroupName = String(
-            instructionTargetGroupNameInput || "",
-          ).trim();
-          if (!normalizedInstructionTargetGroupName) return;
-          if (draggingInstructionGroupName) {
+          const instructionGroupSortOverlayElement =
+              instructionGroupSortOverlayRef.current,
+            currentInstructionGroupSortPointerState =
+              instructionGroupSortPointerStateRef.current || {},
+            currentInstructionGroupSortSession =
+              instructionGroupSortSessionRef.current || null,
+            pointerClientY = Number(
+              currentInstructionGroupSortPointerState.pointerClientY,
+            );
+          if (
+            !instructionGroupSortOverlayElement ||
+            currentInstructionGroupSortSession?.phase !== "dragging" ||
+            !currentInstructionGroupSortSession?.sourceGroupName ||
+            !Number.isFinite(pointerClientY)
+          ) {
+            return;
+          }
+          const desiredOverlayTop =
+              pointerClientY -
+              Number(
+                currentInstructionGroupSortSession?.overlayPointerOffsetY || 0,
+              ),
+            nextVisualClientY = resolveInstructionTagOverlayVisualCoordinate(
+              currentInstructionGroupSortPointerState.visualClientY,
+              desiredOverlayTop,
+              shouldAccelerateFollow,
+            );
+          instructionGroupSortOverlayElement.style.transform = `translate3d(0, ${nextVisualClientY}px, 0)`;
+          currentInstructionGroupSortPointerState.visualClientY =
+            nextVisualClientY;
+        },
+        cancelInstructionGroupSortOverlaySync = () => {
+          instructionGroupSortOverlaySyncRafRef.current &&
+            (cancelAnimationFrame(instructionGroupSortOverlaySyncRafRef.current),
+            (instructionGroupSortOverlaySyncRafRef.current = 0));
+          instructionGroupSortOverlaySyncAccelerateRef.current = false;
+        },
+        scheduleInstructionGroupSortOverlaySync = (
+          shouldAccelerateFollow = false,
+        ) => {
+          shouldAccelerateFollow &&
+            (instructionGroupSortOverlaySyncAccelerateRef.current = true);
+          instructionGroupSortOverlaySyncRafRef.current ||
+            (instructionGroupSortOverlaySyncRafRef.current =
+              requestAnimationFrame(() => {
+                instructionGroupSortOverlaySyncRafRef.current = 0;
+                const shouldUseAccelerateFollow =
+                  !!instructionGroupSortOverlaySyncAccelerateRef.current;
+                instructionGroupSortOverlaySyncAccelerateRef.current = false;
+                syncInstructionGroupSortOverlayPosition(
+                  shouldUseAccelerateFollow,
+                );
+              }));
+        },
+        finishInstructionGroupPointerDrag =
+          finishInstructionGroupPointerDragRef.current =
+          (shouldCommitDrag = true) => {
+          const currentInstructionGroupSortPointerState =
+              instructionGroupSortPointerStateRef.current || {},
+            currentInstructionGroupSortSession =
+              instructionGroupSortSessionRef.current || null,
+            wasInstructionGroupSortActive =
+              !!currentInstructionGroupSortPointerState.active ||
+              !!currentInstructionGroupSortSession?.sourceGroupName;
+          cancelInstructionGroupSortOverlaySync();
+          instructionGroupSortMeasureRafRef.current &&
+            (cancelAnimationFrame(instructionGroupSortMeasureRafRef.current),
+            (instructionGroupSortMeasureRafRef.current = 0));
+          instructionGroupSortItemRectCacheRef.current = [];
+          typeof clearInstructionGroupSortPointerListenersRef.current ===
+            "function" &&
+            (clearInstructionGroupSortPointerListenersRef.current(),
+            (clearInstructionGroupSortPointerListenersRef.current = null));
+          instructionGroupSortPointerStateRef.current = {
+            pending: false,
+            active: false,
+            pointerId: -1,
+            groupName: "",
+            holdReadyAt: 0,
+            startClientX: 0,
+            startClientY: 0,
+            pointerClientX: 0,
+            pointerClientY: 0,
+            sourceRectLeft: 0,
+            sourceRectTop: 0,
+            sourceRectWidth: 0,
+            sourceRectHeight: 0,
+            pointerOffsetY: 0,
+            visualClientY: NaN,
+          };
+          instructionGroupSortSettleTimerRef.current &&
+            (clearTimeout(instructionGroupSortSettleTimerRef.current),
+            (instructionGroupSortSettleTimerRef.current = 0));
+          instructionGroupSortExpandRevealTimerRef.current &&
+            (clearTimeout(instructionGroupSortExpandRevealTimerRef.current),
+            (instructionGroupSortExpandRevealTimerRef.current = 0));
+          instructionGroupSortReorderTimerRef.current &&
+            (clearTimeout(instructionGroupSortReorderTimerRef.current),
+            (instructionGroupSortReorderTimerRef.current = 0));
+          setInstructionGroupSortExpandRevealActive(false);
+          if (
+            shouldCommitDrag &&
+            isInstructionGroupSortable(
+              currentInstructionGroupSortSession?.sourceGroupName,
+            )
+          ) {
+            const normalizedPreviewInstructionGroups =
+              normalizeInstructionGroupNameList(
+                currentInstructionGroupSortSession?.previewOrder,
+              );
             setImageQuickPromptGroups((previousInstructionGroups) => {
               const normalizedPreviousInstructionGroups =
                   normalizeInstructionGroupNameList(previousInstructionGroups),
-                draggingInstructionGroupIndex =
-                  normalizedPreviousInstructionGroups.indexOf(
-                    draggingInstructionGroupName,
-                  ),
-                targetInstructionGroupIndex =
-                  normalizedPreviousInstructionGroups.indexOf(
-                    normalizedInstructionTargetGroupName,
-                  );
-              if (
-                draggingInstructionGroupIndex < 0 ||
-                targetInstructionGroupIndex < 0
-              )
-                return normalizedPreviousInstructionGroups;
-              const nextInstructionGroups = [
-                ...normalizedPreviousInstructionGroups,
-              ];
-              const [draggedInstructionGroupName] = nextInstructionGroups.splice(
-                draggingInstructionGroupIndex,
-                1,
-              );
-              nextInstructionGroups.splice(
-                targetInstructionGroupIndex,
-                0,
-                draggedInstructionGroupName,
-              );
-              return nextInstructionGroups;
+                trailingInstructionGroups = normalizedPreviousInstructionGroups.filter(
+                  (instructionGroupName) =>
+                    !normalizedPreviewInstructionGroups.includes(
+                      instructionGroupName,
+                    ),
+                );
+              return normalizeInstructionGroupNameList([
+                ...normalizedPreviewInstructionGroups,
+                ...trailingInstructionGroups,
+              ]);
             });
+            const nextInstructionGroupSortSettleSession = {
+              ...currentInstructionGroupSortSession,
+              phase: "settling",
+              previewOrder: normalizedPreviewInstructionGroups,
+            };
+            instructionGroupSortSessionRef.current =
+              nextInstructionGroupSortSettleSession;
+            setInstructionGroupSortSession(nextInstructionGroupSortSettleSession);
+            instructionGroupSortSettleTimerRef.current = window.setTimeout(() => {
+              instructionGroupSortSessionRef.current = null;
+              setInstructionGroupSortSession(null);
+              instructionGroupSortSettleTimerRef.current = 0;
+              setInstructionGroupSortExpandRevealActive(true);
+              instructionGroupSortExpandRevealTimerRef.current =
+                window.setTimeout(() => {
+                  setInstructionGroupSortExpandRevealActive(false);
+                  instructionGroupSortExpandRevealTimerRef.current = 0;
+                },
+                CONST_INSTRUCTION_GROUP_DRAG_EXPAND_DELAY_MS +
+                  CONST_INSTRUCTION_GROUP_DRAG_EXPAND_ANIMATION_MS,
+              );
+            }, CONST_INSTRUCTION_GROUP_DRAG_SETTLE_MS);
+          } else {
+            instructionGroupSortSessionRef.current = null;
+            setInstructionGroupSortSession(null);
+            setInstructionGroupSortExpandRevealActive(false);
           }
-          (setDraggingInstructionTagPayloadIds([]),
-            setDraggingInstructionGroupName(""),
-            setDragOverInstructionGroupName(""));
+          if (wasInstructionGroupSortActive) {
+            suppressInstructionGroupToggleClickRef.current = true;
+            suppressInstructionGroupToggleClickTimerRef.current &&
+              clearTimeout(suppressInstructionGroupToggleClickTimerRef.current);
+            suppressInstructionGroupToggleClickTimerRef.current =
+              window.setTimeout(() => {
+                suppressInstructionGroupToggleClickRef.current = false;
+                suppressInstructionGroupToggleClickTimerRef.current = 0;
+              }, 160);
+          } else {
+            suppressInstructionGroupToggleClickRef.current = false;
+          }
+        },
+        onInstructionGroupPointerDown = (
+          instructionGroupPointerDownEvent,
+          instructionGroupNameInput,
+        ) => {
+          if (Number(instructionGroupPointerDownEvent?.button ?? 0) !== 0) {
+            return;
+          }
+          const normalizedInstructionGroupName = String(
+              instructionGroupNameInput || "",
+            ).trim(),
+            dragPayloadInstructionGroupNames = (() => {
+              const normalizedSelectedInstructionGroupNames =
+                isImageQuickBatchSelectMode &&
+                selectedInstructionGroupNameSet.has(
+                  normalizedInstructionGroupName,
+                )
+                  ? orderedInstructionCustomGroups.filter(
+                      (instructionGroupName) =>
+                        selectedInstructionGroupNameSet.has(
+                          instructionGroupName,
+                        ),
+                    )
+                  : [];
+              return normalizedSelectedInstructionGroupNames.length
+                ? normalizedSelectedInstructionGroupNames
+                : [normalizedInstructionGroupName];
+            })(),
+            pointerDownTargetElement =
+              instructionGroupPointerDownEvent?.target instanceof Element
+                ? instructionGroupPointerDownEvent.target
+                : null,
+            instructionGroupHeadElement =
+              pointerDownTargetElement?.closest?.(".instruction-group-head") ||
+              null,
+            instructionGroupHeadRect =
+              instructionGroupHeadElement?.getBoundingClientRect?.() || null,
+            pointerStartClientX = Number(
+              instructionGroupPointerDownEvent?.clientX,
+            ),
+            pointerStartClientY = Number(
+              instructionGroupPointerDownEvent?.clientY,
+            ),
+            pointerId = Number.isFinite(
+              Number(instructionGroupPointerDownEvent?.pointerId),
+            )
+              ? Number(instructionGroupPointerDownEvent.pointerId)
+              : -1;
+          if (
+            !isInstructionGroupSortable(normalizedInstructionGroupName) ||
+            !Number.isFinite(pointerStartClientX) ||
+            !Number.isFinite(pointerStartClientY) ||
+            pointerId < 0
+          ) {
+            return;
+          }
+          if (
+            pointerDownTargetElement?.closest?.(
+              ".instruction-group-more-btn, .instruction-group-more-anchor",
+            )
+          ) {
+            return;
+          }
+          finishInstructionGroupPointerDragRef.current?.(false);
+          instructionGroupSortPointerStateRef.current = {
+            pending: true,
+            active: false,
+            pointerId,
+            groupName: normalizedInstructionGroupName,
+            holdReadyAt:
+              (typeof performance !== "undefined" &&
+              Number.isFinite(Number(performance.now?.()))
+                ? Number(performance.now())
+                : Date.now()) + CONST_INSTRUCTION_GROUP_DRAG_HOLD_MS,
+            startClientX: pointerStartClientX,
+            startClientY: pointerStartClientY,
+            pointerClientX: pointerStartClientX,
+            pointerClientY: pointerStartClientY,
+            sourceRectLeft: Number(instructionGroupHeadRect?.left || 0),
+            sourceRectTop: Number(instructionGroupHeadRect?.top || 0),
+            sourceRectWidth: Number(instructionGroupHeadRect?.width || 0),
+            sourceRectHeight: Number(instructionGroupHeadRect?.height || 0),
+            pointerOffsetY: Math.max(
+              0,
+              pointerStartClientY - Number(instructionGroupHeadRect?.top || 0),
+            ),
+            visualClientY: NaN,
+          };
+          const handleInstructionGroupPointerMove = (
+              instructionGroupPointerMoveEvent,
+            ) => {
+              const currentInstructionGroupPointerDragState =
+                instructionGroupSortPointerStateRef.current || {};
+              if (
+                !currentInstructionGroupPointerDragState.pending &&
+                !currentInstructionGroupPointerDragState.active
+              ) {
+                return;
+              }
+              if (
+                !shouldHandleUploadPointerDragEvent(
+                  currentInstructionGroupPointerDragState.pointerId,
+                  instructionGroupPointerMoveEvent?.pointerId,
+                )
+              ) {
+                return;
+              }
+              const moveClientX = Number(
+                  instructionGroupPointerMoveEvent?.clientX,
+                ),
+                moveClientY = Number(instructionGroupPointerMoveEvent?.clientY);
+              if (!Number.isFinite(moveClientX) || !Number.isFinite(moveClientY)) {
+                return;
+              }
+              currentInstructionGroupPointerDragState.pointerClientX = moveClientX;
+              currentInstructionGroupPointerDragState.pointerClientY = moveClientY;
+              currentInstructionGroupPointerDragState.active &&
+                scheduleInstructionGroupSortOverlaySync(false);
+              if (currentInstructionGroupPointerDragState.pending) {
+                const pendingDragDeltaX =
+                    moveClientX -
+                    Number(
+                      currentInstructionGroupPointerDragState.startClientX || 0,
+                    ),
+                  pendingDragDeltaY =
+                    moveClientY -
+                    Number(
+                      currentInstructionGroupPointerDragState.startClientY || 0,
+                    ),
+                  pendingDragDistanceSquared =
+                    pendingDragDeltaX * pendingDragDeltaX +
+                    pendingDragDeltaY * pendingDragDeltaY,
+                  nowTimestampMs =
+                    typeof performance !== "undefined" &&
+                    Number.isFinite(Number(performance.now?.()))
+                      ? Number(performance.now())
+                      : Date.now(),
+                  holdReadyAt = Number(
+                    currentInstructionGroupPointerDragState.holdReadyAt || 0,
+                  ),
+                  minDragDistancePx = Math.max(
+                    1,
+                    Number(CONST_INSTRUCTION_GROUP_DRAG_MOVE_THRESHOLD_PX) || 0,
+                  ),
+                  minDragDistanceSquared = minDragDistancePx * minDragDistancePx;
+                if (nowTimestampMs < holdReadyAt) {
+                  return;
+                }
+                if (pendingDragDistanceSquared < minDragDistanceSquared) {
+                  return;
+                }
+                finishInstructionTagPointerDrag(false);
+                currentInstructionGroupPointerDragState.pending = false;
+                currentInstructionGroupPointerDragState.active = true;
+                currentInstructionGroupPointerDragState.visualClientY = NaN;
+                const nextInstructionGroupSortSession = {
+                  phase: "dragging",
+                  sourceGroupName: normalizedInstructionGroupName,
+                  sourceGroupNames: dragPayloadInstructionGroupNames,
+                  dropGroupName: normalizedInstructionGroupName,
+                  dropInsertAfter: false,
+                  previewOrder: [...orderedInstructionCustomGroups],
+                  overlayLeft: Number(
+                    currentInstructionGroupPointerDragState.sourceRectLeft || 0,
+                  ),
+                  overlayTop: Number(
+                    currentInstructionGroupPointerDragState.sourceRectTop || 0,
+                  ),
+                  overlayWidth: Number(
+                    currentInstructionGroupPointerDragState.sourceRectWidth || 0,
+                  ),
+                  overlayHeight: Number(
+                    currentInstructionGroupPointerDragState.sourceRectHeight || 0,
+                  ),
+                  overlayPointerOffsetY: Number(
+                    currentInstructionGroupPointerDragState.pointerOffsetY || 0,
+                  ),
+                };
+                instructionGroupSortLastCommitAtRef.current = 0;
+                instructionGroupSortSessionRef.current =
+                  nextInstructionGroupSortSession;
+                setInstructionGroupSortSession(nextInstructionGroupSortSession);
+                instructionGroupSortItemRectCacheRef.current = [];
+                rebuildInstructionGroupSortItemRectCache();
+                suppressInstructionGroupToggleClickRef.current = true;
+                requestAnimationFrame(() => {
+                  scheduleInstructionGroupSortOverlaySync(true);
+                  scheduleInstructionGroupSortReorderTick();
+                });
+              }
+              if (!currentInstructionGroupPointerDragState.active) {
+                return;
+              }
+              instructionGroupPointerMoveEvent?.stopPropagation?.();
+              instructionGroupPointerMoveEvent?.stopImmediatePropagation?.();
+              scheduleInstructionGroupSortOverlaySync(true);
+              scheduleInstructionGroupSortReorderTick();
+            },
+            handleInstructionGroupPointerUpOrCancel = (
+              instructionGroupPointerUpEvent,
+            ) => {
+              const currentInstructionGroupPointerDragState =
+                instructionGroupSortPointerStateRef.current || {};
+              if (
+                !shouldHandleUploadPointerDragEvent(
+                  currentInstructionGroupPointerDragState.pointerId,
+                  instructionGroupPointerUpEvent?.pointerId,
+                )
+            ) {
+              return;
+            }
+            if (instructionGroupSortSessionRef.current?.phase === "dragging") {
+              applyInstructionGroupSortReorderTick(true);
+            }
+            finishInstructionGroupPointerDragRef.current?.(true);
+          },
+            handleInstructionGroupPointerWindowBlur = () => {
+              finishInstructionGroupPointerDragRef.current?.(false);
+            };
+          clearInstructionGroupSortPointerListenersRef.current =
+            bindUploadPointerDragWindowEvents(window, {
+              handlePointerMove: handleInstructionGroupPointerMove,
+              handlePointerUpOrCancel: handleInstructionGroupPointerUpOrCancel,
+              handleWindowBlur: handleInstructionGroupPointerWindowBlur,
+              pointerMovePassive: true,
+            });
         };
 
-      return (
+      const renderInstructionGroupDragHandle = ({
+          draggable = false,
+          selectable = false,
+          selected = false,
+          onPointerDown = null,
+          onToggleSelection = null,
+        } = {}) => {
+          const instructionGroupDragHandleNode = (
+            <span className="instruction-group-drag-handle-dot" />
+          );
+          if (
+            (draggable && typeof onPointerDown === "function") ||
+            (selectable && typeof onToggleSelection === "function")
+          ) {
+            return (
+              <button
+                className={`instruction-group-drag-handle ${draggable ? "is-draggable" : "is-selectable"} ${selected ? "is-selected" : ""}`}
+                type="button"
+                draggable="false"
+                onPointerDown={(instructionGroupDragHandlePointerDownEvent) => {
+                  instructionGroupDragHandlePointerDownEvent.preventDefault();
+                  instructionGroupDragHandlePointerDownEvent.stopPropagation();
+                  draggable &&
+                    typeof onPointerDown === "function" &&
+                    onPointerDown(
+                      instructionGroupDragHandlePointerDownEvent,
+                    );
+                }}
+                onClick={(instructionGroupDragHandleClickEvent) => {
+                  instructionGroupDragHandleClickEvent.preventDefault();
+                  instructionGroupDragHandleClickEvent.stopPropagation();
+                  selectable &&
+                    typeof onToggleSelection === "function" &&
+                    !suppressInstructionGroupToggleClickRef.current &&
+                    onToggleSelection();
+                }}
+              >
+                {instructionGroupDragHandleNode}
+              </button>
+            );
+          }
+          return (
+            <span
+              className={`instruction-group-drag-handle ${draggable ? "is-draggable is-visual" : "is-placeholder"} ${selected ? "is-selected" : ""}`}
+              aria-hidden="true"
+            >
+              {instructionGroupDragHandleNode}
+            </span>
+          );
+        },
+        renderInstructionGroupSortCardHead = (instructionGroupItem) => {
+          const instructionGroupName = String(
+              instructionGroupItem?.name || "",
+            ).trim(),
+            instructionGroupItems = Array.isArray(instructionGroupItem?.items)
+              ? instructionGroupItem.items
+              : [],
+            instructionGroupSelected =
+              isImageQuickBatchSelectMode &&
+              selectedInstructionGroupNameSet.has(instructionGroupName),
+            isInstructionFavoritesGroup =
+              instructionGroupName === CONST_INSTRUCTION_FAVORITES_GROUP,
+            instructionGroupMenuAllowed = !isInstructionFavoritesGroup,
+            instructionGroupDraggable =
+              !isInstructionFavoritesGroup &&
+              instructionGroupName !== CONST_INSTRUCTION_DEFAULT_GROUP;
+          return (
+            <div className="instruction-group-head instruction-group-sort-card-head" aria-hidden="true">
+              {renderInstructionGroupDragHandle({
+                draggable: instructionGroupDraggable,
+                selectable:
+                  isImageQuickBatchSelectMode && !isInstructionFavoritesGroup,
+                selected: instructionGroupSelected,
+              })}
+              <div className="instruction-group-toggle">
+                <span className="instruction-group-title">
+                  {instructionGroupName}
+                </span>
+                <span className="instruction-group-count-badge">
+                  {instructionGroupItems.length}
+                </span>
+              </div>
+              <div className="instruction-group-head-right">
+                {instructionGroupMenuAllowed ? (
+                  <span className="instruction-group-more-anchor">
+                    <span
+                      className="chat-history-more-btn instruction-group-more-btn instruction-group-more-visual"
+                      aria-hidden="true"
+                    >
+                      <img
+                        className="icon-16"
+                        src={iconMore}
+                        alt=""
+                      />
+                    </span>
+                  </span>
+                ) : (
+                  <span
+                    className="instruction-group-favorite-mark"
+                    aria-hidden="true"
+                  >
+                    <img
+                      className="icon-14 instruction-group-favorite-icon"
+                      src={iconFavoriteGroup}
+                      alt=""
+                    />
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        },
+        instructionGroupSortPanelContent = isInstructionGroupSortVisible ? (
+          <div className="instruction-group-sort-list">
+            {instructionGroupSortCards.map((instructionGroupItem) => {
+              const instructionGroupName = String(
+                  instructionGroupItem?.name || "",
+                ).trim(),
+                instructionGroupItems = Array.isArray(instructionGroupItem?.items)
+                  ? instructionGroupItem.items
+                  : [],
+                instructionGroupItemIds = resolveInstructionGroupItemIds(
+                  instructionGroupItems,
+                ),
+                instructionGroupItemsSelected =
+                  isImageQuickBatchSelectMode
+                    ? selectedInstructionGroupNameSet.has(
+                        instructionGroupName,
+                      )
+                    : !!instructionGroupItemIds.length &&
+                      instructionGroupItemIds.every((instructionGroupItemId) =>
+                        selectedInstructionPromptIdSet.has(
+                          instructionGroupItemId,
+                        ),
+                      ),
+                isInstructionFavoritesGroup =
+                  instructionGroupName === CONST_INSTRUCTION_FAVORITES_GROUP,
+                instructionGroupSortable =
+                  !isInstructionFavoritesGroup &&
+                  instructionGroupName !== CONST_INSTRUCTION_DEFAULT_GROUP,
+                instructionGroupSortSource =
+                  normalizedInstructionGroupSortSourceNameSet.has(
+                    instructionGroupName,
+                  ),
+                instructionGroupSortPlaceholder =
+                  isInstructionGroupSortDragging && instructionGroupSortSource,
+                instructionGroupSortSettling =
+                  instructionGroupSortSession?.phase === "settling";
+              return (
+                <section
+                  key={`instruction-group-sort-${instructionGroupName}`}
+                  className={`instruction-group-sort-card ${instructionGroupSortSource && !instructionGroupSortPlaceholder ? "is-source" : ""} ${instructionGroupSortPlaceholder ? "is-placeholder" : ""} ${instructionGroupSortSettling ? "is-settling" : ""}`}
+                  data-instruction-group-name={instructionGroupName}
+                  data-group-sortable={instructionGroupSortable ? "true" : "false"}
+                  data-group-flip={
+                    instructionGroupSortable && !instructionGroupSortSource
+                      ? "true"
+                      : "false"
+                  }
+                >
+                  {renderInstructionGroupSortCardHead(instructionGroupItem)}
+                </section>
+              );
+            })}
+          </div>
+        ) : null,
+        instructionGroupSortOverlayNode =
+          instructionGroupSortOverlayVisible && instructionGroupSortSourceItem ? (
+            <section
+              ref={instructionGroupSortOverlayRef}
+              className={`instruction-group-sort-overlay is-source ${isInstructionGroupSortMultiDrag ? "is-multi-drag" : ""}`}
+              style={instructionGroupSortOverlayStyle}
+              aria-hidden="true"
+            >
+              {renderInstructionGroupSortCardHead(instructionGroupSortSourceItem)}
+            </section>
+          ) : null,
+        instructionPanelNode = (
         <>
             <div
               ref={instructionPanelGroupsRef}
-              className={`instruction-panel-groups scrollbar-activity scrollbar-persistent ${isInstructionTagPointerDragActive ? "is-pointer-drag-active" : ""}`}
+              className={`instruction-panel-groups ${isInstructionGroupSortDragging ? "is-group-drag-active" : ""} ${isInstructionGroupSortVisible ? "is-group-sort-visible" : ""} ${instructionGroupSortExpandRevealActive ? "is-group-sort-expand-reveal" : ""}`}
             >
-              {orderedInstructionGroups.map((instructionGroupItem) => {
+              {instructionGroupSortPanelContent ||
+                renderInstructionGroups.map((instructionGroupItem) => {
                 const instructionGroupName = String(
                     instructionGroupItem?.name || "",
                   ),
@@ -35190,80 +42806,93 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                     instructionGroupItems,
                   ),
                   instructionGroupItemsSelected =
-                    !!instructionGroupItemIds.length &&
-                    instructionGroupItemIds.every((instructionGroupItemId) =>
-                      selectedInstructionPromptIdSet.has(instructionGroupItemId),
-                    ),
+                    isImageQuickBatchSelectMode
+                      ? selectedInstructionGroupNameSet.has(
+                          instructionGroupName,
+                        )
+                      : !!instructionGroupItemIds.length &&
+                        instructionGroupItemIds.every(
+                          (instructionGroupItemId) =>
+                            selectedInstructionPromptIdSet.has(
+                              instructionGroupItemId,
+                            ),
+                        ),
                   isInstructionFavoritesGroup =
                     instructionGroupName === CONST_INSTRUCTION_FAVORITES_GROUP,
                   instructionGroupMenuAllowed =
                     !isInstructionFavoritesGroup,
-                  instructionGroupDropTarget =
-                    dragOverInstructionGroupName === instructionGroupName &&
-                    (!!draggingInstructionTagId || !!draggingInstructionGroupName),
                   instructionGroupDraggable =
-                    isImageQuickBatchSelectMode &&
                     !isInstructionFavoritesGroup &&
                     instructionGroupName !== CONST_INSTRUCTION_DEFAULT_GROUP;
                 return (
                   <section
                     key={`instruction-group-${instructionGroupName}`}
-                    className={`instruction-group ${instructionGroupCollapsed ? "is-collapsed" : ""} ${instructionGroupItemsSelected ? "is-group-selected" : ""} ${instructionGroupDropTarget ? "is-drop-target" : ""}`}
+                    className={`instruction-group ${instructionGroupCollapsed ? "is-collapsed" : ""}`}
                     data-instruction-group-name={instructionGroupName}
-                    draggable={
-                      instructionGroupDraggable && !isInstructionTagPointerDragActive
-                    }
-                    onDragStart={(instructionGroupDragStartEvent) =>
-                      onInstructionGroupDragStart(
-                        instructionGroupDragStartEvent,
-                        instructionGroupName,
-                      )
-                    }
-                    onDragEnd={onInstructionGroupDragEnd}
-                    onDragOver={(instructionGroupDragOverEvent) =>
-                      onInstructionGroupDragOver(
-                        instructionGroupDragOverEvent,
-                        instructionGroupName,
-                      )
-                    }
-                    onDrop={(instructionGroupDropEvent) =>
-                      onInstructionGroupDrop(
-                        instructionGroupDropEvent,
-                        instructionGroupName,
-                      )
-                    }
                   >
-                    <div className="instruction-group-head">
-                      {isImageQuickBatchSelectMode ? (
-                        <label
-                          className="list-select-check instruction-group-check"
-                          onClick={(instructionGroupSelectionClickEvent) =>
-                            instructionGroupSelectionClickEvent.stopPropagation()
-                          }
-                        >
-                          <input
-                            type="checkbox"
-                            checked={instructionGroupItemsSelected}
-                            disabled={!instructionGroupItemIds.length}
-                            onChange={() =>
-                              toggleInstructionGroupSelection(instructionGroupItems)
+                    <div
+                      className="instruction-group-head"
+                      onClick={(instructionGroupToggleClickEvent) => {
+                        if (
+                          suppressInstructionGroupToggleClickRef.current ||
+                          instructionGroupSortSessionRef.current?.sourceGroupName ||
+                          instructionGroupSortSession?.sourceGroupName
+                        ) {
+                          instructionGroupToggleClickEvent.preventDefault();
+                          instructionGroupToggleClickEvent.stopPropagation();
+                          return;
+                        }
+                        setInstructionGroupFoldMap(
+                          (previousInstructionGroupFoldMap) => {
+                            const nextInstructionGroupCollapsedState =
+                              !previousInstructionGroupFoldMap[
+                                instructionGroupName
+                              ];
+                            if (instructionGroupToggleClickEvent.ctrlKey) {
+                              const nextInstructionGroupFoldMap = {
+                                ...previousInstructionGroupFoldMap,
+                              };
+                              renderInstructionGroups.forEach(
+                                (instructionGroupOption) => {
+                                  const instructionGroupOptionName = String(
+                                    instructionGroupOption?.name || "",
+                                  ).trim();
+                                  if (!instructionGroupOptionName) return;
+                                  nextInstructionGroupFoldMap[
+                                    instructionGroupOptionName
+                                  ] = nextInstructionGroupCollapsedState;
+                                },
+                              );
+                              return nextInstructionGroupFoldMap;
                             }
-                          />
-                          <span className="list-select-indicator" />
-                        </label>
-                      ) : null}
+                            return {
+                              ...previousInstructionGroupFoldMap,
+                              [instructionGroupName]:
+                                nextInstructionGroupCollapsedState,
+                            };
+                          },
+                        );
+                      }}
+                    >
+                      {renderInstructionGroupDragHandle({
+                        draggable: instructionGroupDraggable,
+                        selectable:
+                          isImageQuickBatchSelectMode &&
+                          !isInstructionFavoritesGroup,
+                        selected: instructionGroupItemsSelected,
+                        onPointerDown: (instructionGroupPointerDownEvent) =>
+                          onInstructionGroupPointerDown(
+                            instructionGroupPointerDownEvent,
+                            instructionGroupName,
+                          ),
+                        onToggleSelection: () =>
+                          toggleInstructionGroupBatchSelection(
+                            instructionGroupName,
+                          ),
+                      })}
                       <button
                         className={`instruction-group-toggle ${instructionGroupCollapsed ? "is-collapsed" : "is-expanded"}`}
                         type="button"
-                        onClick={() => {
-                          setInstructionGroupFoldMap(
-                            (previousInstructionGroupFoldMap) => ({
-                              ...previousInstructionGroupFoldMap,
-                              [instructionGroupName]:
-                                !previousInstructionGroupFoldMap[instructionGroupName],
-                            }),
-                          );
-                        }}
                       >
                         <span className="instruction-group-title">
                           {instructionGroupName}
@@ -35314,9 +42943,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                         className="instruction-group-body"
                         data-instruction-group-name={instructionGroupName}
                       >
-                        <div
-                          className={`instruction-tag-list ${isInstructionTagPointerDragActive && instructionTagDragSourceGroupName === instructionGroupName ? "is-pointer-drag-active" : ""}`}
-                        >
+                        <div className="instruction-tag-list">
                           {instructionGroupItems.length ? (
                             instructionGroupItems.map(
                               (instructionPromptItem, instructionPromptIndex) => {
@@ -35433,9 +43060,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                       </div>
                     ) : null}
                   </section>
-                );
-              })}
+                  );
+                })}
             </div>
+            {instructionGroupSortOverlayNode}
             {openInstructionGroupMenuId
               ? renderFloatingLayerPortalNode({
                   isOpen: true,
@@ -35471,7 +43099,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               ? renderFloatingLayerPortalNode({
                   isOpen: true,
                   popupRef: instructionTagMenuPopupRef,
-                  className: "chat-history-menu chat-history-menu-portal floating-layer",
+                  className: `chat-history-menu chat-history-menu-portal floating-layer ${instructionTagMenuPlacementClassName}`,
                   style: {
                     top: instructionTagMenuRect.top,
                     left: instructionTagMenuRect.left,
@@ -35567,7 +43195,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                   contentPlaceholder: "填写点击后直接跑图的指令内容",
                   groupLabel: "分组",
                   groupPlaceholder: "可留空；留空归入“预设”",
-                  onCancel: clearImageQuickEditId,
+                  onCancel: cancelImageQuickEdit,
                   onSave: saveImageQuickPromptEdit,
                 })
               : null}
@@ -35585,6 +43213,14 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             />
         </>
       );
+      (!isInstructionPointerDragRunning ||
+        !instructionPanelFrozenNodeRef.current) &&
+        (instructionPanelFrozenNodeRef.current = instructionPanelNode);
+      instructionPanelNodeCacheRef.current = {
+        snapshot: nextInstructionPanelRenderSnapshot,
+        node: instructionPanelNode,
+      };
+      return instructionPanelNode;
     },
     renderIdentityPresetListItems = () => (
       <>
@@ -35702,7 +43338,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                     identityPresetItem?.title || "身份标题",
                   contentLabel: "内容",
                   contentPlaceholder: "填写聊天身份设定内容",
-                  onCancel: clearIdentityPresetEditingId,
+                  onCancel: cancelIdentityPresetEdit,
                   onSave: saveIdentityPresetEdit,
                 })}
             </div>
@@ -35722,7 +43358,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         closePresetMenu: closeImageQuickMenu,
         setPresetItemsState: setImageQuickPrompts,
         setSelectedPresetIdsState: setSelectedImageQuickPromptIds,
-        clearEditingPresetId: clearImageQuickEditId,
+        clearEditingPresetId: cancelImageQuickEdit,
         clearActiveIdentityPresetId: null,
         isBatchSelectMode: isImageQuickBatchSelectMode,
         setBatchSelectModeState: setImageQuickBatchSelectMode,
@@ -35743,7 +43379,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         importSuccessLabel: "指令预设",
         resetAfterImport: () => {
           (resetImageQuickBatchSelection(),
-            clearImageQuickEditId(),
+            cancelImageQuickEdit(),
             closeImageQuickMenu());
         },
       },
@@ -35751,7 +43387,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         closePresetMenu: closeIdentityPresetMenu,
         setPresetItemsState: setIdentityPresets,
         setSelectedPresetIdsState: setSelectedIdentityPresetIds,
-        clearEditingPresetId: clearIdentityPresetEditingId,
+        clearEditingPresetId: cancelIdentityPresetEdit,
         clearActiveIdentityPresetId: () =>
           setActiveIdentityPresetId(""),
       },
@@ -35759,7 +43395,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         closePresetMenu: closeChatQuickMenu,
         setPresetItemsState: setChatQuickPrompts,
         setSelectedPresetIdsState: setSelectedChatQuickPromptIds,
-        clearEditingPresetId: clearChatQuickEditId,
+        clearEditingPresetId: cancelChatQuickEdit,
         clearActiveIdentityPresetId: null,
         isBatchSelectMode: isChatQuickBatchSelectMode,
         setBatchSelectModeState: setChatQuickBatchSelectMode,
@@ -35780,7 +43416,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         importSuccessLabel: "预设",
         resetAfterImport: () => {
           (resetChatQuickBatchSelection(),
-            clearChatQuickEditId(),
+            cancelChatQuickEdit(),
             closeChatQuickMenu());
         },
       },
@@ -36002,10 +43638,14 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     toggleImageQuickBatchSelectMode = () => {
       (closeInstructionTagMenu(),
         closeInstructionGroupMenu(),
-        setDraggingInstructionTagId(""),
-        setInstructionTagDragSourceGroupName(""),
-        setDraggingInstructionGroupName(""),
-        setDragOverInstructionGroupName(""),
+        finishInstructionGroupPointerDragRef.current?.(false),
+        isImageQuickBatchSelectMode &&
+          setSelectedImageQuickGroupNames(
+            (previousSelectedInstructionGroupNamesState) =>
+              previousSelectedInstructionGroupNamesState.length
+                ? []
+                : previousSelectedInstructionGroupNamesState,
+          ),
         toggleQuickPresetBatchSelectMode("image"));
     },
     toggleImageQuickSelection = (toggledImageQuickSelectionId) => {
@@ -36013,12 +43653,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         "image",
         toggledImageQuickSelectionId,
       );
-    },
-    toggleAllImageQuickSelections = () => {
-      toggleAllQuickPresetSelections("image");
-    },
-    deleteSelectedImageQuickPrompts = () => {
-      deleteSelectedQuickPresets("image");
     },
     resolveQuickPresetIoScopeConfig = (presetScopeInput = "chat") => {
       const normalizedPresetScope =
@@ -36123,7 +43757,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     } = {}) => {
       (shouldCloseMenu && closeIdentityPresetMenu(),
         shouldClearEditingId &&
-          clearIdentityPresetEditingId(),
+          cancelIdentityPresetEdit(),
         shouldResetSelection &&
           resetIdentityPresetSelectionState());
     },
@@ -36133,7 +43767,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       shouldResetSelection = true,
     } = {}) => {
       (shouldCloseMenu && closeChatQuickMenu(),
-        shouldClearEditingId && clearChatQuickEditId(),
+        shouldClearEditingId && cancelChatQuickEdit(),
         shouldResetSelection &&
           resetChatQuickBatchSelection());
     },
@@ -36144,7 +43778,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     } = {}) => {
       (shouldCloseMenu && closeImageQuickMenu(),
         shouldClearEditingId &&
-          clearImageQuickEditId(),
+          cancelImageQuickEdit(),
         shouldResetSelection &&
           resetImageQuickBatchSelection());
     },
@@ -36368,11 +44002,17 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         );
         return;
       }
-      (setComposerTextWithDraftSync(chatPresetContent),
+      (composerTextChangeSourceRef.current = "programmatic",
+        setComposerTextWithDraftSync(chatPresetContent),
         requestAnimationFrame(() => {
           if (!composerTextareaRef.current) return;
+          markComposerExpandedInteraction();
           (composerTextareaRef.current.focus(),
-            resizeComposerTextarea(composerTextareaRef.current));
+            requestComposerResize({
+              textareaElement: composerTextareaRef.current,
+              active: true,
+              scrollToBottom: true,
+            }));
           const composerTextLength =
             composerTextareaRef.current.value.length;
           composerTextareaRef.current.setSelectionRange(
@@ -36416,6 +44056,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     },
     setChatInputExpandedState = (isExpanded) => {
       const nextExpanded = !!isExpanded;
+      if (composerExpandedVisualStateRef.current === nextExpanded) return;
+      composerExpandedVisualStateRef.current = nextExpanded;
       (chatInputRowRef.current &&
         chatInputRowRef.current.classList.toggle(
           "is-expanded",
@@ -36432,16 +44074,122 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             nextExpanded,
           ));
     },
+    clearComposerCollapseTimer = () => {
+      composerCollapseTimerRef.current &&
+        clearTimeout(composerCollapseTimerRef.current);
+      composerCollapseTimerRef.current = 0;
+    },
+    markComposerExpandedInteraction = (
+      holdDurationMs = CONST_COMPOSER_EXPANDED_HOLD_MS,
+    ) => {
+      composerExpandedHoldUntilRef.current = Math.max(
+        composerExpandedHoldUntilRef.current,
+        Date.now() + Math.max(0, Number(holdDurationMs) || 0),
+      );
+      clearComposerCollapseTimer();
+    },
+    scheduleComposerCollapse = (
+      textareaCollapseTarget = composerTextareaRef.current,
+      delayMs = CONST_COMPOSER_COLLAPSE_DEBOUNCE_MS,
+    ) => {
+      clearComposerCollapseTimer();
+      const scheduleDelayMs = Math.max(0, Number(delayMs) || 0);
+      composerCollapseTimerRef.current = window.setTimeout(() => {
+        composerCollapseTimerRef.current = 0;
+        const textareaElement =
+          textareaCollapseTarget || composerTextareaRef.current;
+        if (!textareaElement) return;
+        const hasComposerText = !!String(textareaElement.value || "").trim(),
+          isComposerFocusedNow =
+            typeof document !== "undefined" &&
+            document.activeElement === textareaElement,
+          keepExpandedForMs = Math.max(
+            0,
+            composerExpandedHoldUntilRef.current - Date.now(),
+          );
+        if (isComposerFocusedNow || hasComposerText) {
+          requestComposerResizeRef.current?.({
+            textareaElement,
+            active: true,
+          });
+          return;
+        }
+        if (keepExpandedForMs > 0) {
+          scheduleComposerCollapse(
+            textareaElement,
+            Math.max(CONST_COMPOSER_COLLAPSE_DEBOUNCE_MS, keepExpandedForMs),
+          );
+          return;
+        }
+        requestComposerResizeRef.current?.({
+          textareaElement,
+          forceCollapse: true,
+          forceMeasure: true,
+        });
+      }, scheduleDelayMs);
+    },
     resetComposerTextareaLayout = (textareaResetTarget = composerTextareaRef.current) => {
       const textareaElement = textareaResetTarget;
-      textareaElement &&
-        ((textareaElement.style.height = `${CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX}px`),
+      if (!textareaElement) return;
+      const collapsedComposerHeightPx = CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX,
+        collapsedComposerHeight = `${collapsedComposerHeightPx}px`,
+        isAlreadyCollapsed =
+          textareaElement.style.height === collapsedComposerHeight &&
+          textareaElement.style.overflowY === "hidden" &&
+          !textareaElement.classList.contains("is-expanded");
+      isAlreadyCollapsed ||
+        ((textareaElement.style.height = collapsedComposerHeight),
         (textareaElement.style.overflowY = "hidden"),
-        textareaElement.classList.remove(
-          "is-scroll-active",
+        textareaElement.classList.remove("is-expanded"));
+      composerResizeSignatureRef.current = [
+        "collapsed",
+        String(textareaElement.value || "").length,
+        Math.floor(Number(textareaElement.clientWidth) || 0),
+        collapsedComposerHeightPx,
+      ].join("|");
+      composerResizeMeasureRef.current = {
+        textLength: String(textareaElement.value || "").length,
+        clientWidth: Math.floor(Number(textareaElement.clientWidth) || 0),
+        maxHeightPx: collapsedComposerHeightPx,
+        appliedHeightPx: collapsedComposerHeightPx,
+        overflowY: "hidden",
+        expanded: false,
+      };
+      composerExpandedHoldUntilRef.current = 0;
+      setChatInputExpandedState(false);
+    },
+    shouldKeepComposerTextareaScrolledToBottom = (
+      textareaCheckTarget = composerTextareaRef.current,
+    ) => {
+      const textareaElement = textareaCheckTarget;
+      if (!textareaElement) return false;
+      if (
+        typeof document !== "undefined" &&
+        document.activeElement !== textareaElement
+      ) {
+        return false;
+      }
+      const composerValueText = String(textareaElement.value || ""),
+        composerValueLength = composerValueText.length,
+        selectionStart = Number.isFinite(textareaElement.selectionStart)
+          ? Number(textareaElement.selectionStart)
+          : composerValueLength,
+        selectionEnd = Number.isFinite(textareaElement.selectionEnd)
+          ? Number(textareaElement.selectionEnd)
+          : composerValueLength,
+        isSelectionAtEnd =
+          selectionStart >= composerValueLength &&
+          selectionEnd >= composerValueLength,
+        composerMaxScrollTop = Math.max(
+          0,
+          Number(textareaElement.scrollHeight || 0) -
+            Number(textareaElement.clientHeight || 0),
         ),
-        textareaElement.classList.remove("is-expanded"),
-        setChatInputExpandedState(false));
+        isNearBottom =
+          composerMaxScrollTop <= 0 ||
+          Number(textareaElement.scrollTop || 0) >=
+            composerMaxScrollTop - CONST_COMPOSER_SCROLL_BOTTOM_SNAP_PX;
+      return isSelectionAtEnd || isNearBottom;
     },
     resizeComposerTextarea = (
       textareaArgOrElement = composerTextareaRef.current,
@@ -36449,412 +44197,634 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     ) => {
       const textareaElement = textareaArgOrElement;
       if (!textareaElement) return;
-      const hasComposerText =
-          String(textareaElement.value || "").length > 0,
+      const composerValueText = String(textareaElement.value || ""),
+        hasComposerText = composerValueText.length > 0,
+        shouldKeepComposerVisuallyExpanded =
+          Date.now() < composerExpandedHoldUntilRef.current,
         shouldExpandComposer = resizeOptions.forceCollapse
           ? false
           : resizeOptions.active === true ||
             (typeof document !== "undefined" &&
               document.activeElement ===
                 textareaElement) ||
-            hasComposerText;
+            hasComposerText ||
+            shouldKeepComposerVisuallyExpanded;
       if (!shouldExpandComposer) {
         resetComposerTextareaLayout(textareaElement);
         return;
       }
-      const composerScrollHeightPx = Math.round(
-          chatCardRef.current?.clientHeight || 0,
+      const composerCardHeightPx = Math.max(
+          0,
+          Math.round(
+            Number(chatCardMeasuredHeightRef.current) ||
+              Number(chatCardRef.current?.clientHeight) ||
+              0,
+          ),
+        ),
+        composerCardHeightBucket = Math.max(
+          0,
+          Math.floor(
+            composerCardHeightPx / CONST_COMPOSER_RESIZE_STABILITY_PX,
+          ),
         ),
         composerHeightClampTargetPx =
-          composerScrollHeightPx > 0
-            ? Math.round(composerScrollHeightPx * CONST_COMPOSER_TEXTAREA_MAX_RATIO)
+          composerCardHeightPx > 0
+            ? Math.round(composerCardHeightPx * CONST_COMPOSER_TEXTAREA_MAX_RATIO)
             : CONST_COMPOSER_TEXTAREA_FALLBACK_MAX_HEIGHT_PX,
         composerMaxHeightPx = Math.max(
           CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX,
           Math.min(CONST_COMPOSER_TEXTAREA_MAX_HEIGHT_PX, composerHeightClampTargetPx),
         );
-      textareaElement.style.height = "auto";
+      const composerClientWidth = Math.floor(
+          Number(textareaElement.clientWidth) || 0,
+        ),
+        composerClientWidthBucket = Math.floor(
+          composerClientWidth / CONST_COMPOSER_RESIZE_STABILITY_PX,
+        ),
+        composerMaxHeightBucket = Math.floor(
+          composerMaxHeightPx / CONST_COMPOSER_RESIZE_STABILITY_PX,
+        ),
+        previousComposerResizeMeasure =
+          composerResizeMeasureRef.current || {};
+      const shouldResetComposerHeightBeforeMeasure =
+        resizeOptions.forceMeasure === true ||
+        composerValueText.length <
+          Number(previousComposerResizeMeasure.textLength || 0) ||
+        Math.abs(
+          composerClientWidth -
+            Number(previousComposerResizeMeasure.clientWidth || 0),
+        ) >=
+          CONST_COMPOSER_RESIZE_STABILITY_PX ||
+        Math.abs(
+          composerMaxHeightPx -
+            Number(previousComposerResizeMeasure.maxHeightPx || 0),
+        ) >=
+          CONST_COMPOSER_RESIZE_STABILITY_PX;
+      shouldResetComposerHeightBeforeMeasure &&
+        (textareaElement.style.height = "auto");
+      const composerNaturalScrollHeightPx = Math.max(
+        CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX,
+        Math.round(Number(textareaElement.scrollHeight) || 0),
+      );
       const composerNextHeightPx = Math.max(
         CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX,
         Math.min(
-          textareaElement.scrollHeight,
+          composerNaturalScrollHeightPx,
           composerMaxHeightPx,
         ),
       );
-      textareaElement.style.height = `${composerNextHeightPx}px`;
-      const shouldShowComposerVerticalScrollbar =
-          textareaElement.scrollHeight >
-          composerMaxHeightPx,
-        shouldExpandComposerInput =
-          composerNextHeightPx > CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX + 1;
-      ((textareaElement.style.overflowY =
-        shouldShowComposerVerticalScrollbar ? "auto" : "hidden"),
-        textareaElement.classList.toggle(
-          "is-scroll-active",
-          shouldShowComposerVerticalScrollbar,
+      const previousComposerOverflowY =
+          String(previousComposerResizeMeasure.overflowY || "hidden"),
+        previousComposerExpanded =
+          previousComposerResizeMeasure.expanded === true,
+        shouldShowComposerVerticalScrollbar = (
+          previousComposerOverflowY === "auto"
+            ? composerNaturalScrollHeightPx >
+              composerMaxHeightPx - CONST_COMPOSER_OVERFLOW_EXIT_DELTA_PX
+            : composerNaturalScrollHeightPx >
+              composerMaxHeightPx + CONST_COMPOSER_OVERFLOW_ENTER_DELTA_PX
         ),
+        shouldExpandComposerInput = previousComposerExpanded
+          ? composerNextHeightPx > CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX
+          : composerNextHeightPx >=
+            CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX +
+              CONST_COMPOSER_EXPAND_ENTER_DELTA_PX,
+        nextComposerOverflowY = shouldShowComposerVerticalScrollbar
+          ? "auto"
+          : "hidden",
+        composerNaturalHeightBucket = Math.floor(
+          composerNaturalScrollHeightPx / CONST_COMPOSER_RESIZE_STABILITY_PX,
+        ),
+        composerAppliedHeightBucket = Math.floor(
+          composerNextHeightPx / CONST_COMPOSER_RESIZE_STABILITY_PX,
+        ),
+        previousComposerHeightPx = Number(
+          previousComposerResizeMeasure.appliedHeightPx ||
+            CONST_COMPOSER_TEXTAREA_MIN_HEIGHT_PX,
+        ),
+        shouldWriteComposerHeight =
+          shouldResetComposerHeightBeforeMeasure ||
+          composerNextHeightPx !== previousComposerHeightPx,
+        shouldWriteComposerOverflow =
+          nextComposerOverflowY !== previousComposerOverflowY,
+        shouldWriteComposerExpanded =
+          shouldExpandComposerInput !== previousComposerExpanded,
+        composerResizeSignature = [
+          shouldExpandComposer ? "expanded" : "collapsed",
+          composerCardHeightBucket,
+          composerClientWidthBucket,
+          composerMaxHeightBucket,
+          composerNaturalHeightBucket,
+          composerAppliedHeightBucket,
+          nextComposerOverflowY,
+          shouldExpandComposerInput ? "expanded" : "collapsed",
+        ].join("|");
+      if (
+        resizeOptions.scrollToBottom !== true &&
+        composerResizeSignatureRef.current === composerResizeSignature
+      ) {
+        return;
+      }
+      shouldWriteComposerHeight &&
+        (textareaElement.style.height = `${composerNextHeightPx}px`);
+      shouldWriteComposerOverflow &&
+        (textareaElement.style.overflowY = nextComposerOverflowY);
+      shouldWriteComposerExpanded &&
         textareaElement.classList.toggle(
           "is-expanded",
           shouldExpandComposerInput,
-        ),
-        setChatInputExpandedState(shouldExpandComposerInput),
-        resizeOptions.scrollToBottom === true &&
-          (textareaElement.scrollTop =
-            textareaElement.scrollHeight));
+        );
+      shouldExpandComposerInput &&
+        (composerExpandedHoldUntilRef.current = Math.max(
+          composerExpandedHoldUntilRef.current,
+          Date.now() + CONST_COMPOSER_EXPANDED_HOLD_MS,
+        ));
+      shouldWriteComposerExpanded &&
+        setChatInputExpandedState(shouldExpandComposerInput);
+      if (resizeOptions.scrollToBottom === true) {
+        textareaElement.scrollTop = textareaElement.scrollHeight;
+        requestAnimationFrame(() => {
+          textareaElement.scrollTop = textareaElement.scrollHeight;
+        });
+      }
+      composerResizeMeasureRef.current = {
+        textLength: composerValueText.length,
+        clientWidth: composerClientWidth,
+        maxHeightPx: composerMaxHeightPx,
+        appliedHeightPx: composerNextHeightPx,
+        overflowY: nextComposerOverflowY,
+        expanded: shouldExpandComposerInput,
+      };
+      composerResizeSignatureRef.current = composerResizeSignature;
     };
+  const requestComposerResize = (resizeRequestInput = {}) => {
+    const normalizedResizeRequest =
+        resizeRequestInput && typeof resizeRequestInput === "object"
+          ? resizeRequestInput
+          : {},
+      requestTextareaElement =
+        normalizedResizeRequest.textareaElement || composerTextareaRef.current;
+    if (!requestTextareaElement) return;
+    const previousPendingResizeRequest =
+        composerPendingResizeRequestRef.current || {},
+      nextPendingResizeRequest = {
+        textareaElement:
+          normalizedResizeRequest.textareaElement ||
+          previousPendingResizeRequest.textareaElement ||
+          requestTextareaElement,
+        active:
+          normalizedResizeRequest.active === true ||
+          previousPendingResizeRequest.active === true,
+        forceCollapse:
+          normalizedResizeRequest.forceCollapse === true ||
+          previousPendingResizeRequest.forceCollapse === true,
+        forceMeasure:
+          normalizedResizeRequest.forceMeasure === true ||
+          previousPendingResizeRequest.forceMeasure === true,
+        scrollToBottom:
+          normalizedResizeRequest.scrollToBottom === true ||
+          previousPendingResizeRequest.scrollToBottom === true,
+      };
+    composerPendingResizeRequestRef.current = nextPendingResizeRequest;
+    if (composerResizeRafRef.current) return;
+    composerResizeRafRef.current = requestAnimationFrame(() => {
+      composerResizeRafRef.current = 0;
+      const pendingResizeRequest =
+        composerPendingResizeRequestRef.current || {};
+      composerPendingResizeRequestRef.current = null;
+      resizeComposerTextarea(
+        pendingResizeRequest.textareaElement || composerTextareaRef.current,
+        pendingResizeRequest,
+      );
+    });
+  };
   resizeComposerTextareaRef.current = resizeComposerTextarea;
+  requestComposerResizeRef.current = requestComposerResize;
   (React.useEffect(() => {
-    activePage === "home" && resizeComposerTextareaRef.current?.();
+    if (activePage !== "home") return;
+    const composerTextChangeSource = String(
+      composerTextChangeSourceRef.current || "external",
+    ).trim();
+    const shouldScrollComposerToBottom =
+      composerScrollToBottomAfterSyncRef.current === true;
+    composerScrollToBottomAfterSyncRef.current = false;
+    composerTextChangeSourceRef.current = "external";
+    if (
+      composerTextChangeSource === "input" ||
+      composerTextChangeSource === "programmatic"
+    ) {
+      return;
+    }
+    requestComposerResizeRef.current?.({
+      scrollToBottom: shouldScrollComposerToBottom,
+    });
   }, [composerText, activePage]),
     React.useEffect(() => {
       if (activePage !== "home") return;
-      const handleComposerResizeForWindow = () => resizeComposerTextareaRef.current?.();
+      const handleComposerResizeForWindow = () =>
+        requestComposerResizeRef.current?.({
+          forceMeasure: true,
+        });
       window.addEventListener("resize", handleComposerResizeForWindow);
-      let composerResizeObserver = null;
       return (
-        typeof ResizeObserver !== "undefined" &&
-          chatCardRef.current &&
-          ((composerResizeObserver = new ResizeObserver(() =>
-            resizeComposerTextareaRef.current?.()
-          )),
-          composerResizeObserver.observe(chatCardRef.current)),
         () => {
-          (window.removeEventListener("resize", handleComposerResizeForWindow),
-            composerResizeObserver?.disconnect());
+          window.removeEventListener("resize", handleComposerResizeForWindow);
         }
       );
     }, [activePage, uiScale]),
     React.useEffect(() => {
-      const hasTruthyOverlayBindingFlag = (overlayBindingFlags = []) =>
-          overlayBindingFlags.some(Boolean),
-        overlayPointerBindingFlags = [
-          modelDropdown.open,
-          providerDropdown.open,
-          uiScaleDropdownState.open,
-          isSessionPanelOpen,
-          runQueueTaskPanelOpen,
-          logFilterOpen,
-          uploadCompressPanelOpen,
-          isSessionPanelToolsOpen,
-          isChatQuickPanelToolsOpen,
-          isImageQuickPanelToolsOpen,
-          isIdentityPanelToolsOpen,
-          isChatQuickPanelOpen,
-          isImageQuickPanelOpen,
-          !!openChatQuickMenuId,
-          !!openImageQuickMenuId,
-          !!openInstructionTagMenuId,
-          !!openInstructionGroupMenuId,
-          !!editingChatQuickPromptId,
-          !!editingImageQuickPromptId,
-          !!openIdentityPresetMenuId,
-          !!editingIdentityPresetId,
-          isIdentityPanelOpen,
+      if (activePage !== "home") return;
+      const syncMeasuredChatCardHeight = () => {
+        const nextMeasuredChatCardHeight = Math.max(
+          0,
+          Math.round(
+            Number(chatCardRef.current?.clientHeight) ||
+              Number(
+                chatCardRef.current?.getBoundingClientRect?.().height || 0,
+              ),
+          ),
+        );
+        nextMeasuredChatCardHeight > 0 &&
+          (chatCardMeasuredHeightRef.current = nextMeasuredChatCardHeight);
+      };
+      syncMeasuredChatCardHeight();
+      if (
+        typeof ResizeObserver !== "function" ||
+        !chatCardRef.current
+      ) {
+        return;
+      }
+      const chatCardResizeObserver = new ResizeObserver(() => {
+        syncMeasuredChatCardHeight();
+      });
+      chatCardResizeObserver.observe(chatCardRef.current);
+      return () => {
+        chatCardResizeObserver.disconnect();
+      };
+    }, [activePage, isInstructionMode]),
+    React.useEffect(
+      () => () => {
+        composerResizeRafRef.current &&
+          cancelAnimationFrame(composerResizeRafRef.current);
+        composerResizeRafRef.current = 0;
+        composerPendingResizeRequestRef.current = null;
+        clearComposerCollapseTimer();
+      },
+      [],
+    ),
+    React.useEffect(() => {
+      const resolvePointerTargetElement = (pointerDownEvent) =>
+          pointerDownEvent.target instanceof Element
+            ? pointerDownEvent.target
+            : pointerDownEvent.target?.parentElement || null,
+        isTargetWithinNode = (targetElement, node) =>
+          !!(
+            targetElement &&
+            node &&
+            typeof node.contains === "function" &&
+            node.contains(targetElement)
+          ),
+        isTargetWithinAnyNode = (targetElement, nodeList = []) =>
+          Array.isArray(nodeList) &&
+          nodeList.some((node) => isTargetWithinNode(targetElement, node)),
+        resolveMenuButtonElement = (
+          openMenuId,
+          menuButtonRefsMap,
+        ) =>
+          (openMenuId &&
+            menuButtonRefsMap?.current?.[openMenuId]) ||
+          null,
+        closeChatQuickPanel = () => {
+          (setChatQuickPanelOpen(false),
+            closeChatQuickMenu(),
+            cancelChatQuickEdit(),
+            resetChatQuickBatchSelection(),
+            setChatQuickPanelToolsOpen(false),
+            closeFloatingQuickActionStateRef.current?.());
+        },
+        closeImageQuickPanel = () => {
+          (setImageQuickPanelOpen(false),
+            closeImageQuickMenu(),
+            cancelImageQuickEdit(),
+            resetImageQuickBatchSelection(),
+            setImageQuickPanelToolsOpen(false),
+            closeFloatingQuickActionStateRef.current?.());
+        },
+        closeIdentityPanel = () => {
+          (setIdentityPanelOpen(false),
+            closeIdentityPresetMenu(),
+            cancelIdentityPresetEdit(),
+            resetIdentityPresetSelectionState(),
+            setIdentityPanelToolsOpen(false),
+            closeFloatingQuickActionStateRef.current?.());
+        },
+        overlayOutsideCloseRules = [
+          {
+            key: "settings-model-dropdown",
+            isOpen: modelDropdown.open,
+            getInsideNodes: () => [
+              (modelDropdown.section === "chat"
+                ? chatModelAnchorRef
+                : imageModelAnchorRef
+              ).current,
+              modelDropdownPortalRef.current,
+            ],
+            onClose: closeModelDropdown,
+          },
+          {
+            key: "settings-provider-dropdown",
+            isOpen: providerDropdown.open,
+            getInsideNodes: () => [
+              (providerDropdown.section === "chat"
+                ? chatProviderAnchorRef
+                : imageProviderAnchorRef
+              ).current,
+              providerDropdownPortalRef.current,
+            ],
+            onClose: () => {
+              setProviderDropdown((currentProviderDropdownState) =>
+                patchPopupOpenState(currentProviderDropdownState, false),
+              );
+            },
+          },
+          {
+            key: "ui-scale-dropdown",
+            isOpen: uiScaleDropdownState.open,
+            getInsideNodes: () => [
+              uiScaleAnchorRef.current,
+              uiScaleDropdownPortalRef.current,
+            ],
+            onClose: () => {
+              setUiScaleDropdownState((currentUiScaleDropdownState) =>
+                patchPopupOpenState(currentUiScaleDropdownState, false),
+              );
+            },
+          },
+          {
+            key: "settings-chat-config-expanded",
+            isOpen: activePage === "settings" && isChatConfigExpanded,
+            getInsideNodes: () => [chatConfigExpandedRef.current],
+            onClose: () => {
+              setChatConfigExpanded(false);
+            },
+          },
+          {
+            key: "settings-cache-retention-dropdown",
+            isOpen:
+              activePage === "settings" && !!openCacheRetentionDropdownKey,
+            getInsideNodes: () => [cacheRetentionDropdownRootRef.current],
+            onClose: () => {
+              setOpenCacheRetentionDropdownKey("");
+            },
+          },
+          {
+            key: "control-dropdown",
+            isOpen: controlDropdownState.open,
+            getInsideNodes: () => [
+              resolveControlDropdownAnchorElement(controlDropdownState.kind),
+              controlDropdownInlineRef.current,
+            ],
+            onClose: closeControlDropdown,
+          },
+          {
+            key: "session-menu-inside-panel",
+            isOpen: isSessionPanelOpen,
+            shouldClose: ({ targetElement, isTargetWithinNodes }) =>
+              isTargetWithinNodes([sessionPanelPopupRef.current]) &&
+              !targetElement?.closest?.("[data-session-menu='1']"),
+            onClose: closeSessionMenu,
+          },
+          {
+            key: "session-panel",
+            isOpen: isSessionPanelOpen,
+            getInsideNodes: () => [
+              sessionPanelPopupRef.current,
+              sessionMenuPopupRef.current,
+              historyPanelAnchorRef.current,
+            ],
+            onClose: () => {
+              (applySessionPanelClosePlan(),
+                closeFloatingQuickActionStateRef.current?.());
+            },
+          },
+          {
+            key: "log-filter",
+            isOpen: logFilterOpen,
+            getInsideNodes: () => [
+              consoleFilterRef.current,
+              logFilterPopupRef.current,
+            ],
+            onClose: () => {
+              setLogFilterOpen(false);
+            },
+          },
+          {
+            key: "run-queue-task-panel",
+            isOpen: runQueueTaskPanelOpen,
+            getInsideNodes: () => [
+              runQueueTaskPanelAnchorRef.current,
+              runQueueTaskPanelPopupRef.current,
+            ],
+            onClose: () => {
+              setRunQueueTaskPanelOpen(false);
+            },
+          },
+          {
+            key: "upload-compress-panel",
+            isOpen: uploadCompressPanelOpen,
+            getInsideNodes: () => [
+              uploadCompressTriggerRef.current,
+              uploadCompressPopoverRef.current,
+            ],
+            onClose: () => {
+              setUploadCompressPanelOpen(false);
+            },
+          },
+          {
+            key: "session-panel-tools",
+            isOpen: isSessionPanelToolsOpen,
+            getInsideNodes: () => [
+              sessionPanelToolsTriggerRef.current,
+              sessionPanelToolsPopupRef.current,
+            ],
+            onClose: () => {
+              setSessionPanelToolsOpen(false);
+            },
+          },
+          {
+            key: "chat-quick-panel-tools",
+            isOpen: isChatQuickPanelToolsOpen,
+            getInsideNodes: () => [
+              chatQuickPanelToolsTriggerRef.current,
+              chatQuickPanelToolsPopupRef.current,
+            ],
+            onClose: () => {
+              setChatQuickPanelToolsOpen(false);
+            },
+          },
+          {
+            key: "image-quick-panel-tools",
+            isOpen: isImageQuickPanelToolsOpen,
+            getInsideNodes: () => [
+              imageQuickPanelToolsTriggerRef.current,
+              imageQuickPanelToolsPopupRef.current,
+            ],
+            onClose: () => {
+              setImageQuickPanelToolsOpen(false);
+            },
+          },
+          {
+            key: "identity-panel-tools",
+            isOpen: isIdentityPanelToolsOpen,
+            getInsideNodes: () => [
+              identityPanelToolsTriggerRef.current,
+              identityPanelToolsPopupRef.current,
+            ],
+            onClose: () => {
+              setIdentityPanelToolsOpen(false);
+            },
+          },
+          {
+            key: "chat-quick-menu",
+            isOpen: !!openChatQuickMenuId,
+            getInsideNodes: () => [
+              chatQuickMenuPopupRef.current,
+              resolveMenuButtonElement(
+                openChatQuickMenuId,
+                chatQuickMenuButtonRefsMap,
+              ),
+            ],
+            onClose: closeChatQuickMenu,
+          },
+          {
+            key: "image-quick-menu",
+            isOpen: !!openImageQuickMenuId,
+            getInsideNodes: () => [
+              imageQuickMenuPopupRef.current,
+              resolveMenuButtonElement(
+                openImageQuickMenuId,
+                imageQuickMenuButtonRefsMap,
+              ),
+            ],
+            onClose: closeImageQuickMenu,
+          },
+          {
+            key: "instruction-tag-menu",
+            isOpen: !!openInstructionTagMenuId,
+            getInsideNodes: () => [
+              instructionTagMenuPopupRef.current,
+              resolveMenuButtonElement(
+                openInstructionTagMenuId,
+                instructionTagMenuButtonRefsMap,
+              ),
+            ],
+            onClose: closeInstructionTagMenu,
+          },
+          {
+            key: "instruction-group-menu",
+            isOpen: !!openInstructionGroupMenuId,
+            getInsideNodes: () => [
+              instructionGroupMenuPopupRef.current,
+              resolveMenuButtonElement(
+                openInstructionGroupMenuId,
+                instructionGroupMenuButtonRefsMap,
+              ),
+            ],
+            onClose: closeInstructionGroupMenu,
+          },
+          {
+            key: "identity-preset-menu",
+            isOpen: !!openIdentityPresetMenuId,
+            getInsideNodes: () => [
+              identityPresetMenuPopupRef.current,
+              resolveMenuButtonElement(
+                openIdentityPresetMenuId,
+                identityPresetMenuButtonRefsMap,
+              ),
+            ],
+            onClose: closeIdentityPresetMenu,
+          },
+          {
+            key: "chat-quick-panel",
+            isOpen: isChatQuickPanelOpen,
+            getInsideNodes: () => [
+              chatQuickPanelAnchorRef.current,
+              chatQuickPanelPopupRef.current,
+              chatQuickMenuPopupRef.current,
+              chatQuickPanelToolsPopupRef.current,
+            ],
+            onClose: closeChatQuickPanel,
+          },
+          {
+            key: "image-quick-panel",
+            isOpen: isImageQuickPanelOpen,
+            getInsideNodes: () => [
+              imageQuickPanelAnchorRef.current,
+              imageQuickPanelPopupRef.current,
+              imageQuickMenuPopupRef.current,
+              imageQuickPanelToolsPopupRef.current,
+            ],
+            onClose: closeImageQuickPanel,
+          },
+          {
+            key: "identity-panel",
+            isOpen: isIdentityPanelOpen,
+            getInsideNodes: () => [
+              identityPanelAnchorRef.current,
+              identityPanelPopupRef.current,
+              identityPresetMenuPopupRef.current,
+              identityPanelToolsPopupRef.current,
+            ],
+            onClose: closeIdentityPanel,
+          },
+          {
+            key: "preview-thumb-context-menu",
+            isOpen: previewThumbContextMenu.open,
+            getInsideNodes: () => [previewThumbContextMenuRef.current],
+            onClose: () => {
+              setPreviewThumbContextMenu(closePreviewThumbContextMenuState);
+            },
+          },
         ],
-        shouldBindOverlayPointerListener =
-          hasTruthyOverlayBindingFlag(
-            overlayPointerBindingFlags,
-          );
+        activeOverlayOutsideCloseRules = overlayOutsideCloseRules.filter(
+          (overlayOutsideCloseRule) => !!overlayOutsideCloseRule?.isOpen,
+        ),
+        shouldBindOverlayPointerListener = activeOverlayOutsideCloseRules.length > 0;
       if (!shouldBindOverlayPointerListener) return;
       const handleGlobalOverlayPointerDown = (pointerDownEvent) => {
         const pointerDownTargetElement =
-          pointerDownEvent.target instanceof Element
-            ? pointerDownEvent.target
-            : pointerDownEvent.target?.parentElement || null;
-        const isWindowInteractiveElement = (targetElement) =>
-          !!(
-            targetElement &&
-            typeof targetElement.closest === "function" &&
-            targetElement.closest(
-              ".floating-layer, .modal-mask, .modal, .preview-lightbox, .window-controls, .top-actions, .topbar-api-status-group, .status-btn, .icon-btn, .win-btn, .console-pill, button, input, textarea, select, label, a, summary, [role='button'], [tabindex], [contenteditable='true']",
-            )
-          );
-        const isPointerDownOnWindowDragRegion = (() => {
-          if (!pointerDownTargetElement) return false;
-          if (isWindowInteractiveElement(pointerDownTargetElement)) return false;
-          let currentNode = pointerDownTargetElement;
-          while (
-            currentNode &&
-            currentNode instanceof Element &&
-            currentNode !== document.body
-          ) {
-            const currentNodeStyle = window.getComputedStyle?.(currentNode);
-            const appRegionRaw =
-              typeof currentNodeStyle?.getPropertyValue === "function"
-                ? currentNodeStyle.getPropertyValue("-webkit-app-region")
-                : currentNodeStyle?.webkitAppRegion || "";
-            const appRegion = String(appRegionRaw || "").trim().toLowerCase();
-            if (appRegion === "no-drag") return false;
-            if (appRegion === "drag") return true;
-            currentNode = currentNode.parentElement;
-          }
-          return false;
-        })();
-        if (isPointerDownOnWindowDragRegion) return;
-        const isPointerTargetContained = (targetElement) =>
-            !!(
-              targetElement &&
-              typeof targetElement.contains === "function" &&
-              targetElement.contains(pointerDownTargetElement)
-            ),
-          closePopupWhenOutside = ({
-            isOpen,
-            triggerElement,
-            popupElement,
-            onClose,
-          } = {}) => {
-            if (!isOpen) return;
-            const triggerContainsTarget =
-                isPointerTargetContained(triggerElement),
-              popupContainsTarget =
-                isPointerTargetContained(popupElement);
-            !triggerContainsTarget &&
-              !popupContainsTarget &&
-              typeof onClose === "function" &&
-              onClose();
-          },
-          closeQuickMenuWhenOutside = ({
-            openMenuId,
-            popupElement,
-            menuButtonRefsMap,
-            onClose,
-          } = {}) => {
-            if (!openMenuId) return;
-            const menuPopupContainsTarget =
-                isPointerTargetContained(popupElement),
-              menuButtonContainsTarget = isPointerTargetContained(
-                (openMenuId &&
-                  menuButtonRefsMap?.current?.[
-                    openMenuId
-                  ]) ||
-                  null,
-              );
-            !menuPopupContainsTarget &&
-              !menuButtonContainsTarget &&
-              typeof onClose === "function" &&
-              onClose();
-          },
-          closePresetPanelWhenOutside = ({
-            isOpen,
-            anchorElement,
-            panelPopupElement,
-            menuPopupElement,
-            toolsPopupElement,
-            onClose,
-          } = {}) => {
-            if (!isOpen) return;
-            const panelAnchorContainsTarget =
-                isPointerTargetContained(anchorElement),
-              panelPopupContainsTarget =
-                isPointerTargetContained(panelPopupElement),
-              menuPopupContainsTarget =
-                isPointerTargetContained(menuPopupElement),
-              toolsPopupContainsTarget =
-                isPointerTargetContained(toolsPopupElement);
-            !panelAnchorContainsTarget &&
-              !panelPopupContainsTarget &&
-              !menuPopupContainsTarget &&
-              !toolsPopupContainsTarget &&
-              typeof onClose === "function" &&
-              onClose();
-          };
-        closePopupWhenOutside({
-          isOpen: modelDropdown.open,
-          triggerElement:
-            (modelDropdown.section === "chat"
-              ? chatModelAnchorRef
-              : imageModelAnchorRef
-            ).current,
-          popupElement: modelDropdownPortalRef.current,
-          onClose: closeModelDropdown,
-        });
-        closePopupWhenOutside({
-          isOpen: providerDropdown.open,
-          triggerElement:
-            (providerDropdown.section === "chat"
-              ? chatProviderAnchorRef
-              : imageProviderAnchorRef
-            ).current,
-          popupElement: providerDropdownPortalRef.current,
-          onClose: () => {
-            setProviderDropdown((currentProviderDropdownState) =>
-              patchPopupOpenState(currentProviderDropdownState, false),
-            );
-          },
-        });
-        closePopupWhenOutside({
-          isOpen: uiScaleDropdownState.open,
-          triggerElement: uiScaleAnchorRef.current,
-          popupElement: uiScaleDropdownPortalRef.current,
-          onClose: () => {
-            setUiScaleDropdownState((currentUiScaleDropdownState) =>
-              patchPopupOpenState(currentUiScaleDropdownState, false),
-            );
-          },
-        });
-        if (isSessionPanelOpen) {
-          const sessionMenuPopupContainsTarget = isPointerTargetContained(
-              sessionMenuPopupRef.current,
-            ),
-            sessionPanelPopupContainsTarget = isPointerTargetContained(
-              sessionPanelPopupRef.current,
-            ),
-            sessionPanelAnchorContainsTarget = isPointerTargetContained(
-              historyPanelAnchorRef.current,
-            );
-          (sessionPanelPopupContainsTarget &&
-            !pointerDownTargetElement?.closest?.(
-              "[data-session-menu='1']",
-            ) &&
-            closeSessionMenu(),
-            !sessionMenuPopupContainsTarget &&
-              !sessionPanelPopupContainsTarget &&
-              !sessionPanelAnchorContainsTarget &&
-              (applySessionPanelClosePlan(),
-              closeFloatingQuickActionStateRef.current?.()));
-        }
-        closePopupWhenOutside({
-          isOpen: logFilterOpen,
-          triggerElement: consoleFilterRef.current,
-          popupElement: logFilterPopupRef.current,
-          onClose: () => {
-            setLogFilterOpen(false);
-          },
-        });
-        closePopupWhenOutside({
-          isOpen: runQueueTaskPanelOpen,
-          triggerElement: runQueueTaskPanelAnchorRef.current,
-          popupElement: runQueueTaskPanelPopupRef.current,
-          onClose: () => {
-            setRunQueueTaskPanelOpen(false);
-          },
-        });
-        closePopupWhenOutside({
-          isOpen: uploadCompressPanelOpen,
-          triggerElement: uploadCompressTriggerRef.current,
-          popupElement: uploadCompressPopoverRef.current,
-          onClose: () => {
-            setUploadCompressPanelOpen(false);
-          },
-        });
-        closePopupWhenOutside({
-          isOpen: isSessionPanelToolsOpen,
-          triggerElement: sessionPanelToolsTriggerRef.current,
-          popupElement: sessionPanelToolsPopupRef.current,
-          onClose: () => {
-            setSessionPanelToolsOpen(false);
-          },
-        });
-        closePopupWhenOutside({
-          isOpen: isChatQuickPanelToolsOpen,
-          triggerElement: chatQuickPanelToolsTriggerRef.current,
-          popupElement: chatQuickPanelToolsPopupRef.current,
-          onClose: () => {
-            setChatQuickPanelToolsOpen(false);
-          },
-        });
-        closePopupWhenOutside({
-          isOpen: isImageQuickPanelToolsOpen,
-          triggerElement: imageQuickPanelToolsTriggerRef.current,
-          popupElement: imageQuickPanelToolsPopupRef.current,
-          onClose: () => {
-            setImageQuickPanelToolsOpen(false);
-          },
-        });
-        closePopupWhenOutside({
-          isOpen: isIdentityPanelToolsOpen,
-          triggerElement: identityPanelToolsTriggerRef.current,
-          popupElement: identityPanelToolsPopupRef.current,
-          onClose: () => {
-            setIdentityPanelToolsOpen(false);
-          },
-        });
-        closeQuickMenuWhenOutside({
-          openMenuId: openChatQuickMenuId,
-          popupElement: chatQuickMenuPopupRef.current,
-          menuButtonRefsMap: chatQuickMenuButtonRefsMap,
-          onClose: closeChatQuickMenu,
-        });
-        closeQuickMenuWhenOutside({
-          openMenuId: openImageQuickMenuId,
-          popupElement: imageQuickMenuPopupRef.current,
-          menuButtonRefsMap: imageQuickMenuButtonRefsMap,
-          onClose: closeImageQuickMenu,
-        });
-        closeQuickMenuWhenOutside({
-          openMenuId: openInstructionTagMenuId,
-          popupElement: instructionTagMenuPopupRef.current,
-          menuButtonRefsMap: instructionTagMenuButtonRefsMap,
-          onClose: closeInstructionTagMenu,
-        });
-        closeQuickMenuWhenOutside({
-          openMenuId: openInstructionGroupMenuId,
-          popupElement: instructionGroupMenuPopupRef.current,
-          menuButtonRefsMap: instructionGroupMenuButtonRefsMap,
-          onClose: closeInstructionGroupMenu,
-        });
-        closeQuickMenuWhenOutside({
-          openMenuId: openIdentityPresetMenuId,
-          popupElement: identityPresetMenuPopupRef.current,
-          menuButtonRefsMap: identityPresetMenuButtonRefsMap,
-          onClose: closeIdentityPresetMenu,
-        });
-        closePresetPanelWhenOutside({
-          isOpen: isChatQuickPanelOpen,
-          anchorElement: chatQuickPanelAnchorRef.current,
-          panelPopupElement: chatQuickPanelPopupRef.current,
-          menuPopupElement: chatQuickMenuPopupRef.current,
-          toolsPopupElement: chatQuickPanelToolsPopupRef.current,
-          onClose: () => {
-            (setChatQuickPanelOpen(false),
-              closeChatQuickMenu(),
-              clearChatQuickEditId(),
-              resetChatQuickBatchSelection(),
-              setChatQuickPanelToolsOpen(false),
-              closeFloatingQuickActionStateRef.current?.());
-          },
-        });
-        closePresetPanelWhenOutside({
-          isOpen: isImageQuickPanelOpen,
-          anchorElement: imageQuickPanelAnchorRef.current,
-          panelPopupElement: imageQuickPanelPopupRef.current,
-          menuPopupElement: imageQuickMenuPopupRef.current,
-          toolsPopupElement: imageQuickPanelToolsPopupRef.current,
-          onClose: () => {
-            (setImageQuickPanelOpen(false),
-              closeImageQuickMenu(),
-              clearImageQuickEditId(),
-              resetImageQuickBatchSelection(),
-              setImageQuickPanelToolsOpen(false),
-              closeFloatingQuickActionStateRef.current?.());
-          },
-        });
-        closePresetPanelWhenOutside({
-          isOpen: isIdentityPanelOpen,
-          anchorElement: identityPanelAnchorRef.current,
-          panelPopupElement: identityPanelPopupRef.current,
-          menuPopupElement: identityPresetMenuPopupRef.current,
-          toolsPopupElement: identityPanelToolsPopupRef.current,
-          onClose: () => {
-            (setIdentityPanelOpen(false),
-              closeIdentityPresetMenu(),
-              clearIdentityPresetEditingId(),
-              resetIdentityPresetSelectionState(),
-              setIdentityPanelToolsOpen(false),
-              closeFloatingQuickActionStateRef.current?.());
-          },
+          resolvePointerTargetElement(pointerDownEvent);
+        if (!pointerDownTargetElement) return;
+        const isTargetWithinNodes = (nodeList = []) =>
+          isTargetWithinAnyNode(pointerDownTargetElement, nodeList);
+        activeOverlayOutsideCloseRules.forEach((overlayOutsideCloseRule) => {
+          const shouldCloseRule =
+            typeof overlayOutsideCloseRule.shouldClose === "function"
+              ? overlayOutsideCloseRule.shouldClose({
+                  targetElement: pointerDownTargetElement,
+                  pointerDownEvent,
+                  isTargetWithinNodes,
+                })
+              : !isTargetWithinNodes(
+                  overlayOutsideCloseRule.getInsideNodes?.() || [],
+                );
+          shouldCloseRule &&
+            typeof overlayOutsideCloseRule.onClose === "function" &&
+            overlayOutsideCloseRule.onClose();
         });
       };
       return (
-        shouldBindOverlayPointerListener &&
-          document.addEventListener("pointerdown", handleGlobalOverlayPointerDown, true),
+        document.addEventListener(
+          "pointerdown",
+          handleGlobalOverlayPointerDown,
+          true,
+        ),
         () => {
-          (shouldBindOverlayPointerListener &&
-            document.removeEventListener(
-              "pointerdown",
-              handleGlobalOverlayPointerDown,
-              true,
-            ));
+          document.removeEventListener(
+            "pointerdown",
+            handleGlobalOverlayPointerDown,
+            true,
+          );
         }
       );
     }, [
@@ -36862,27 +44832,29 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       modelDropdown.section,
       providerDropdown.open,
       providerDropdown.section,
-      isChatQuickPanelOpen,
-      isImageQuickPanelOpen,
-      editingChatQuickPromptId,
-      editingImageQuickPromptId,
-      openChatQuickMenuId,
-      openImageQuickMenuId,
-      openInstructionTagMenuId,
-      openInstructionGroupMenuId,
-      editingIdentityPresetId,
-      openIdentityPresetMenuId,
-      isSessionPanelOpen,
-      isIdentityPanelOpen,
-      logFilterOpen,
       uiScaleDropdownState.open,
+      activePage,
+      isChatConfigExpanded,
+      openCacheRetentionDropdownKey,
+      controlDropdownState.open,
+      controlDropdownState.kind,
+      isSessionPanelOpen,
       runQueueTaskPanelOpen,
-      openSessionMenuId,
+      logFilterOpen,
       uploadCompressPanelOpen,
       isSessionPanelToolsOpen,
       isChatQuickPanelToolsOpen,
       isImageQuickPanelToolsOpen,
       isIdentityPanelToolsOpen,
+      isChatQuickPanelOpen,
+      isImageQuickPanelOpen,
+      isIdentityPanelOpen,
+      openChatQuickMenuId,
+      openImageQuickMenuId,
+      openInstructionTagMenuId,
+      openInstructionGroupMenuId,
+      openIdentityPresetMenuId,
+      previewThumbContextMenu.open,
     ]),
     React.useEffect(() => {
       isSessionPanelOpen ||
@@ -36918,7 +44890,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         openMenuIdInput: openChatQuickMenuId,
         clearOpenMenu: closeChatQuickMenu,
         editingIdInput: editingChatQuickPromptId,
-        clearEditingId: clearChatQuickEditId,
+        clearEditingId: cancelChatQuickEdit,
       });
     }, [chatQuickPrompts, editingChatQuickPromptId, openChatQuickMenuId]),
     React.useEffect(() => {
@@ -36928,9 +44900,38 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         openMenuIdInput: openImageQuickMenuId,
         clearOpenMenu: closeImageQuickMenu,
         editingIdInput: editingImageQuickPromptId,
-        clearEditingId: clearImageQuickEditId,
+        clearEditingId: cancelImageQuickEdit,
       });
     }, [imageQuickPrompts, editingImageQuickPromptId, openImageQuickMenuId]),
+    React.useEffect(() => {
+      const visibleInstructionGroupNameSet = new Set(
+        getAllInstructionGroupNames().filter(
+          (instructionGroupName) =>
+            instructionGroupName &&
+            instructionGroupName !== CONST_INSTRUCTION_FAVORITES_GROUP,
+        ),
+      );
+      setSelectedImageQuickGroupNames(
+        (previousSelectedInstructionGroupNamesState) =>
+          resolveSelectionByVisibleSet(
+            normalizeInstructionGroupNameList(
+              previousSelectedInstructionGroupNamesState,
+            ).filter(
+              (instructionGroupName) =>
+                instructionGroupName &&
+                instructionGroupName !==
+                  CONST_INSTRUCTION_FAVORITES_GROUP,
+            ),
+            visibleInstructionGroupNameSet,
+          ),
+      );
+      openInstructionGroupMenuId &&
+        shouldClearHiddenId(
+          openInstructionGroupMenuId,
+          visibleInstructionGroupNameSet,
+        ) &&
+        closeInstructionGroupMenu();
+    }, [imageQuickPrompts, imageQuickPromptGroups, openInstructionGroupMenuId]),
     React.useEffect(() => {
       applyVisibleItemSelectionAndHiddenState({
         visibleItemsInput: identityPresets,
@@ -36938,7 +44939,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         openMenuIdInput: openIdentityPresetMenuId,
         clearOpenMenu: closeIdentityPresetMenu,
         editingIdInput: editingIdentityPresetId,
-        clearEditingId: clearIdentityPresetEditingId,
+        clearEditingId: cancelIdentityPresetEdit,
         activeIdInput: activeIdentityPresetId,
         clearActiveId: () => setActiveIdentityPresetId(""),
       });
@@ -37107,37 +45108,13 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     ]),
     React.useEffect(() => {
       if (!controlDropdownState.open) return;
-      const handleControlDropdownOutsidePointerDown = (pointerDownEvent) => {
-          const controlDropdownPointerTarget =
-              pointerDownEvent.target,
-            controlDropdownSafeZoneElements = [
-              controlDropdownInlineRef.current,
-              sizeControlTriggerRef.current,
-              ratioControlTriggerRef.current,
-              generationCountTriggerRef.current,
-            ],
-            isPointerInsideControlDropdownSafeZone =
-              controlDropdownSafeZoneElements.some((safeZoneElement) =>
-                safeZoneElement?.contains(
-                  controlDropdownPointerTarget,
-                ),
-              );
-          !isPointerInsideControlDropdownSafeZone &&
-            closeControlDropdown();
-        },
-        handleControlDropdownEscapeKeyDown = (keyboardEvent) => {
+      const handleControlDropdownEscapeKeyDown = (keyboardEvent) => {
           keyboardEvent.key === "Escape" && closeControlDropdown();
         };
       return (
-        document.addEventListener("pointerdown", handleControlDropdownOutsidePointerDown, true),
         document.addEventListener("keydown", handleControlDropdownEscapeKeyDown),
         () => {
-          (document.removeEventListener(
-            "pointerdown",
-            handleControlDropdownOutsidePointerDown,
-            true,
-          ),
-            document.removeEventListener("keydown", handleControlDropdownEscapeKeyDown));
+          document.removeEventListener("keydown", handleControlDropdownEscapeKeyDown);
         }
       );
     }, [controlDropdownState.open, controlDropdownState.kind]));
@@ -37317,7 +45294,32 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       [normalizedGenerationAspectRatio],
     ),
     generationCountButtonValue = normalizedGenerationCount,
-    uploadSizeSliderValuePx = React.useMemo(() => {
+    runQueueLiveSettings = React.useMemo(
+      () => ({
+        providerKey: String(imageProviderKey || "").trim(),
+        imageConfig:
+          imageConfig && typeof imageConfig === "object"
+            ? { ...imageConfig }
+            : { ...defaultImageApiConfig },
+        generationImageSizeLabel: String(generationImageSizeLabel || "").trim(),
+        generationImageSizeText: String(generationImageSizeText || "").trim(),
+        generationAspectRatio: String(normalizedGenerationAspectRatio || "").trim(),
+        generationCount: parseGenerationCount(
+          normalizedGenerationCount,
+          defaultImageApiConfig.generationCount,
+        ),
+      }),
+      [
+        imageProviderKey,
+        imageConfig,
+        generationImageSizeLabel,
+        generationImageSizeText,
+        normalizedGenerationAspectRatio,
+        normalizedGenerationCount,
+      ],
+    );
+  runQueueLiveSettingsRef.current = runQueueLiveSettings;
+  const uploadSizeSliderValuePx = React.useMemo(() => {
       const normalizedUploadSizeCandidate = normalizeUploadSizePx(
         uploadMaxSizePx,
         "slider",
@@ -37654,10 +45656,15 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         );
         return;
       }
-      (composerDraftBySessionRef.current.set("__chat-draft__", ""),
+      const preservedComposerDraftText = String(
+        composerLiveTextRef.current || "",
+      );
+      (composerDraftBySessionRef.current.set(
+        "__chat-draft__",
+        preservedComposerDraftText,
+      ),
         setChatDraftMode(true),
         setActiveChatSessionId(""),
-        setComposerText(""),
         applySessionPanelClosePlan());
     },
     updateSessionRenameInput = (nextSessionRenameInput) => {
@@ -37886,7 +45893,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         targetPanelToolsKey: "identity",
         afterApply: () => {
           (resetIdentityPresetSelectionState(),
-            clearIdentityPresetEditingId(),
+            cancelIdentityPresetEdit(),
             closeIdentityPresetMenu());
         },
       });
@@ -38040,7 +46047,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       }),
         applySessionSwitchPanelVisibilityPlan(),
         closeImageQuickMenu(),
-        clearImageQuickEditId(),
+        cancelImageQuickEdit(),
         resetFloatingQuickActionState());
     },
     resolveFloatingQuickActionTargetState = (targetKey) =>
@@ -38135,7 +46142,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         setChatDraftMode(false)),
         applySessionSwitchPanelVisibilityPlan(),
         closeImageQuickMenu(),
-        clearImageQuickEditId());
+        cancelImageQuickEdit());
     },
     getUploadCompressOptions = () => {
       const normalizedUploadMaxSide = normalizeUploadSizePx(
@@ -38153,12 +46160,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         resolvedUploadMaxSide = Number.isFinite(normalizedUploadMaxSide)
           ? normalizedUploadMaxSide
           : CONST_UPLOAD_SIZE_DEFAULT_PX,
-        resolvedUploadQualityPercent =
-          normalizedUploadFormat === "png"
-            ? CONST_UPLOAD_QUALITY_DEFAULT_PERCENT
-            : Number.isFinite(normalizedUploadQuality)
-              ? normalizedUploadQuality
-              : CONST_UPLOAD_QUALITY_DEFAULT_PERCENT,
+        resolvedUploadQualityPercent = Number.isFinite(normalizedUploadQuality)
+          ? normalizedUploadQuality
+          : CONST_UPLOAD_QUALITY_DEFAULT_PERCENT,
         resolvedUploadQualityScale = Math.max(
           0.01,
           Math.min(1, resolvedUploadQualityPercent / 100),
@@ -38177,19 +46181,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         setComposerImages(normalizedComposerImages));
     },
     buildUploadImageIngestConfig = () => {
-      const compressOptions = getUploadCompressOptions(),
-        imageProcessConfigs = buildUploadImageProcessConfigs({
-          minSidePx: CONST_UPLOAD_SIZE_MIN_PX,
-          maxSidePx: CONST_UPLOAD_SIZE_HARD_MAX_PX,
-          defaultSidePx: CONST_UPLOAD_SIZE_DEFAULT_PX,
-          defaultFormat: CONST_UPLOAD_IMAGE_FORMAT_DEFAULT,
-          defaultQualityPercent: CONST_UPLOAD_QUALITY_DEFAULT_PERCENT,
-          recompressMaxSidePx: CONST_PS_CACHE_RECOMPRESS_MAX_SIDE_PX,
-          recompressMaxQuality: CONST_PS_CACHE_RECOMPRESS_MAX_QUALITY,
-        });
       return {
-        compressOptions,
-        imageProcessConfigs,
+        compressOptions: getUploadCompressOptions(),
       };
     },
     appendComposerImagesWithLimit = (incomingImageItems, appendOptions = {}) => {
@@ -38255,10 +46248,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         "正在读取图片数据。",
         imageSource === "local" ? "uploadLocalImage" : "uploadSelection",
       );
-      const {
-        compressOptions,
-        imageProcessConfigs: uploadImageProcessConfigs,
-      } = buildUploadImageIngestConfig();
+      const { compressOptions } = buildUploadImageIngestConfig();
       updateMiniStatus(
         "编码处理中",
         "busy",
@@ -38275,7 +46265,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           slotIndex: -1,
         },
         compressOptions,
-        ...uploadImageProcessConfigs,
         onIgnoredError: (ignoredError) => {
           reportIgnoredError("app/empty-catch", ignoredError);
         },
@@ -38357,7 +46346,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           const transformState = resolveUploadSlotTransformState(
             slotIndex,
             dragState,
-            !!currentComposerImages[slotIndex]?.dataUrl,
+            hasResolvableImageRecord(currentComposerImages[slotIndex]),
             CONST_TIP_ANIMATION_STEP_PX,
           );
           if (transformState.shouldReset) {
@@ -38905,11 +46894,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         composerImagesRef.current,
         slotIndex,
       );
-      const removedImageName = String(
-        removeResult.removedItem?.originName ||
-          removeResult.removedItem?.name ||
-          "",
-      ).trim();
+      const removedImageName = resolveAssetRecordDisplayName(
+        removeResult.removedItem,
+        "",
+      );
       const removedImageLabel =
         removedImageName ||
         formatImageSlotLabel(slotIndex, true);
@@ -39025,10 +47013,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             bridgeStartNoticePlan.miniStatus.iconKey,
           ));
         try {
-          const {
-            compressOptions: uploadCompressOptions,
-            imageProcessConfigs: uploadImageProcessConfigs,
-          } = buildUploadImageIngestConfig();
+          const { compressOptions: uploadCompressOptions } =
+            buildUploadImageIngestConfig();
           const currentComposerImages = Array.isArray(
               composerImagesRef.current,
             )
@@ -39084,24 +47070,22 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             slotIndex: normalizedUploadSlotIndex,
             psCachePut: window.shell?.psCachePut,
             psCachePutTtlMs,
-            compressOptions: uploadCompressOptions,
-            imageProcessConfigs: uploadImageProcessConfigs,
             onIgnoredError: (ignoredError) => {
               reportIgnoredError("app/empty-catch", ignoredError);
             },
           });
-          const recompressedBridgeImages =
+          const processedBridgeImages =
             await processBridgeCapturedImagesForUpload(
                 normalizedBridgeImages,
                 bridgeProcessOptions,
               );
           const bridgeSuccessNoticePlan = buildUploadBridgeSuccessNoticePlan(
             actionLabel,
-            recompressedBridgeImages.length,
-            recompressedBridgeImages,
+            processedBridgeImages.length,
+            processedBridgeImages,
           );
           (appendComposerImagesWithLimit(
-            recompressedBridgeImages,
+            processedBridgeImages,
             buildUploadSlotBridgeAppendOptions(
               normalizedUploadSlotIndex,
               actionLabel,
@@ -39172,12 +47156,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         (candidateTargetSession) =>
           candidateTargetSession.id === normalizedSessionId,
       );
-      if (
-        !targetSession ||
-        !Array.isArray(targetSession.messages) ||
-        !targetSession.messages.length
-      )
-        return;
+      if (!targetSession) return;
       const hydrationCacheIds = collectSessionHydrationCacheIds(
         targetSession,
         CONST_SESSION_HYDRATION_CACHE_BATCH_LIMIT,
@@ -39206,13 +47185,44 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               const psCacheLookupResult = await window.shell.psCacheGet(
                 missingCacheId,
               );
-              const psCacheDataUrl = String(
-                psCacheLookupResult?.item?.dataUrl || "",
-              ).trim();
+              const psCacheEntry =
+                psCacheLookupResult?.item &&
+                typeof psCacheLookupResult.item === "object"
+                  ? psCacheLookupResult.item
+                  : null;
+              const psCacheDataUrl = String(psCacheEntry?.dataUrl || "").trim();
               if (!/^data:image\//i.test(psCacheDataUrl)) continue;
+              const resolvedPsCacheDisplayName = resolveAssetRecordDisplayName(
+                psCacheEntry,
+                "",
+              );
               cacheRecordById.set(missingCacheId, {
-                cacheId: missingCacheId,
+                ...(psCacheEntry || {}),
                 dataUrl: psCacheDataUrl,
+                cacheId: String(
+                    psCacheEntry?.cacheId ||
+                    "",
+                ).trim(),
+                psCacheId: String(
+                    psCacheEntry?.psCacheId ||
+                    "",
+                ).trim(),
+                internalCacheId: String(
+                  psCacheEntry?.internalCacheId ||
+                    psCacheEntry?.itemId ||
+                    psCacheEntry?.fileName ||
+                    missingCacheId,
+                ).trim(),
+                itemId: String(
+                  psCacheEntry?.itemId ||
+                    psCacheEntry?.internalCacheId ||
+                    psCacheEntry?.fileName ||
+                    missingCacheId,
+                ).trim(),
+                fileName: String(
+                  resolvedPsCacheDisplayName || psCacheEntry?.fileName || "",
+                ).trim(),
+                filePath: String(psCacheEntry?.filePath || "").trim(),
               });
             } catch (ignoredError) {
               reportIgnoredError("app/empty-catch", ignoredError);
@@ -39384,27 +47394,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           areUploadedImageListsSameOrder(
             normalizedUserImages,
             lastUploadedImagesInSession,
-          ),
-        effectiveUserImages = shouldSkipRepeatedImageUpload
-          ? []
-          : normalizedUserImages,
-        effectiveChatImagePreviewNames = effectiveUserImages
-          .slice(0, 3)
-          .map((chatImageItem, chatImageIndex) =>
-            String(
-              chatImageItem?.originName ||
-                chatImageItem?.name ||
-                `image_${chatImageIndex + 1}`,
-            ).trim(),
-          )
-          .filter(Boolean),
-        effectiveChatImagePreviewText = effectiveChatImagePreviewNames.length
-          ? effectiveChatImagePreviewNames.join(", ")
-          : "无",
-        effectiveChatImageOverflowCount = Math.max(
-          0,
-          effectiveUserImages.length - effectiveChatImagePreviewNames.length,
-        );
+          );
+      let effectiveUserImages = shouldSkipRepeatedImageUpload
+        ? []
+        : normalizedUserImages;
       shouldSkipRepeatedImageUpload &&
         appendConsoleLogEntry(
           "info",
@@ -39422,6 +47415,67 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             "chatHistory",
           ),
           false
+        );
+      if (effectiveUserImages.length > 0) {
+        try {
+          const persistedEffectiveUserImageRefs = await persistApiUsedImageList(
+            effectiveUserImages,
+            window.shell?.apiImageStorePut,
+            {
+              usageMeta: {
+                ownerType: "api-input-cache",
+                chatApiUsed: true,
+              },
+              context: {
+                scope: "chat-api",
+                sessionId,
+              },
+            },
+          );
+          effectiveUserImages = restoreRuntimeDataUrlOnPersistedApiImages(
+            effectiveUserImages,
+            persistedEffectiveUserImageRefs,
+          );
+        } catch (persistChatImageError) {
+          const persistChatImageErrorMessage = String(
+            persistChatImageError?.message ||
+              persistChatImageError ||
+              "聊天输入图落盘失败",
+          ).trim();
+          return (
+            chatRequestInFlightLockRef.current.delete(sessionId),
+            appendConsoleLogEntry(
+              "warn",
+              `发送失败：${persistChatImageErrorMessage}`,
+              "api",
+            ),
+            setChatApiStatusLevel("error"),
+            setChatApiStatusTip(persistChatImageErrorMessage),
+            updateMiniStatus(
+              "聊天失败",
+              "error",
+              "聊天输入图正式落盘失败，请查看大控制台。",
+              "chatHistory",
+            ),
+            false
+          );
+        }
+      }
+      const effectiveChatImagePreviewNames = effectiveUserImages
+          .slice(0, 3)
+          .map((chatImageItem, chatImageIndex) =>
+            resolveAssetRecordDisplayName(
+              chatImageItem,
+              `image_${chatImageIndex + 1}`,
+            ),
+          )
+          .filter(Boolean),
+        effectiveChatImagePreviewText = effectiveChatImagePreviewNames.length
+          ? effectiveChatImagePreviewNames.join(", ")
+          : "无",
+        effectiveChatImageOverflowCount = Math.max(
+          0,
+          effectiveUserImages.length - effectiveChatImagePreviewNames.length,
         );
       const
         localMessageTimestamp = Date.now(),
@@ -39645,7 +47699,14 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             (!currentActiveSessionId || sessionId === currentActiveSessionId) &&
             shouldUpdateVisibleSession
           ) {
-            setJsonPromptText(resolvedSuccessfulJsonPromptText || "");
+            commitJsonPromptText(
+              resolvedSuccessfulJsonPromptText || "",
+              {
+                source: "chat-success",
+                sessionId: String(sessionId || "").trim(),
+                protectEditedSession: true,
+              },
+            );
           }
           logApiLifecycleEvent({
             level: "info",
@@ -40717,7 +48778,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       return true;
     },
     runInstructionFromComposer = async () => {
-      const instructionText = String(composerText || "").trim();
+      const instructionText = String(composerLiveTextRef.current || "").trim();
       if (!instructionText) {
         (appendConsoleLogEntry("warn", "当前没有可跑图的指令文本", "api"),
           updateMiniStatus(
@@ -40734,7 +48795,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       });
     },
     sendChatFromComposer = async () => {
-      const composerTextTrim = String(composerText || "").trim(),
+      const composerTextTrim = String(composerLiveTextRef.current || "").trim(),
         pendingImages = Array.isArray(composerImages) ? [...composerImages] : [];
       const normalizedActiveComposerSessionId = String(
         activeChatSession?.id || "",
@@ -41009,15 +49070,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         successToast: "复制成功",
         failWarn: "复制失败",
       });
-    },
-    openPreviewImageInNewTab = (image) => {
-      const dataUrl = String(image?.dataUrl || "").trim();
-      if (dataUrl)
-        try {
-          window.open(dataUrl, "_blank", "noopener,noreferrer");
-        } catch (ignoredError) {
-          void ignoredError;
-        }
     },
     resolveSessionMessagesSnapshotById = (
       sessionIdInput,
@@ -41693,7 +49745,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         variant = "",
       ) => {
         if (shouldSuppressGlobalTooltip()) {
-          ((hoveredTipTargetRef.current = null), hideGlobalTip(0));
           return;
         }
         (globalTipHideTimerRef.current &&
@@ -41742,7 +49793,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       },
       refreshHoveredTooltipByPointer = () => {
         if (shouldSuppressGlobalTooltip()) {
-          ((hoveredTipTargetRef.current = null), hideGlobalTip(0));
           return;
         }
         if (!hoveredTipTargetRef.current) return;
@@ -41783,11 +49833,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           ));
       },
       handleGlobalTooltipMouseOver = (mouseOverEvent) => {
-        updatePointerPositionFromEvent(mouseOverEvent);
         if (shouldSuppressGlobalTooltip()) {
-          ((hoveredTipTargetRef.current = null), hideGlobalTip(0));
           return;
         }
+        updatePointerPositionFromEvent(mouseOverEvent);
         const hoveredTooltipCandidateFromMouseOver =
           mouseOverEvent.target?.closest?.(
             tooltipTriggerSelector,
@@ -41833,6 +49882,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         );
       },
       handleGlobalTooltipMouseOut = (mouseOutEvent) => {
+        if (shouldSuppressGlobalTooltip()) {
+          return;
+        }
         updatePointerPositionFromEvent(mouseOutEvent);
         const hoveredTooltipCandidateFromMouseOut =
           mouseOutEvent.target?.closest?.(
@@ -41847,9 +49899,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             hideGlobalTip(CONST_TOOLTIP_HIDE_DELAY_MS)));
       },
       handleGlobalTooltipPointerMove = (pointerEvent) => {
+        if (shouldSuppressGlobalTooltip()) {
+          return;
+        }
         updatePointerPositionFromEvent(pointerEvent);
-        shouldSuppressGlobalTooltip() &&
-          ((hoveredTipTargetRef.current = null), hideGlobalTip(0));
       };
     let tooltipScrollRafId = 0;
     const handleGlobalTooltipScroll = (scrollEvent) => {
@@ -41878,7 +49931,14 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     return (
       document.addEventListener("mouseover", handleGlobalTooltipMouseOver, true),
       document.addEventListener("mouseout", handleGlobalTooltipMouseOut, true),
-      document.addEventListener("pointermove", handleGlobalTooltipPointerMove, true),
+      document.addEventListener(
+        "pointermove",
+        handleGlobalTooltipPointerMove,
+        {
+          capture: true,
+          passive: true,
+        },
+      ),
       document.addEventListener("scroll", handleGlobalTooltipScroll, true),
       document.addEventListener("pointerdown", handleGlobalTooltipPointerDown, true),
       () => {
@@ -41953,10 +50013,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       ) {
         pluginActionReconnectLastHintRef.current = nowTimestamp;
         updateMiniStatus(
-          "插件待连接",
-          "warn",
+          "插件连接失败",
+          "error",
           `${normalizedActionLabel}需要插件连接，已尝试重连。`,
-          "reconnect",
+          "bridgeReconnect",
         );
       }
       return false;
@@ -42040,6 +50100,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               manualReturnFile,
               {
                 trigger: "manual",
+                returnIndex: manualReturnFileIndex,
               },
             );
           manualReturnResult?.ok
@@ -42089,9 +50150,15 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       const normalizedPromptText = String(promptText || "").trim();
       if (!normalizedPromptText) return;
       const { autoRun = false, runOptions = {} } = options;
-      setJsonPromptText(normalizedPromptText);
+      commitJsonPromptText(normalizedPromptText, {
+        source: "manual-takeover",
+        sessionId: String(
+          activeSessionIdRef.current || activeChatSession?.id || "",
+        ).trim(),
+        protectEditedSession: false,
+      });
       if (!autoRun) {
-        appendConsoleLogEntry("info", "已接管该条 JSON 提示词", "system");
+        appendConsoleLogEntry("info", "已选用该条 JSON 提示词", "system");
         return;
       }
       enqueueRunTask({
@@ -42136,7 +50203,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             : messageItem,
         ),
       ),
-        setJsonPromptText(normalizedJsonText),
+        commitJsonPromptText(normalizedJsonText, {
+          source: "manual-message-edit",
+          sessionId: normalizedActiveSessionId,
+          protectEditedSession: false,
+        }),
         normalizedActiveSessionId &&
           shouldMarkEditedForCurrentSession &&
           setEditedJsonPromptBySessionId((previousEditedState) => ({
@@ -42598,6 +50669,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           reconnectOptions && typeof reconnectOptions === "object"
             ? reconnectOptions
             : {},
+        forceReconnect = normalizedReconnectOptions.forceReconnect === true,
         suppressInFlightWarn = normalizedReconnectOptions.suppressInFlightWarn === true,
         suppressThrottleWarn = normalizedReconnectOptions.suppressThrottleWarn === true,
         suppressFailureWarn = normalizedReconnectOptions.suppressFailureWarn === true,
@@ -42605,7 +50677,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           normalizedReconnectOptions.suppressFailureLifecycle === true,
         suppressFailureMiniStatus =
           normalizedReconnectOptions.suppressFailureMiniStatus === true;
-      if (pluginBridgeStatus.psConnected) return true;
+      if (pluginBridgeStatus.psConnected && !forceReconnect) return true;
       if (reconnectPluginBridgeInFlightRef.current) {
         suppressInFlightWarn ||
           appendConsoleLogEntry(
@@ -42748,6 +50820,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               reconnectPluginBridgeErrorMessage,
               "bridge",
             ),
+            emitHistory: false,
           });
         suppressFailureMiniStatus ||
           updateMiniStatus(
@@ -42768,46 +50841,283 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     });
   }, [activeChatMessages.length]),
     React.useEffect(() => {
-      const SCROLLBAR_ACTIVE_IDLE_MS = 520;
-      const scrollTargetTimerMap = new WeakMap();
-      const clearScrollTargetTimer = (scrollTargetElement) => {
-        const timerId = scrollTargetTimerMap.get(scrollTargetElement);
-        timerId && clearTimeout(timerId);
-        scrollTargetTimerMap.delete(scrollTargetElement);
-      };
-      const markScrollbarTargetScrolling = (scrollTargetElement) => {
-        if (!(scrollTargetElement instanceof HTMLElement)) return;
-        clearScrollTargetTimer(scrollTargetElement);
-        scrollTargetElement.classList.add("is-scrolling");
-        const timerId = setTimeout(() => {
-          scrollTargetElement.classList.remove("is-scrolling");
-          scrollTargetTimerMap.delete(scrollTargetElement);
-        }, SCROLLBAR_ACTIVE_IDLE_MS);
-        scrollTargetTimerMap.set(scrollTargetElement, timerId);
-      };
-      const handleScrollCapture = (scrollEvent) => {
-        const eventTarget = scrollEvent.target;
-        if (!(eventTarget instanceof HTMLElement)) return;
-        if (!eventTarget.classList.contains("scrollbar-activity")) return;
-        const programmaticScrollUntilMs = Number(
-          eventTarget.dataset.programmaticScrollUntil || 0,
-        );
-        if (
-          Number.isFinite(programmaticScrollUntilMs) &&
-          programmaticScrollUntilMs > Date.now()
-        ) {
-          return;
-        }
-        markScrollbarTargetScrolling(eventTarget);
-      };
+      const SCROLLBAR_VISIBLE_HOLD_MS = 3000,
+        SCROLLBAR_SCROLLING_HOLD_MS = 240,
+        scrollingStateClassName = "is-scroll-scrolling",
+        visibleStateClassName = "is-scroll-visible",
+        hoverStateClassName = "is-scroll-hover",
+        scrollbarHoverZoneSizeCache = new WeakMap(),
+        scrollingStateTimerMap = new WeakMap(),
+        visibleStateTimerMap = new WeakMap(),
+        clearStateTimer = (stateTimerMap, scrollTargetElement) => {
+          const timerId = stateTimerMap.get(scrollTargetElement);
+          timerId && clearTimeout(timerId);
+          stateTimerMap.delete(scrollTargetElement);
+        },
+        clearScrollingStateTimer = (scrollTargetElement) => {
+          clearStateTimer(scrollingStateTimerMap, scrollTargetElement);
+        },
+        clearVisibleStateTimer = (scrollTargetElement) => {
+          clearStateTimer(visibleStateTimerMap, scrollTargetElement);
+        },
+        scheduleVisibleStateClear = (scrollTargetElement) => {
+          if (!(scrollTargetElement instanceof HTMLElement)) return;
+          if (scrollTargetElement.classList.contains(hoverStateClassName)) return;
+          clearVisibleStateTimer(scrollTargetElement);
+          const timerId = setTimeout(() => {
+            if (scrollTargetElement.classList.contains(hoverStateClassName)) return;
+            scrollTargetElement.classList.remove(visibleStateClassName);
+            scrollTargetElement.classList.remove(scrollingStateClassName);
+            visibleStateTimerMap.delete(scrollTargetElement);
+          }, SCROLLBAR_VISIBLE_HOLD_MS);
+          visibleStateTimerMap.set(scrollTargetElement, timerId);
+        },
+        markScrollbarTargetVisible = (
+          scrollTargetElement,
+          { scheduleAutoHide = true } = {},
+        ) => {
+          if (!(scrollTargetElement instanceof HTMLElement)) return;
+          scrollTargetElement.classList.add(visibleStateClassName);
+          clearVisibleStateTimer(scrollTargetElement);
+          scheduleAutoHide && scheduleVisibleStateClear(scrollTargetElement);
+        },
+        scheduleScrollingStateClear = (scrollTargetElement) => {
+          clearScrollingStateTimer(scrollTargetElement);
+          const timerId = setTimeout(() => {
+            scrollTargetElement.classList.remove(scrollingStateClassName);
+            scrollingStateTimerMap.delete(scrollTargetElement);
+          }, SCROLLBAR_SCROLLING_HOLD_MS);
+          scrollingStateTimerMap.set(scrollTargetElement, timerId);
+        },
+        markScrollbarTargetScrolling = (scrollTargetElement) => {
+          if (!(scrollTargetElement instanceof HTMLElement)) return;
+          scrollTargetElement.classList.add(scrollingStateClassName);
+          markScrollbarTargetVisible(scrollTargetElement, {
+            scheduleAutoHide: true,
+          });
+          scheduleScrollingStateClear(scrollTargetElement);
+        },
+        resolveScrollActivityElement = (eventTarget) => {
+          if (!(eventTarget instanceof Element)) return null;
+          const scrollTargetElement = eventTarget.closest(".scrollbar-activity");
+          return scrollTargetElement instanceof HTMLElement
+            ? scrollTargetElement
+            : null;
+        },
+        resolveScrollbarHoverZoneSize = (scrollTargetElement) => {
+          if (!(scrollTargetElement instanceof HTMLElement)) {
+            return 6;
+          }
+          const cachedHoverZoneSizePx = Number(
+            scrollbarHoverZoneSizeCache.get(scrollTargetElement) || 0,
+          );
+          if (cachedHoverZoneSizePx > 0) {
+            return cachedHoverZoneSizePx;
+          }
+          const scrollTargetStyle = window.getComputedStyle(scrollTargetElement),
+            rootStyle = window.getComputedStyle(document.documentElement),
+            resolvedScrollbarSizePx = Math.max(
+              0,
+              Math.round(
+                Number.parseFloat(
+                  scrollTargetStyle.getPropertyValue("--scrollbar-size"),
+                ) ||
+                  Number.parseFloat(
+                    scrollTargetStyle.getPropertyValue(
+                      "--scrollbar-size-unified",
+                    ),
+                  ) ||
+                  Number.parseFloat(
+                    rootStyle.getPropertyValue("--scrollbar-size-unified"),
+                  ) ||
+                  0,
+              ),
+            ),
+            nextHoverZoneSizePx = Math.max(6, resolvedScrollbarSizePx || 6);
+          scrollbarHoverZoneSizeCache.set(
+            scrollTargetElement,
+            nextHoverZoneSizePx,
+          );
+          return nextHoverZoneSizePx;
+        },
+        resolveScrollbarHoverTarget = (pointerEvent) => {
+          const scrollTargetElement = resolveScrollActivityElement(
+            pointerEvent.target,
+          );
+          if (!(scrollTargetElement instanceof HTMLElement)) return null;
+          const viewportRect = scrollTargetElement.getBoundingClientRect();
+          if (!(viewportRect.width > 0) || !(viewportRect.height > 0)) return null;
+          const clientX = Number(pointerEvent.clientX),
+            clientY = Number(pointerEvent.clientY);
+          if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return null;
+          if (
+            clientX < viewportRect.left ||
+            clientX > viewportRect.right ||
+            clientY < viewportRect.top ||
+            clientY > viewportRect.bottom
+          ) {
+            return null;
+          }
+          const hasVerticalScrollbar =
+              scrollTargetElement.scrollHeight - scrollTargetElement.clientHeight >
+              1,
+            hasHorizontalScrollbar =
+              scrollTargetElement.scrollWidth - scrollTargetElement.clientWidth > 1;
+          if (!hasVerticalScrollbar && !hasHorizontalScrollbar) return null;
+          const hoverZoneSizePx = resolveScrollbarHoverZoneSize(scrollTargetElement),
+            isInVerticalScrollbarZone =
+              hasVerticalScrollbar &&
+              clientX >= viewportRect.right - hoverZoneSizePx &&
+              clientY >= viewportRect.top &&
+              clientY <= viewportRect.bottom,
+            isInHorizontalScrollbarZone =
+              hasHorizontalScrollbar &&
+              clientY >= viewportRect.bottom - hoverZoneSizePx &&
+              clientX >= viewportRect.left &&
+              clientX <= viewportRect.right;
+          return isInVerticalScrollbarZone || isInHorizontalScrollbarZone
+            ? scrollTargetElement
+            : null;
+        };
+      let activeHoverTargetElement = null,
+        pointerMoveRafId = 0,
+        pendingPointerMoveEvent = null,
+        scrollMarkRafId = 0,
+        pendingScrollTargetElement = null,
+        isScrollbarHoverSuspendedByDrag = false;
+      const releaseHoverTarget = (scrollTargetElement) => {
+          if (!(scrollTargetElement instanceof HTMLElement)) return;
+          scrollTargetElement.classList.remove(hoverStateClassName);
+          scheduleVisibleStateClear(scrollTargetElement);
+        },
+        updateHoverTarget = (nextHoverTargetElement) => {
+          if (activeHoverTargetElement === nextHoverTargetElement) return;
+          releaseHoverTarget(activeHoverTargetElement);
+          activeHoverTargetElement =
+            nextHoverTargetElement instanceof HTMLElement
+              ? nextHoverTargetElement
+              : null;
+          if (!(activeHoverTargetElement instanceof HTMLElement)) return;
+          activeHoverTargetElement.classList.add(hoverStateClassName);
+          markScrollbarTargetVisible(activeHoverTargetElement, {
+            scheduleAutoHide: false,
+          });
+        },
+        flushPointerMoveHover = () => {
+          pointerMoveRafId = 0;
+          const pointerEvent = pendingPointerMoveEvent;
+          pendingPointerMoveEvent = null;
+          if (!pointerEvent) return;
+          updateHoverTarget(resolveScrollbarHoverTarget(pointerEvent));
+        },
+        schedulePointerMoveHover = () => {
+          pointerMoveRafId ||
+            (pointerMoveRafId = requestAnimationFrame(() => {
+              flushPointerMoveHover();
+            }));
+        },
+        handlePointerMoveCapture = (pointerEvent) => {
+          if (suspendScrollbarHoverRef.current) {
+            isScrollbarHoverSuspendedByDrag ||
+              (pendingPointerMoveEvent = null,
+              pointerMoveRafId &&
+                (cancelAnimationFrame(pointerMoveRafId),
+                (pointerMoveRafId = 0)),
+              updateHoverTarget(null));
+            isScrollbarHoverSuspendedByDrag = true;
+            return;
+          }
+          isScrollbarHoverSuspendedByDrag = false;
+          pendingPointerMoveEvent = pointerEvent;
+          schedulePointerMoveHover();
+        },
+        handlePointerDownCapture = (pointerEvent) => {
+          if (suspendScrollbarHoverRef.current) {
+            isScrollbarHoverSuspendedByDrag ||
+              updateHoverTarget(null);
+            isScrollbarHoverSuspendedByDrag = true;
+            return;
+          }
+          isScrollbarHoverSuspendedByDrag = false;
+          const hoverTargetElement = resolveScrollbarHoverTarget(pointerEvent);
+          if (!(hoverTargetElement instanceof HTMLElement)) return;
+          updateHoverTarget(hoverTargetElement);
+          markScrollbarTargetScrolling(hoverTargetElement);
+        },
+        handlePointerLeaveDocument = () => {
+          pendingPointerMoveEvent = null;
+          pointerMoveRafId &&
+            (cancelAnimationFrame(pointerMoveRafId),
+            (pointerMoveRafId = 0));
+          updateHoverTarget(null);
+          isScrollbarHoverSuspendedByDrag = false;
+        },
+        flushScrollMark = () => {
+          scrollMarkRafId = 0;
+          const scrollTargetElement = pendingScrollTargetElement;
+          pendingScrollTargetElement = null;
+          scrollTargetElement instanceof HTMLElement &&
+            markScrollbarTargetScrolling(scrollTargetElement);
+        },
+        scheduleScrollMark = (scrollTargetElement) => {
+          pendingScrollTargetElement = scrollTargetElement;
+          scrollMarkRafId ||
+            (scrollMarkRafId = requestAnimationFrame(() => {
+              flushScrollMark();
+            }));
+        },
+        handleScrollCapture = (scrollEvent) => {
+          if (suspendScrollbarHoverRef.current) {
+            return;
+          }
+          const scrollTargetElement = resolveScrollActivityElement(
+            scrollEvent.target,
+          );
+          if (!(scrollTargetElement instanceof HTMLElement)) return;
+          scheduleScrollMark(scrollTargetElement);
+        };
       document.addEventListener("scroll", handleScrollCapture, true);
+      document.addEventListener("pointermove", handlePointerMoveCapture, {
+        capture: true,
+        passive: true,
+      });
+      document.addEventListener("pointerdown", handlePointerDownCapture, true);
+      document.addEventListener("pointerup", handlePointerLeaveDocument, true);
+      document.addEventListener(
+        "pointercancel",
+        handlePointerLeaveDocument,
+        true,
+      );
+      window.addEventListener("blur", handlePointerLeaveDocument);
       return () => {
         document.removeEventListener("scroll", handleScrollCapture, true);
+        document.removeEventListener("pointermove", handlePointerMoveCapture, true);
+        document.removeEventListener("pointerdown", handlePointerDownCapture, true);
+        document.removeEventListener("pointerup", handlePointerLeaveDocument, true);
+        document.removeEventListener(
+          "pointercancel",
+          handlePointerLeaveDocument,
+          true,
+        );
+        window.removeEventListener("blur", handlePointerLeaveDocument);
+        pointerMoveRafId &&
+          (cancelAnimationFrame(pointerMoveRafId),
+          (pointerMoveRafId = 0));
+        pendingPointerMoveEvent = null;
+        scrollMarkRafId &&
+          (cancelAnimationFrame(scrollMarkRafId),
+          (scrollMarkRafId = 0));
+        pendingScrollTargetElement = null;
         document
-          .querySelectorAll(".scrollbar-activity.is-scrolling")
+          .querySelectorAll(
+            `.scrollbar-activity.${scrollingStateClassName}, .scrollbar-activity.${visibleStateClassName}, .scrollbar-activity.${hoverStateClassName}`,
+          )
           .forEach((scrollTargetElement) => {
-            scrollTargetElement.classList.remove("is-scrolling");
-            clearScrollTargetTimer(scrollTargetElement);
+            scrollTargetElement.classList.remove(scrollingStateClassName);
+            scrollTargetElement.classList.remove(visibleStateClassName);
+            scrollTargetElement.classList.remove(hoverStateClassName);
+            clearScrollingStateTimer(scrollTargetElement);
+            clearVisibleStateTimer(scrollTargetElement);
           });
       };
     }, []),
@@ -42891,6 +51201,20 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         startupMinSizeCancelled = true;
       };
     }, []),
+    React.useEffect(() => {
+      refreshRunQueueTaskListForLiveSettings();
+    }, [
+      imageProviderKey,
+      imageConfig?.baseUrl,
+      imageConfig?.apiKey,
+      imageConfig?.model,
+      imageConfig?.timeoutMs,
+      imageConfig?.providerMode,
+      generationImageSizeLabel,
+      generationImageSizeText,
+      normalizedGenerationAspectRatio,
+      normalizedGenerationCount,
+    ]),
     React.useEffect(() => {
       if (!window.shell || typeof window.shell.onResizing !== "function") return;
       const handleShellResizingStateChange = (resizeState) => {
@@ -43360,19 +51684,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             ),
           })
         : null,
-    renderSessionPanelHeadActions = () => {
-      const sessionPanelToolsPlacementClassName =
-        buildRelativeOverlayPlacementClassName(
-          resolveRelativeOverlayPlacement({
-            anchorElement: sessionPanelToolsTriggerRef.current,
-            overlayWidth: CONST_SESSION_TOOLS_PANEL_WIDTH,
-            overlayHeight: 110,
-            gap: 6,
-            viewportPadding: CONST_OVERLAY_VIEWPORT_PADDING_PX,
-            preferVertical: "bottom",
-            preferHorizontal: "right",
-          }),
-        );
+    renderSessionPanelHeadActions = ({
+      toolsOverlayPlacementClassName = "is-bottom align-right",
+      toolsOverlayPlacementStyle = void 0,
+    } = {}) => {
       if (isSessionBatchSelectMode) {
         const selectedSessionCount = selectedSessionIds.length;
         const totalSessionCount = sortedVisibleSessions.length;
@@ -43470,7 +51785,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             {isSessionPanelToolsOpen ? (
               <div
                 ref={sessionPanelToolsPopupRef}
-                className={`chat-history-tools-panel floating-layer ${sessionPanelToolsPlacementClassName}`}
+                className={`chat-history-tools-panel floating-layer ${toolsOverlayPlacementClassName}`}
+                style={toolsOverlayPlacementStyle}
               >
                 <button
                   className="settings-fetch-btn"
@@ -43579,14 +51895,20 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         selectedSessionIds,
       ],
     ),
-    renderSessionPanelContent = () => (
+    renderSessionPanelContent = ({
+      toolsOverlayPlacementClassName = "is-bottom align-right",
+      toolsOverlayPlacementStyle = void 0,
+    } = {}) => (
       <>
         <div
           className={`chat-history-head ${isSessionBatchSelectMode ? "is-batch-select-mode" : ""}`}
         >
           {!isSessionBatchSelectMode ? <span>对话列表</span> : null}
           <div className="chat-history-head-actions">
-            {renderSessionPanelHeadActions()}
+            {renderSessionPanelHeadActions({
+              toolsOverlayPlacementClassName,
+              toolsOverlayPlacementStyle,
+            })}
           </div>
         </div>
         <div className="chat-history-list scrollbar-activity scrollbar-persistent">
@@ -43663,10 +51985,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               item: previewImageItem,
               idx: previewImageIndex,
               thumbUrl: previewThumbUrl,
-              name: String(
-                previewImageItem?.name ||
-                  previewImageItem?.originName ||
-                  `图片 ${previewImageIndex + 1}`,
+              name: resolveAssetRecordDisplayName(
+                previewImageItem,
+                `图片 ${previewImageIndex + 1}`,
               ),
               key: getCachedPreviewKey(previewImageItem, previewImageIndex),
             };
@@ -43691,9 +52012,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     previewDialogImageOffsetX = Number(imagePreviewDialog.offsetX) || 0,
     previewDialogImageOffsetY = Number(imagePreviewDialog.offsetY) || 0,
     previewDialogImageTitle = String(
-      previewDialogImageItem?.name ||
-        previewDialogImageItem?.originName ||
+      resolveAssetRecordDisplayName(
+        previewDialogImageItem,
         `图片 ${previewDialogImageIndex + 1}`,
+      ) || `图片 ${previewDialogImageIndex + 1}`,
     ),
     isConsoleRenderHeavyPathEnabled = !!consoleOpen || !!consoleOpening,
     filteredLogs = React.useMemo(
@@ -43770,8 +52092,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         onCancelInstructionGroupDeleteAction={
           cancelInstructionGroupDeleteActionDialog
         }
-        onMoveInstructionGroupItems={moveInstructionGroupItemsToLastGroup}
-        onDeleteInstructionGroupItems={deleteInstructionGroupWithItems}
+        onConfirmInstructionGroupDeleteAction={deleteInstructionGroupWithItems}
       />
     ),
     renderInstructionPromptInputModalContent = () => (
@@ -43861,7 +52182,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         previewDialogImageTitle={previewDialogImageTitle}
         previewDialogImageScale={previewDialogImageScale}
         previewDialogImageDataUrl={previewDialogImageDataUrl}
-        previewDialogImageItemName={previewDialogImageItem?.name}
+        previewDialogImageItemName={resolveAssetRecordDisplayName(
+          previewDialogImageItem,
+          "",
+        )}
         previewDialogImageOffsetX={previewDialogImageOffsetX}
         previewDialogImageOffsetY={previewDialogImageOffsetY}
         iconPreviewOpen={iconPreviewOpen}
@@ -43897,7 +52221,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       children: previewHoverState.open ? (
         <>
           <div className="preview-upload-hover-media">
-            {/^data:image\//i.test(String(previewHoverState.dataUrl || "")) ? (
+            {isRenderableImageSrc(previewHoverState.dataUrl) ? (
               <img
                 className="preview-upload-hover-image"
                 src={previewHoverState.dataUrl}
@@ -43926,7 +52250,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       children: uploadHoverState.open ? (
         <>
           <div className="preview-upload-hover-media">
-            {/^data:image\//i.test(String(uploadHoverState.dataUrl || "")) ? (
+            {isRenderableImageSrc(uploadHoverState.dataUrl) ? (
               <img
                 className="preview-upload-hover-image"
                 src={uploadHoverState.dataUrl}
@@ -43938,6 +52262,35 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           </div>
           <div className="preview-upload-hover-title">
             {String(uploadHoverState.name || "").trim() || "上传图"}
+          </div>
+        </>
+      ) : null,
+    }),
+    runQueueOutputHoverPortal = renderFloatingLayerPortalNode({
+      isOpen: runQueueOutputHoverState.open,
+      keepMounted: true,
+      className: "preview-upload-hover-card floating-layer",
+      style: {
+        top: runQueueOutputHoverState.top,
+        left: runQueueOutputHoverState.left,
+        width: runQueueOutputHoverState.width || void 0,
+        height: runQueueOutputHoverState.height || void 0,
+      },
+      children: runQueueOutputHoverState.open ? (
+        <>
+          <div className="preview-upload-hover-media">
+            {isRenderableImageSrc(runQueueOutputHoverState.dataUrl) ? (
+              <img
+                className="preview-upload-hover-image"
+                src={runQueueOutputHoverState.dataUrl}
+                alt={runQueueOutputHoverState.name || "run-queue-output-hover-image"}
+              />
+            ) : (
+              <div className="preview-upload-hover-loading">加载中...</div>
+            )}
+          </div>
+          <div className="preview-upload-hover-title">
+            {String(runQueueOutputHoverState.name || "").trim() || "回传图片"}
           </div>
         </>
       ) : null,
@@ -44020,29 +52373,43 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                   : iconSend;
           return (
             <>
-        <textarea
-          ref={composerTextareaRef}
-          className={`chat-input ${composerText ? "has-content" : ""} ${isComposerFocused ? "is-focused" : "is-unfocused"}`}
-          rows={1}
+        <ComposerTextareaInput
+          textareaRef={composerTextareaRef}
+          externalText={composerText}
           placeholder={composerPlaceholderText}
-          value={composerText}
-          onChange={(composerTextareaChangeEvent) => {
-            (setComposerTextWithDraftSync(
-              composerTextareaChangeEvent.target.value,
-            ),
-              resizeComposerTextarea(composerTextareaChangeEvent.currentTarget));
+          isFocused={isComposerFocused}
+          onInputActivity={() => {
+            markComposerExpandedInteraction();
           }}
+          onImmediateTextChange={(nextComposerText) => {
+            syncComposerDraftStoreOnly(nextComposerText);
+          }}
+          onStateSync={syncComposerTextStateOnly}
+          shouldKeepScrolledToBottom={(
+            composerTextareaElement = composerTextareaRef.current,
+          ) => {
+            const shouldKeepComposerScrolledToBottom =
+              shouldKeepComposerTextareaScrolledToBottom(
+                composerTextareaElement,
+              );
+            composerScrollToBottomAfterSyncRef.current =
+              shouldKeepComposerScrolledToBottom;
+            return shouldKeepComposerScrolledToBottom;
+          }}
+          requestResize={requestComposerResize}
           onFocus={(composerFocusEvent) => {
+            markComposerExpandedInteraction();
             setComposerFocused(true);
-            resizeComposerTextarea(composerFocusEvent.currentTarget, {
+            requestComposerResize({
+              textareaElement: composerFocusEvent.currentTarget,
               active: true,
             });
           }}
           onBlur={(composerBlurEvent) => {
             setComposerFocused(false);
-            resizeComposerTextarea(composerBlurEvent.currentTarget, {
-              forceCollapse: true,
-            });
+            scheduleComposerCollapse(
+              composerBlurEvent.currentTarget,
+            );
           }}
           onKeyDown={handleComposerKeyDown}
           onPaste={handlePasteImageFiles}
@@ -44077,7 +52444,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     ),
     renderUploadSlotCard = (slotIndex) => {
       const slotImageItem = composerImages[slotIndex],
-        hasSlotImage = !!slotImageItem?.dataUrl,
+        slotImageThumbSrc = resolveRunQueueTaskThumbSrc(slotImageItem),
+        hasSlotThumbDataUrl = isRenderableImageSrc(slotImageThumbSrc),
+        hasSlotImage = hasResolvableImageRecord(slotImageItem),
         uploadSlotLabel = formatImageSlotLabel(
           slotIndex,
           hasSlotImage,
@@ -44101,9 +52470,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             uploadSlotLabel
           }
           data-tip-text={
-            slotImageItem?.originName ||
-            slotImageItem?.name ||
-            uploadSlotLabel
+            resolveAssetRecordDisplayName(
+              slotImageItem,
+              uploadSlotLabel,
+            ) || uploadSlotLabel
           }
           onDragEnter={(slotDragEnterEvent) =>
             handleSlotDragEnter(
@@ -44196,14 +52566,15 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               />
             </button>
           )}
-          {hasSlotImage && (
+          {hasSlotImage && hasSlotThumbDataUrl && (
             <img
               className="upload-slot-thumb"
-              src={
-                slotImageItem.dataUrl
-              }
+              src={slotImageThumbSrc}
               alt={
-                slotImageItem.name ||
+                resolveAssetRecordDisplayName(
+                  slotImageItem,
+                  uploadSlotLabel,
+                ) ||
                 uploadSlotLabel
               }
               draggable={false}
@@ -44624,7 +52995,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       );
     },
     renderRunQueueTaskButton = () => {
-      const runQueueTaskPanelViewportWidth = Math.round(
+      const runQueueTaskPanelUiScale = resolveOverlayUiScaleFactor(),
+        runQueueTaskPanelViewportWidth = Math.round(
           window.visualViewport?.width ||
             window.innerWidth ||
             document.documentElement.clientWidth ||
@@ -44632,20 +53004,29 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         ),
         runQueueTaskPanelWidth = Math.max(
           1,
-          runQueueTaskPanelViewportWidth -
+          Math.round(
+            normalizeOverlayLengthToLayout(
+              runQueueTaskPanelViewportWidth,
+              runQueueTaskPanelUiScale,
+              "viewport",
+            ),
+          ) -
             CONST_CHAT_QUICK_PANEL_VIEWPORT_WIDTH_OFFSET_PX,
         ),
         runQueueTaskPanelPlacement = resolveRelativeOverlayPlacement({
           anchorElement: runQueueTaskPanelAnchorRef.current,
           overlayWidth: runQueueTaskPanelWidth,
           overlayHeight: 360,
+          uiScale: runQueueTaskPanelUiScale,
+          lengthUnit: "layout",
+          outputOffsetUnit: "layout",
           gap: 6,
           viewportPadding: CONST_OVERLAY_VIEWPORT_PADDING_PX,
           viewportPaddingLeft: CONST_CHAT_QUICK_PANEL_LEFT_MARGIN_PX,
           viewportPaddingRight: CONST_CHAT_QUICK_PANEL_RIGHT_MARGIN_PX,
           mirrorHorizontalPadding: true,
           preferVertical: "bottom",
-          preferHorizontal: "right",
+          preferHorizontal: isInstructionMode ? "left" : "right",
           allowWideDock: false,
           forceHorizontalDock: true,
         }),
@@ -44654,12 +53035,426 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         runQueueTaskPanelPlacementStyle = {
           ...(buildRelativeOverlayPlacementStyle(runQueueTaskPanelPlacement) || {}),
           width: runQueueTaskPanelWidth,
+        },
+        currentRunQueueTaskList = Array.isArray(runQueueTaskListState)
+          ? runQueueTaskListState
+          : [],
+        historicalRunQueueTaskList = Array.isArray(runQueueTaskHistoryState)
+          ? runQueueTaskHistoryState
+          : [],
+        runQueueHistoryCollapsedLimit = Math.max(
+          1,
+          Number(CONST_RUN_QUEUE_HISTORY_PANEL_BATCH_SIZE) || 5,
+        ),
+        runQueueHistoryVisibleLimit = Math.max(
+          runQueueHistoryCollapsedLimit,
+          Number(runQueueHistoryVisibleCount) ||
+            runQueueHistoryCollapsedLimit,
+        ),
+        visibleHistoricalRunQueueTaskList = historicalRunQueueTaskList.slice(
+          0,
+          runQueueHistoryVisibleLimit,
+        ),
+        hiddenRunQueueHistoryCount = Math.max(
+          0,
+          historicalRunQueueTaskList.length - visibleHistoricalRunQueueTaskList.length,
+        ),
+        hasMoreRunQueueHistory = hiddenRunQueueHistoryCount > 0,
+        canToggleRunQueueHistory =
+          historicalRunQueueTaskList.length > runQueueHistoryCollapsedLimit,
+        toggleRunQueueHistory = () => {
+          if (!canToggleRunQueueHistory) return;
+          setRunQueueHistoryVisibleCount((previousVisibleCount) => {
+            const normalizedPreviousVisibleCount = Math.max(
+              runQueueHistoryCollapsedLimit,
+              Number(previousVisibleCount) ||
+                runQueueHistoryCollapsedLimit,
+            );
+            return normalizedPreviousVisibleCount >=
+              historicalRunQueueTaskList.length
+              ? runQueueHistoryCollapsedLimit
+              : historicalRunQueueTaskList.length;
+          });
+        },
+        runQueueHistoryToggleButtonText = hasMoreRunQueueHistory
+          ? `展开历史（剩余 ${hiddenRunQueueHistoryCount}）`
+          : "收起历史",
+        runQueueTaskRunnerClassName = buildCometRunnerClassName(
+          runQueueTaskButtonRunnerVisualState,
+        ),
+        runQueueTaskRunnerSource = String(
+          runQueueTaskButtonRunnerVisualState?.source || "run",
+        )
+          .trim()
+          .toLowerCase(),
+        runQueueTaskRunnerStyle = {
+          "--status-runner-spin-duration": `${Math.max(
+            0,
+            Number(runQueueTaskButtonRunnerVisualState?.spinDurationMs) || 2000,
+          )}ms`,
+          "--status-runner-fill-duration": `${CONST_COMET_RUNNER_FILL_MS}ms`,
+          "--status-runner-fade-duration": `${CONST_COMET_RUNNER_FADE_MS}ms`,
+        },
+        renderRunQueueTaskCard = (
+          runQueueTaskItem,
+          renderOptions = {},
+        ) => {
+          const isHistoryTask = renderOptions?.isHistory === true,
+            isRunQueueTaskExpanded =
+              expandedRunQueueTaskId === runQueueTaskItem.id,
+            showRunQueueTaskHeadThumb = !isRunQueueTaskExpanded,
+            taskItemResults = Array.isArray(runQueueTaskItem.itemResults)
+              ? runQueueTaskItem.itemResults
+              : [],
+            runQueueTaskSourceImageRefs = Array.isArray(
+              runQueueTaskItem.sourceImageRefs,
+            )
+              ? runQueueTaskItem.sourceImageRefs
+              : [],
+            returnedImageList = taskItemResults.length
+              ? taskItemResults.flatMap((taskItemResult) =>
+                  Array.isArray(taskItemResult?.returnedImages)
+                    ? taskItemResult.returnedImages
+                    : [],
+                )
+              : Array.isArray(runQueueTaskItem.returnedImages)
+                ? runQueueTaskItem.returnedImages
+                : [],
+            runQueueTaskThumbBundle = buildRunQueueThumbBundle(
+              runQueueTaskSourceImageRefs.length
+                ? runQueueTaskSourceImageRefs
+                : returnedImageList,
+            ),
+            runQueueTaskRefThumbList =
+              runQueueTaskThumbBundle.refThumbList.length > 0
+                ? runQueueTaskThumbBundle.refThumbList
+                : Array.isArray(runQueueTaskItem.refThumbList)
+                  ? runQueueTaskItem.refThumbList
+                  : [],
+            runQueueTaskHeadThumbSrc = String(
+              runQueueTaskThumbBundle.thumbDataUrl ||
+                runQueueTaskItem.thumbDataUrl ||
+                "",
+            ).trim(),
+            taskTimeoutMs = Math.max(
+              5e3,
+              Number(runQueueTaskItem.timeoutMs) || 3e4,
+            ),
+            taskStartedAtMs =
+              Number.isFinite(Number(runQueueTaskItem.startedAtMs)) &&
+              Number(runQueueTaskItem.startedAtMs) > 0
+                ? Number(runQueueTaskItem.startedAtMs)
+                : 0,
+            taskElapsedMs =
+              !isHistoryTask &&
+              runQueueTaskItem.phase === "running" &&
+              taskStartedAtMs > 0
+                ? Math.max(0, runQueueElapsedNowMs - taskStartedAtMs)
+                : 0,
+            taskElapsedText = isHistoryTask
+              ? formatConsoleLogTime(
+                  Number(runQueueTaskItem.finishedAtMs) ||
+                    Number(runQueueTaskItem.createdAtMs) ||
+                    Date.now(),
+                )
+              : formatRunQueueElapsedText(taskElapsedMs),
+            taskRemainingRatio =
+              runQueueTaskItem.phase === "running"
+                ? Math.max(0, 1 - taskElapsedMs / taskTimeoutMs)
+                : 1,
+            taskProgressWidthPercent = Math.max(
+              0,
+              Math.min(100, Math.round(taskRemainingRatio * 1000) / 10),
+            ),
+            runQueueTaskProgressClassName = `run-queue-task-progress-fill ${runQueueTaskItem.phase === "running" ? "is-running" : "is-pending"}${taskProgressWidthPercent <= 0 ? " is-timeout" : ""}`;
+          return (
+            <div
+              key={runQueueTaskItem.id}
+              className={`run-queue-task-item ${runQueueTaskItem.phase === "running" ? "is-running" : runQueueTaskItem.phase === "pending" ? "is-pending" : "is-history"} ${isRunQueueTaskExpanded ? "is-expanded" : ""}`}
+              onClick={() => {
+                setExpandedRunQueueTaskId(
+                  isRunQueueTaskExpanded ? "" : runQueueTaskItem.id,
+                );
+              }}
+            >
+              <div
+                className={`run-queue-task-head ${showRunQueueTaskHeadThumb ? "" : "is-thumb-hidden"}`}
+              >
+                {showRunQueueTaskHeadThumb ? (
+                  <div className="run-queue-task-thumb-wrap">
+                    {runQueueTaskHeadThumbSrc ? (
+                      <img
+                        className="run-queue-task-thumb"
+                        src={runQueueTaskHeadThumbSrc}
+                        alt="run-queue-thumb"
+                      />
+                    ) : (
+                      <div className="run-queue-task-thumb-empty">
+                        <img
+                          className="icon-14"
+                          src={iconImage}
+                          alt="run-queue-no-image"
+                        />
+                      </div>
+                    )}
+                    {Number(runQueueTaskItem.imageCount) > 1 ? (
+                      <span className="run-queue-task-thumb-badge">
+                        {`+${Math.max(1, Number(runQueueTaskItem.imageCount) - 1)}`}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+                <div className="run-queue-task-main">
+                  <div className="run-queue-task-head-top">
+                    <div className="run-queue-task-summary">
+                      {runQueueTaskItem.summaryText}
+                    </div>
+                    <div className="run-queue-task-elapsed">
+                      {taskElapsedText}
+                    </div>
+                  </div>
+                  {!isHistoryTask ? (
+                    <div className="run-queue-task-progress-track">
+                      <div
+                        className={runQueueTaskProgressClassName}
+                        style={{
+                          width: `${taskProgressWidthPercent}%`,
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="run-queue-task-history-status-row">
+                      <span
+                        className={`run-queue-task-history-status is-${String(runQueueTaskItem.historyStatus || "success").trim() || "success"}`}
+                      >
+                        {runQueueTaskItem.statusLabel || "历史任务"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="run-queue-task-head-actions">
+                  {!isHistoryTask ? (
+                    <button
+                      type="button"
+                      className="run-queue-task-action-btn run-queue-task-cancel-btn"
+                      onClick={(runQueueTaskCancelClickEvent) => {
+                        runQueueTaskCancelClickEvent.stopPropagation();
+                        void cancelRunQueueTaskById(runQueueTaskItem.id);
+                      }}
+                      data-tip-text="中止该任务"
+                      data-tip-placement="bottom"
+                    >
+                      <img
+                        className="icon-12"
+                        src={iconCloseDelete}
+                        alt="cancel-run-queue-task"
+                      />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              {isRunQueueTaskExpanded ? (
+                <div className="run-queue-task-details">
+                  <div className="run-queue-task-ref-row">
+                    <div className="run-queue-task-ref-main">
+                      <div className="run-queue-task-ref-strip">
+                        {runQueueTaskRefThumbList.map((taskRefThumbItem) =>
+                          String(taskRefThumbItem?.src || "").trim() ? (
+                            <img
+                              key={taskRefThumbItem.id}
+                              className="run-queue-task-ref-thumb"
+                              src={taskRefThumbItem.src}
+                              alt={
+                                String(taskRefThumbItem.name || "").trim() ||
+                                "run-queue-ref-thumb"
+                              }
+                            />
+                          ) : (
+                            <div
+                              key={taskRefThumbItem.id}
+                              className="run-queue-task-ref-thumb-empty"
+                            >
+                              <img
+                                className="icon-12"
+                                src={iconImage}
+                                alt="run-queue-no-image"
+                              />
+                            </div>
+                          ),
+                        )}
+                      </div>
+                      <div className="run-queue-task-meta-text">
+                        {`${runQueueTaskItem.sourceLabel || "未知来源"} · ${runQueueTaskItem.providerLabel || "服务商未设"} · ${runQueueTaskItem.modelLabel || "模型未设"}`}
+                      </div>
+                    </div>
+                    {!isHistoryTask ? (
+                      <div className="run-queue-task-ref-actions">
+                        <button
+                          type="button"
+                          className="run-queue-task-action-btn run-queue-task-rerun-btn"
+                          onClick={(runQueueTaskRerunClickEvent) => {
+                            runQueueTaskRerunClickEvent.stopPropagation();
+                            void rerunRunQueueTaskById(runQueueTaskItem.id);
+                          }}
+                          data-tip-text="重试该任务"
+                          data-tip-placement="bottom"
+                          disabled={!runQueueTaskItem.canRerun}
+                        >
+                          <img
+                            className="icon-14"
+                            src={iconRunQueueRetry}
+                            alt="retry-run-queue-task"
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          className="run-queue-task-action-btn run-queue-task-delay-btn"
+                          onClick={(runQueueTaskDelayClickEvent) => {
+                            runQueueTaskDelayClickEvent.stopPropagation();
+                            extendRunQueueTaskTimeoutById(runQueueTaskItem.id);
+                          }}
+                          data-tip-text="延长超时 +30s"
+                          data-tip-placement="bottom"
+                        >
+                          <img
+                            className="icon-14"
+                            src={iconRunQueueExtendTime}
+                            alt="extend-run-queue-timeout"
+                          />
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                  {runQueueTaskItem.resultMessage ? (
+                    <div className="run-queue-task-result-text">
+                      {runQueueTaskItem.resultMessage}
+                    </div>
+                  ) : null}
+                  {taskItemResults.length ? (
+                    <div className="run-queue-task-item-results">
+                      {taskItemResults.map((taskItemResult) => {
+                        const taskItemResultImages = Array.isArray(
+                            taskItemResult?.returnedImages,
+                          )
+                            ? taskItemResult.returnedImages
+                            : [],
+                          taskItemResultMessage = String(
+                            taskItemResult?.message || "",
+                          ).trim(),
+                          taskItemResultStatus = String(
+                            taskItemResult?.status || "pending",
+                          ).trim(),
+                          taskItemResultTailText = taskItemResultMessage
+                            ? taskItemResultMessage
+                            : taskItemResultStatus === "success"
+                              ? `已返回 ${taskItemResultImages.length || 1} 张图片`
+                              : taskItemResultStatus === "running"
+                                ? "请求进行中"
+                                : "等待执行";
+                        return (
+                          <div
+                            key={taskItemResult.id}
+                            className={`run-queue-task-item-result is-${taskItemResultStatus}`}
+                          >
+                            <div className="run-queue-task-item-result-head">
+                              <span className="run-queue-task-item-result-index">
+                                {`第 ${taskItemResult.itemIndex} 张`}
+                              </span>
+                              <span className="run-queue-task-item-result-status">
+                                {taskItemResult.statusLabel || "待执行"}
+                              </span>
+                            </div>
+                            <div className="run-queue-task-item-result-text">
+                              {taskItemResultTailText}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                  <pre className="run-queue-task-prompt scrollbar-activity scrollbar-persistent">
+                    {runQueueTaskItem.promptText || "该任务未记录提示词"}
+                  </pre>
+                  {returnedImageList.length ? (
+                    <div className="run-queue-task-output-wrap">
+                      <div className="run-queue-task-output-head">回传图片</div>
+                      <div className="run-queue-task-output-list">
+                        {returnedImageList.map((returnedImageItem, returnedImageIndex) => {
+                          const returnedImageDisplayName =
+                              resolveAssetRecordDisplayName(
+                                returnedImageItem,
+                                "回传图片",
+                              ),
+                            returnedImageThumbSrc = resolveRunQueueTaskThumbSrc(
+                              returnedImageItem,
+                            ),
+                            returnedImageTipText =
+                              resolveAssetRecordStoragePath(returnedImageItem) ||
+                              returnedImageDisplayName;
+                          return (
+                            <button
+                              key={
+                                String(returnedImageItem?.id || "").trim() ||
+                                `run-queue-returned-image-${returnedImageIndex + 1}`
+                              }
+                              type="button"
+                              className="run-queue-task-output-thumb-btn"
+                              onClick={(runQueueHistoryImageClickEvent) => {
+                                runQueueHistoryImageClickEvent.stopPropagation();
+                                hideRunQueueOutputHoverCard();
+                                void exportPreviewImageToCanvas(returnedImageItem, {
+                                  trigger: "manual",
+                                  source: "run-queue-output",
+                                });
+                              }}
+                              onMouseEnter={(runQueueOutputHoverEnterEvent) => {
+                                scheduleRunQueueOutputHoverCard(
+                                  returnedImageItem,
+                                  runQueueOutputHoverEnterEvent.currentTarget,
+                                );
+                              }}
+                              onMouseLeave={(runQueueOutputHoverLeaveEvent) => {
+                                runQueueOutputHoverActiveElementRef.current ===
+                                  runQueueOutputHoverLeaveEvent.currentTarget &&
+                                  ((runQueueOutputHoverActiveElementRef.current = null),
+                                  (runQueueOutputHoverActiveKeyRef.current = ""));
+                                hideRunQueueOutputHoverCard();
+                              }}
+                              data-tip-text={returnedImageTipText}
+                              data-tip-placement="top"
+                            >
+                              {isRenderableImageSrc(returnedImageThumbSrc) ? (
+                                <img
+                                  className="run-queue-task-output-thumb"
+                                  src={returnedImageThumbSrc}
+                                  alt={returnedImageDisplayName || "run-queue-history-output"}
+                                  draggable={false}
+                                />
+                              ) : (
+                                <div className="run-queue-task-output-thumb-empty">
+                                  <img
+                                    className="icon-12"
+                                    src={iconImage}
+                                    alt="run-queue-history-output"
+                                  />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          );
         };
       return (
         <div className="run-queue-task-anchor">
           <button
             ref={runQueueTaskPanelAnchorRef}
-            className={`square-btn square-btn-lockPagePanelsHeight run-queue-stop-btn ${hasRunQueueTask ? "is-active" : ""} ${hasRunQueueTask ? "is-multi" : ""}`}
+            className={`square-btn gray square-btn-lockPagePanelsHeight run-queue-task-btn ${hasRunQueueTask ? "is-multi" : ""}`}
             onClick={(runQueueButtonClickEvent) => {
               runQueueTaskPanelAnchorRef.current =
                 runQueueButtonClickEvent.currentTarget;
@@ -44667,13 +53462,20 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             }}
             data-tip-text={runQueueTaskButtonTipText}
             data-tip-variant="preset"
-            disabled={!hasRunQueueTask}
           >
-            <img
-              className="icon-12"
-              src={iconTaskList}
-              alt="run-queue-list"
+            <span
+              className={`status-border-runner ${runQueueTaskRunnerClassName}`}
+              style={runQueueTaskRunnerStyle}
+              data-runner-source={runQueueTaskRunnerSource}
+              aria-hidden="true"
             />
+            <span className="run-queue-task-btn-icon-wrap" aria-hidden="true">
+              <img
+                className="icon-12"
+                src={iconTaskList}
+                alt="run-queue-list"
+              />
+            </span>
             {hasRunQueueTask ? (
               <span className="run-queue-stop-count">{`x${runQueueDisplayCount}`}</span>
             ) : null}
@@ -44688,193 +53490,51 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               }}
             >
               <div className="run-queue-task-panel-head">
-                <span>跑图任务</span>
-                <span>{`x${runQueueDisplayCount}`}</span>
+                <span>任务列表</span>
               </div>
               <div className="run-queue-task-panel-list scrollbar-activity scrollbar-persistent">
-                {runQueueTaskListState.length ? (
-                  runQueueTaskListState.map((runQueueTaskItem) => {
-                    const isRunQueueTaskExpanded =
-                        expandedRunQueueTaskId === runQueueTaskItem.id,
-                      runQueueTaskRefThumbList = Array.isArray(
-                        runQueueTaskItem.refThumbList,
-                      )
-                        ? runQueueTaskItem.refThumbList
-                        : [],
-                      taskTimeoutMs = Math.max(
-                        5e3,
-                        Number(runQueueTaskItem.timeoutMs) || 3e4,
-                      ),
-                      taskStartedAtMs =
-                        Number.isFinite(Number(runQueueTaskItem.startedAtMs)) &&
-                        Number(runQueueTaskItem.startedAtMs) > 0
-                          ? Number(runQueueTaskItem.startedAtMs)
-                          : 0,
-                      taskElapsedMs =
-                        runQueueTaskItem.phase === "running" && taskStartedAtMs > 0
-                          ? Math.max(0, runQueueElapsedNowMs - taskStartedAtMs)
-                          : 0,
-                      taskElapsedText = formatRunQueueElapsedText(taskElapsedMs),
-                      taskRemainingRatio =
-                        runQueueTaskItem.phase === "running"
-                          ? Math.max(0, 1 - taskElapsedMs / taskTimeoutMs)
-                          : 1,
-                      taskProgressWidthPercent = Math.max(
-                        0,
-                        Math.min(100, Math.round(taskRemainingRatio * 1000) / 10),
-                      ),
-                      runQueueTaskProgressClassName = `run-queue-task-progress-fill ${runQueueTaskItem.phase === "running" ? "is-running" : "is-pending"}${taskProgressWidthPercent <= 0 ? " is-timeout" : ""}`;
-                    return (
-                      <div
-                        key={runQueueTaskItem.id}
-                        className={`run-queue-task-item ${runQueueTaskItem.phase === "running" ? "is-running" : "is-pending"} ${isRunQueueTaskExpanded ? "is-expanded" : ""}`}
-                        onClick={() => {
-                          setExpandedRunQueueTaskId(
-                            isRunQueueTaskExpanded ? "" : runQueueTaskItem.id,
-                          );
+                {currentRunQueueTaskList.length ? (
+                  <div className="run-queue-task-section-label run-queue-task-summary-label">
+                    进行中任务
+                  </div>
+                ) : null}
+                {currentRunQueueTaskList.length ? (
+                  currentRunQueueTaskList.map((runQueueTaskItem) =>
+                    renderRunQueueTaskCard(runQueueTaskItem, {
+                      isHistory: false,
+                    }),
+                  )
+                ) : null}
+                {currentRunQueueTaskList.length && historicalRunQueueTaskList.length ? (
+                  <div className="run-queue-task-section-divider" />
+                ) : null}
+                {historicalRunQueueTaskList.length ? (
+                  <>
+                    <div className="run-queue-task-section-label">历史任务</div>
+                    {visibleHistoricalRunQueueTaskList.map((runQueueTaskItem) =>
+                      renderRunQueueTaskCard(runQueueTaskItem, {
+                        isHistory: true,
+                      }),
+                    )}
+                    {canToggleRunQueueHistory ? (
+                      <button
+                        type="button"
+                        className="run-queue-task-history-load-more-btn"
+                        onClick={(runQueueHistoryLoadMoreEvent) => {
+                          runQueueHistoryLoadMoreEvent.stopPropagation();
+                          toggleRunQueueHistory();
                         }}
                       >
-                        <div className="run-queue-task-head">
-                          <div className="run-queue-task-thumb-wrap">
-                            {runQueueTaskItem.thumbDataUrl ? (
-                              <img
-                                className="run-queue-task-thumb"
-                                src={runQueueTaskItem.thumbDataUrl}
-                                alt="run-queue-thumb"
-                              />
-                            ) : (
-                              <div className="run-queue-task-thumb-empty">
-                                <img
-                                  className="icon-14"
-                                  src={iconImage}
-                                  alt="run-queue-no-image"
-                                />
-                              </div>
-                            )}
-                            {Number(runQueueTaskItem.imageCount) > 1 ? (
-                              <span className="run-queue-task-thumb-badge">
-                                {`+${Math.max(1, Number(runQueueTaskItem.imageCount) - 1)}`}
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="run-queue-task-main">
-                            <div className="run-queue-task-head-top">
-                              <div className="run-queue-task-summary">
-                                {runQueueTaskItem.summaryText}
-                              </div>
-                              <div className="run-queue-task-elapsed">
-                                {taskElapsedText}
-                              </div>
-                            </div>
-                            <div className="run-queue-task-progress-track">
-                              <div
-                                className={runQueueTaskProgressClassName}
-                                style={{
-                                  width: `${taskProgressWidthPercent}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <div className="run-queue-task-head-actions">
-                            <button
-                              type="button"
-                              className="run-queue-task-action-btn run-queue-task-cancel-btn"
-                              onClick={(runQueueTaskCancelClickEvent) => {
-                                runQueueTaskCancelClickEvent.stopPropagation();
-                                void cancelRunQueueTaskById(runQueueTaskItem.id);
-                              }}
-                              data-tip-text="中止该任务"
-                              data-tip-placement="bottom"
-                            >
-                              <img
-                                className="icon-12"
-                                src={iconCloseDelete}
-                                alt="cancel-run-queue-task"
-                              />
-                            </button>
-                          </div>
-                        </div>
-                        {isRunQueueTaskExpanded ? (
-                          <div className="run-queue-task-details">
-                            <div className="run-queue-task-ref-row">
-                              <div className="run-queue-task-ref-main">
-                                <div className="run-queue-task-ref-strip">
-                                  {runQueueTaskRefThumbList.map((taskRefThumbItem) =>
-                                    String(taskRefThumbItem?.src || "").trim() ? (
-                                      <img
-                                        key={taskRefThumbItem.id}
-                                        className="run-queue-task-ref-thumb"
-                                        src={taskRefThumbItem.src}
-                                        alt={
-                                          String(taskRefThumbItem.name || "").trim() ||
-                                          "run-queue-ref-thumb"
-                                        }
-                                      />
-                                    ) : (
-                                      <div
-                                        key={taskRefThumbItem.id}
-                                        className="run-queue-task-ref-thumb-empty"
-                                      >
-                                        <img
-                                          className="icon-12"
-                                          src={iconImage}
-                                          alt="run-queue-no-image"
-                                        />
-                                      </div>
-                                    ),
-                                  )}
-                                </div>
-                                <div className="run-queue-task-meta-text">
-                                  {`${runQueueTaskItem.sourceLabel || "未知来源"} · ${runQueueTaskItem.providerLabel || "服务商未设"} · ${runQueueTaskItem.modelLabel || "模型未设"}`}
-                                </div>
-                              </div>
-                              <div className="run-queue-task-ref-actions">
-                                <button
-                                  type="button"
-                                  className="run-queue-task-action-btn run-queue-task-rerun-btn"
-                                  onClick={(runQueueTaskRerunClickEvent) => {
-                                    runQueueTaskRerunClickEvent.stopPropagation();
-                                    void rerunRunQueueTaskById(runQueueTaskItem.id);
-                                  }}
-                                  data-tip-text="重试该任务"
-                                  data-tip-placement="bottom"
-                                  disabled={!runQueueTaskItem.canRerun}
-                                >
-                                  <img
-                                    className="icon-14"
-                                    src={iconRunQueueRetry}
-                                    alt="retry-run-queue-task"
-                                  />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="run-queue-task-action-btn run-queue-task-delay-btn"
-                                  onClick={(runQueueTaskDelayClickEvent) => {
-                                    runQueueTaskDelayClickEvent.stopPropagation();
-                                    extendRunQueueTaskTimeoutById(runQueueTaskItem.id);
-                                  }}
-                                  data-tip-text="延长超时 +30s"
-                                  data-tip-placement="bottom"
-                                >
-                                  <img
-                                    className="icon-14"
-                                    src={iconRunQueueExtendTime}
-                                    alt="extend-run-queue-timeout"
-                                  />
-                                </button>
-                              </div>
-                            </div>
-                            <pre className="run-queue-task-prompt scrollbar-activity scrollbar-persistent">
-                              {runQueueTaskItem.promptText || "该任务未记录提示词"}
-                            </pre>
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="run-queue-task-panel-empty">暂无跑图任务</div>
-                )}
+                        {runQueueHistoryToggleButtonText}
+                      </button>
+                    ) : null}
+                  </>
+                ) : null}
+                {!hasRunQueuePanelEntries ? (
+                  <div className="run-queue-task-panel-empty">
+                    暂无当前任务与历史任务
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -44882,30 +53542,16 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       );
     },
     renderInstructionHeaderActions = () => {
-      const normalizedInstructionPromptIds = Array.from(
-          new Set(
-            imageQuickPrompts
-              .map((imageQuickPromptItem) =>
-                String(imageQuickPromptItem?.id || "").trim(),
-              )
-              .filter(Boolean),
-          ),
-        ),
-        selectedInstructionPromptIdSet = new Set(
-          selectedImageQuickPromptIds
-            .map((selectedImageQuickPromptId) =>
-              String(selectedImageQuickPromptId || "").trim(),
-            )
-            .filter(Boolean),
-        ),
-        hasInstructionSelection = selectedInstructionPromptIdSet.size > 0,
+      const instructionBatchSelectionState =
+          resolveImageQuickBatchSelectionState(),
+        hasInstructionSelection =
+          instructionBatchSelectionState.hasSelection,
         allInstructionSelected =
-          !!normalizedInstructionPromptIds.length &&
-          normalizedInstructionPromptIds.every((instructionPromptId) =>
-            selectedInstructionPromptIdSet.has(instructionPromptId),
-          ),
-        selectedInstructionCount = selectedInstructionPromptIdSet.size,
-        hasAnyInstructionSelected = selectedInstructionCount > 0,
+          instructionBatchSelectionState.allSelected,
+        selectedInstructionCount =
+          instructionBatchSelectionState.selectedEntityCount,
+        hasAnyInstructionSelected =
+          selectedInstructionCount > 0,
         instructionSelectButtonLabel = hasAnyInstructionSelected
           ? allInstructionSelected
             ? `已全选 ${selectedInstructionCount}`
@@ -44927,11 +53573,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 <button
                   className={`settings-fetch-btn batch-select-all-btn ${allInstructionSelected ? "is-danger-state" : ""}`}
                   type="button"
-                  onClick={() => {
-                    allInstructionSelected
-                      ? setSelectedImageQuickPromptIds([])
-                      : setSelectedImageQuickPromptIds(normalizedInstructionPromptIds);
-                  }}
+                  onClick={toggleAllInstructionBatchSelections}
                 >
                   <span className="batch-select-all-btn-label">
                     {instructionSelectButtonLabel}
@@ -44944,9 +53586,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                   className="settings-fetch-btn"
                   type="button"
                   disabled={!hasInstructionSelection}
-                  onClick={() =>
-                    exportImageQuickPrompts(selectedImageQuickPromptIds)
-                  }
+                  onClick={exportSelectedImageQuickBatchEntities}
                 >
                   导出
                 </button>
@@ -44954,7 +53594,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                   className="settings-fetch-btn chat-quick-delete-btn batch-danger-btn"
                   type="button"
                   disabled={!hasInstructionSelection}
-                  onClick={deleteSelectedImageQuickPrompts}
+                  onClick={deleteSelectedImageQuickBatchEntities}
                   aria-label="删除选中项"
                   data-tip-text="删除选中项"
                 >
@@ -44996,17 +53636,28 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                           overlayHeight: 110,
                           gap: 6,
                           viewportPadding: CONST_OVERLAY_VIEWPORT_PADDING_PX,
+                          viewportPaddingLeft: CONST_CHAT_QUICK_PANEL_LEFT_MARGIN_PX,
+                          viewportPaddingRight:
+                            CONST_CHAT_QUICK_PANEL_RIGHT_MARGIN_PX,
+                          mirrorHorizontalPadding: true,
                           preferVertical: "bottom",
                           preferHorizontal: "right",
+                          allowWideDock: false,
+                          forceHorizontalDock: true,
                         }),
                       instructionHeaderToolsPlacementClassName =
                         buildRelativeOverlayPlacementClassName(
+                          instructionHeaderToolsPlacement,
+                        ),
+                      instructionHeaderToolsPlacementStyle =
+                        buildRelativeOverlayPlacementStyle(
                           instructionHeaderToolsPlacement,
                         );
                     return (
                       <div
                         ref={imageQuickPanelToolsPopupRef}
                         className={`chat-history-tools-panel floating-layer ${instructionHeaderToolsPlacementClassName}`}
+                        style={instructionHeaderToolsPlacementStyle}
                       >
                         <button
                           className="settings-fetch-btn"
@@ -45073,6 +53724,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       const isHistoryQuickActionTargetOpen = isFloatingQuickActionTargetOpen(
           "history",
         ),
+        sessionPanelUiScale = resolveOverlayUiScaleFactor(),
         sessionPanelViewportWidth = Math.round(
           window.visualViewport?.width ||
             window.innerWidth ||
@@ -45081,13 +53733,22 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         ),
         sessionPanelWidth = Math.max(
           1,
-          sessionPanelViewportWidth -
+          Math.round(
+            normalizeOverlayLengthToLayout(
+              sessionPanelViewportWidth,
+              sessionPanelUiScale,
+              "viewport",
+            ),
+          ) -
             CONST_CHAT_QUICK_PANEL_VIEWPORT_WIDTH_OFFSET_PX,
         ),
         sessionPanelPlacement = resolveRelativeOverlayPlacement({
           anchorElement: historyPanelAnchorRef.current,
           overlayWidth: sessionPanelWidth,
           overlayHeight: 360,
+          uiScale: sessionPanelUiScale,
+          lengthUnit: "layout",
+          outputOffsetUnit: "layout",
           gap: 6,
           viewportPadding: CONST_OVERLAY_VIEWPORT_PADDING_PX,
           viewportPaddingLeft: CONST_CHAT_QUICK_PANEL_LEFT_MARGIN_PX,
@@ -45100,6 +53761,29 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         }),
         sessionPanelPlacementClassName = buildRelativeOverlayPlacementClassName(
           sessionPanelPlacement,
+        ),
+        sessionPanelToolsPlacement = resolveRelativeOverlayPlacement({
+          anchorElement: sessionPanelToolsTriggerRef.current,
+          overlayWidth: CONST_SESSION_TOOLS_PANEL_WIDTH,
+          overlayHeight: 110,
+          uiScale: sessionPanelUiScale,
+          lengthUnit: "layout",
+          outputOffsetUnit: "layout",
+          gap: 6,
+          viewportPadding: CONST_OVERLAY_VIEWPORT_PADDING_PX,
+          viewportPaddingLeft: CONST_CHAT_QUICK_PANEL_LEFT_MARGIN_PX,
+          viewportPaddingRight: CONST_CHAT_QUICK_PANEL_RIGHT_MARGIN_PX,
+          mirrorHorizontalPadding: true,
+          preferVertical: "bottom",
+          preferHorizontal:
+            sessionPanelPlacement?.horizontal === "left" ? "left" : "right",
+          allowWideDock: false,
+          forceHorizontalDock: true,
+        }),
+        sessionPanelToolsPlacementClassName =
+          buildRelativeOverlayPlacementClassName(sessionPanelToolsPlacement),
+        sessionPanelToolsPlacementStyle = buildRelativeOverlayPlacementStyle(
+          sessionPanelToolsPlacement,
         ),
         sessionPanelPlacementStyle =
           {
@@ -45141,7 +53825,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 onMouseEnter={handleFloatingQuickPanelMouseEnter}
                 onMouseLeave={handleFloatingQuickPanelMouseLeave}
               >
-                {renderSessionPanelContent()}
+                {renderSessionPanelContent({
+                  toolsOverlayPlacementClassName:
+                    sessionPanelToolsPlacementClassName,
+                  toolsOverlayPlacementStyle: sessionPanelToolsPlacementStyle,
+                })}
               </div>
             ) : null}
           </div>
@@ -45163,8 +53851,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       );
     },
     renderPreviewThumbButton = (previewThumbItem) => {
-      const isPreviewThumbImage = /^data:image\//i.test(
-        String(previewThumbItem.thumbUrl || ""),
+      const isPreviewThumbImage = isRenderableImageSrc(
+        previewThumbItem.thumbUrl,
       );
       return (
         <button
@@ -45435,9 +54123,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 userImageItem,
                 userImageIndex,
               ) => {
-                const userImageDataUrl = String(
-                  userImageItem?.dataUrl || "",
-                ).trim();
+                const userImageThumbSrc = resolveRunQueueTaskThumbSrc(
+                  userImageItem,
+                );
                 return (
                   <button
                     key={
@@ -45450,12 +54138,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                       userImageItem?.name ||
                       `图片 ${userImageIndex + 1}`
                     }
-                    onClick={() =>
-                      userImageDataUrl &&
-                      openPreviewImageInNewTab(
-                        userImageItem,
-                      )
-                    }
                     onDoubleClick={(userImageDoubleClickEvent) => {
                       userImageDoubleClickEvent.preventDefault();
                       userImageDoubleClickEvent.stopPropagation();
@@ -45464,7 +54146,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                   >
                     <img
                       className="chat-image-item"
-                      src={userImageDataUrl || void 0}
+                      src={userImageThumbSrc || void 0}
                       alt={
                         userImageItem.name ||
                         "image"
@@ -46272,6 +54954,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         closeWindow={closeWindow}
         isReconnectButtonBusy={isReconnectButtonBusy}
         isPluginConnected={isPluginConnected}
+        isBridgeReachable={isPluginBridgeReachable}
         isReconnectButtonHovering={isReconnectButtonHovering}
         setReconnectButtonHovering={setReconnectButtonHovering}
         reconnectPluginBridge={reconnectPluginBridge}
@@ -46288,6 +54971,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           imageApiConnectivityLevel,
           imageApiConnectivityTip,
         )}
+        appVersionLabel={APP_BUILD_META.appVersionLabel}
         onStatusClick={handleApiStatusClick}
         iconMinimize={iconMinimize}
         iconPinOn={iconPinOn}
@@ -46295,8 +54979,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         iconAutoMinimize={iconAutoMinimize}
         iconCloseDelete={iconCloseDelete}
         iconBrandLogo={iconBrandLogo}
-        iconApiConnectingPrimary={iconApiConnectingPrimary}
-        iconReconnect={iconReconnect}
+        iconBridgeConnected={iconBridgeConnected}
+        iconBridgeDisconnected={iconBridgeDisconnected}
+        iconBridgeReconnect={iconBridgeReconnect}
         iconSettings={iconSettings}
         iconHome={iconHome}
         iconChatHistory={iconChatHistory}
@@ -46368,6 +55053,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       settingsDisplayFoldOpen: isSettingsDisplaySectionOpen,
       chatKeyVisible: isChatApiKeyVisible,
       chatConfigExpanded: isChatConfigExpanded,
+      openCacheRetentionDropdownKey,
       imageApiFormatLabel,
       imageModeSwitchEnabled: isImageModeSwitchEnabled,
       imageSiteLabel,
@@ -46397,12 +55083,17 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       setUploadFullImageShortcut,
       importLayerType,
       setImportLayerType,
+      importAutoGroupEnabled,
+      setImportAutoGroupEnabled,
+      importAutoMaskEnabled,
+      setImportAutoMaskEnabled,
       handleCachePolicyChange,
       setChatApiFoldOpen,
       setImageApiFoldOpen,
       setSettingsToolsFoldOpen: setSettingsToolsSectionOpen,
       setSettingsDisplayFoldOpen: setSettingsDisplayFoldOpen,
       setChatConfigExpanded,
+      setOpenCacheRetentionDropdownKey,
       setImageKeyVisible,
       handleConfigField,
       handleFetchModels,
@@ -46433,6 +55124,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       CACHE_RETENTION_DAYS_MAX: CONST_CACHE_RETENTION_DAYS_MAX,
       handleOpenCacheFolder,
       formatMemoryBytes,
+      chatConfigExpandedRef,
+      cacheRetentionDropdownRootRef,
     }),
     renderConsolePanel = () => (
       <ConsolePanel
@@ -46502,6 +55195,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         imagePreviewDialogPortal={imagePreviewDialogPortal}
         previewHoverPortalNode={previewHoverPortal}
         uploadHoverPortalNode={uploadHoverPortal}
+        runQueueOutputHoverPortalNode={runQueueOutputHoverPortal}
         previewThumbContextMenuPortalNode={previewThumbContextMenuPortal}
       />
     ),
