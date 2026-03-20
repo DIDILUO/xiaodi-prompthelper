@@ -7277,7 +7277,7 @@ function normalizeImageItems(imageItemsInput) {
         },
       );
 
-      return {
+      return stripTopLevelLegacyImageReferenceFields({
         ...baseImageRecord,
         assetId: assetImageRecord.assetId,
         fileName: assetImageRecord.fileName,
@@ -7296,7 +7296,7 @@ function normalizeImageItems(imageItemsInput) {
         legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
         legacyIdConversionRemoveAfter:
           assetImageRecord.legacyIdConversionRemoveAfter,
-      };
+      });
     });
 }
 
@@ -9865,93 +9865,101 @@ async function cacheImagesToPsBridge(
           cachedMappedItem?.legacy && typeof cachedMappedItem.legacy === "object"
             ? cachedMappedItem.legacy
             : {};
-      return cachedMappedItem
-        ? {
-            ...imageCacheItem,
-            assetId: String(
-              cachedMappedItem.assetId ||
-                imageCacheItem.assetId ||
-                "",
-            ).trim(),
-            cacheId: String(
-                cachedMappedItem.cacheId ||
-                cachedMappedItemLegacy.cacheId ||
-                imageCacheItem.cacheId ||
-                "",
-            ).trim(),
-            psCacheId: String(
-              cachedMappedItem.psCacheId ||
-                cachedMappedItemLegacy.psCacheId ||
-                imageCacheItem.psCacheId ||
-                "",
-            ).trim(),
-            psCacheExpiresAt: Number.isFinite(cachedMappedItem.expiresAt)
-              ? Number(cachedMappedItem.expiresAt)
-              : void 0,
-            fileName: String(
-              cachedMappedItem.fileName ||
-                imageCacheItem.fileName ||
-                imageCacheItem.cacheFileName ||
-                "",
-            ).trim(),
-            filePath: String(
-              cachedMappedItem.filePath ||
-                imageCacheItem.filePath ||
-                imageCacheItem.cacheFilePath ||
-                "",
-            ).trim(),
-            cacheFileName: String(
-              cachedMappedItem.fileName ||
-                imageCacheItem.cacheFileName ||
-                imageCacheItem.fileName ||
-                "",
-            ).trim(),
-            cacheFilePath: String(
-              cachedMappedItem.filePath ||
-                imageCacheItem.cacheFilePath ||
-                imageCacheItem.filePath ||
-                "",
-            ).trim(),
-            internalCacheId: String(
-              cachedMappedItem.internalCacheId ||
-                cachedMappedItem.itemId ||
-                imageCacheItem.internalCacheId ||
-                cachedMappedItem.fileName ||
-                "",
-            ).trim(),
-            itemId: String(
-              cachedMappedItem.itemId ||
-                imageCacheItem.itemId ||
-                cachedMappedItem.internalCacheId ||
-                cachedMappedItem.fileName ||
-                "",
-            ).trim(),
-            sourceRefKey: String(
-              cachedMappedItem.sourceRefKey ||
-                imageCacheItem.sourceRefKey ||
-                parseAssetIdentityFromFileName(
-                  cachedMappedItem.fileName || imageCacheItem.fileName || "",
-                )?.sourceRefKey ||
-                "",
-            ).trim(),
-            inputMethod: String(
-              cachedMappedItem.inputMethod ||
-                imageCacheItem.inputMethod ||
-                imageCacheItem.source ||
-                "",
-            ).trim(),
-            usageMeta:
-              cachedMappedItem.usageMeta &&
-              typeof cachedMappedItem.usageMeta === "object"
-                ? { ...cachedMappedItem.usageMeta }
-                : imageCacheItem.usageMeta,
-            legacy:
-              cachedMappedItem.legacy &&
-              typeof cachedMappedItem.legacy === "object"
-                ? { ...cachedMappedItem.legacy }
-                : imageCacheItem.legacy,
-          }
-        : imageCacheItem;
+      if (!cachedMappedItem) return imageCacheItem;
+      const normalizedCachedImageLegacy = {
+        ...(imageCacheItem?.legacy && typeof imageCacheItem.legacy === "object"
+          ? imageCacheItem.legacy
+          : {}),
+        ...pickLegacyImageReferenceSnapshot(imageCacheItem),
+        ...(cachedMappedItemLegacy &&
+        typeof cachedMappedItemLegacy === "object"
+          ? cachedMappedItemLegacy
+          : {}),
+        ...pickLegacyImageReferenceSnapshot(cachedMappedItem),
+      };
+      return stripTopLevelLegacyImageReferenceFields({
+        ...imageCacheItem,
+        assetId: String(
+          cachedMappedItem.assetId ||
+            imageCacheItem.assetId ||
+            "",
+        ).trim(),
+        cacheId: String(
+            cachedMappedItem.cacheId ||
+            cachedMappedItemLegacy.cacheId ||
+            imageCacheItem.cacheId ||
+            "",
+        ).trim(),
+        psCacheId: String(
+          cachedMappedItem.psCacheId ||
+            cachedMappedItemLegacy.psCacheId ||
+            imageCacheItem.psCacheId ||
+            "",
+        ).trim(),
+        psCacheExpiresAt: Number.isFinite(cachedMappedItem.expiresAt)
+          ? Number(cachedMappedItem.expiresAt)
+          : void 0,
+        fileName: String(
+          cachedMappedItem.fileName ||
+            imageCacheItem.fileName ||
+            imageCacheItem.cacheFileName ||
+            "",
+        ).trim(),
+        filePath: String(
+          cachedMappedItem.filePath ||
+            imageCacheItem.filePath ||
+            imageCacheItem.cacheFilePath ||
+            "",
+        ).trim(),
+        cacheFileName: String(
+          cachedMappedItem.fileName ||
+            imageCacheItem.cacheFileName ||
+            imageCacheItem.fileName ||
+            "",
+        ).trim(),
+        cacheFilePath: String(
+          cachedMappedItem.filePath ||
+            imageCacheItem.cacheFilePath ||
+            imageCacheItem.filePath ||
+            "",
+        ).trim(),
+        internalCacheId: String(
+          cachedMappedItem.internalCacheId ||
+            cachedMappedItem.itemId ||
+            imageCacheItem.internalCacheId ||
+            cachedMappedItem.fileName ||
+            "",
+        ).trim(),
+        itemId: String(
+          cachedMappedItem.itemId ||
+            imageCacheItem.itemId ||
+            cachedMappedItem.internalCacheId ||
+            cachedMappedItem.fileName ||
+            "",
+        ).trim(),
+        sourceRefKey: String(
+          cachedMappedItem.sourceRefKey ||
+            imageCacheItem.sourceRefKey ||
+            parseAssetIdentityFromFileName(
+              cachedMappedItem.fileName || imageCacheItem.fileName || "",
+            )?.sourceRefKey ||
+            "",
+        ).trim(),
+        inputMethod: String(
+          cachedMappedItem.inputMethod ||
+            imageCacheItem.inputMethod ||
+            imageCacheItem.source ||
+            "",
+        ).trim(),
+        usageMeta:
+          cachedMappedItem.usageMeta &&
+          typeof cachedMappedItem.usageMeta === "object"
+            ? { ...cachedMappedItem.usageMeta }
+            : imageCacheItem.usageMeta,
+        legacy: Object.keys(normalizedCachedImageLegacy).length
+          ? normalizedCachedImageLegacy
+          : void 0,
+      });
     });
   } catch (ignoredError) {
     if (typeof onError === "function") onError(ignoredError);
