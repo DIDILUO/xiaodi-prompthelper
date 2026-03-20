@@ -20961,9 +20961,11 @@ const ComposerTextareaInput = React.memo(function ComposerTextareaInput({
       String(externalText || ""),
     ),
     pendingComposerSyncTextRef = React.useRef(String(externalText || "")),
-    composerStateSyncRafRef = React.useRef(0);
+    composerStateSyncRafRef = React.useRef(0),
+    composerCompositionActiveRef = React.useRef(false);
   React.useEffect(() => {
     const normalizedExternalText = String(externalText || "");
+    if (composerCompositionActiveRef.current) return;
     pendingComposerSyncTextRef.current = normalizedExternalText;
     setLocalComposerText((previousLocalComposerText) =>
       previousLocalComposerText === normalizedExternalText
@@ -20972,6 +20974,7 @@ const ComposerTextareaInput = React.memo(function ComposerTextareaInput({
     );
   }, [externalText]);
   const flushComposerStateSync = React.useCallback(() => {
+      if (composerCompositionActiveRef.current) return;
       const nextComposerText = String(
         pendingComposerSyncTextRef.current || "",
       );
@@ -21010,6 +21013,9 @@ const ComposerTextareaInput = React.memo(function ComposerTextareaInput({
         const nextComposerText = String(
             composerTextareaChangeEvent.target.value || "",
           ),
+          isComposerComposing =
+            Boolean(composerTextareaChangeEvent.nativeEvent?.isComposing) ||
+            composerCompositionActiveRef.current,
           shouldKeepComposerScrolledToBottom =
             shouldKeepScrolledToBottom(composerTextareaChangeEvent.currentTarget);
         onInputActivity();
@@ -21020,7 +21026,36 @@ const ComposerTextareaInput = React.memo(function ComposerTextareaInput({
           active: true,
           scrollToBottom: shouldKeepComposerScrolledToBottom,
         });
-        scheduleComposerStateSync(nextComposerText);
+        isComposerComposing || scheduleComposerStateSync(nextComposerText);
+      }}
+      onCompositionStart={() => {
+        composerCompositionActiveRef.current = true;
+        composerStateSyncRafRef.current &&
+          cancelAnimationFrame(composerStateSyncRafRef.current);
+        composerStateSyncRafRef.current = 0;
+      }}
+      onCompositionEnd={(composerCompositionEndEvent) => {
+        const nextComposerText = String(
+            composerCompositionEndEvent.currentTarget.value || "",
+          ),
+          shouldKeepComposerScrolledToBottom =
+            shouldKeepScrolledToBottom(
+              composerCompositionEndEvent.currentTarget,
+            );
+        composerCompositionActiveRef.current = false;
+        pendingComposerSyncTextRef.current = nextComposerText;
+        setLocalComposerText((previousLocalComposerText) =>
+          previousLocalComposerText === nextComposerText
+            ? previousLocalComposerText
+            : nextComposerText,
+        );
+        onImmediateTextChange(nextComposerText);
+        requestResize({
+          textareaElement: composerCompositionEndEvent.currentTarget,
+          active: true,
+          scrollToBottom: shouldKeepComposerScrolledToBottom,
+        });
+        flushComposerStateSync();
       }}
       onFocus={(composerFocusEvent) => {
         onInputActivity();
