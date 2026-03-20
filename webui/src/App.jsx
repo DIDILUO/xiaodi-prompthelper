@@ -3917,6 +3917,10 @@ function buildImageRecordLookupKeys(imageRecordInput = {}) {
     imageRecordInput && typeof imageRecordInput === "object"
       ? imageRecordInput
       : {};
+  const legacyImageRecord =
+    imageRecord.legacy && typeof imageRecord.legacy === "object"
+      ? imageRecord.legacy
+      : {};
   const stableLookupKeys = Array.from(
     new Set(
       [
@@ -3926,6 +3930,9 @@ function buildImageRecordLookupKeys(imageRecordInput = {}) {
         imageRecord.cacheId,
         imageRecord.psCacheId,
         imageRecord.chatCacheId,
+        legacyImageRecord.cacheId,
+        legacyImageRecord.psCacheId,
+        legacyImageRecord.chatCacheId,
         imageRecord.fileName,
       ]
         .map((item) => String(item || "").trim())
@@ -3935,7 +3942,12 @@ function buildImageRecordLookupKeys(imageRecordInput = {}) {
   if (stableLookupKeys.length) return stableLookupKeys;
   return Array.from(
     new Set(
-      [imageRecord.cacheFileName, imageRecord.originName]
+      [
+        imageRecord.cacheFileName,
+        legacyImageRecord.cacheFileName,
+        imageRecord.originName,
+        legacyImageRecord.originName,
+      ]
         .map((item) => extractImageFileLeafName(item))
         .filter(Boolean),
     ),
@@ -3950,13 +3962,20 @@ function resolveAssetRecordDisplayName(
     imageRecordInput && typeof imageRecordInput === "object"
       ? imageRecordInput
       : {};
+  const legacyImageRecord =
+    imageRecord.legacy && typeof imageRecord.legacy === "object"
+      ? imageRecord.legacy
+      : {};
   const displayNameCandidates = [
     imageRecord.fileName,
     imageRecord.displayFileName,
     imageRecord.internalCacheId,
     imageRecord.itemId,
     imageRecord.cacheFileName,
+    legacyImageRecord.cacheFileName,
     imageRecord.originName,
+    legacyImageRecord.originName,
+    legacyImageRecord.oldFileName,
     imageRecord.name,
   ];
   for (const displayNameCandidate of displayNameCandidates) {
@@ -3973,7 +3992,15 @@ function resolveAssetRecordStoragePath(imageRecordInput) {
     imageRecordInput && typeof imageRecordInput === "object"
       ? imageRecordInput
       : {};
-  const storagePathCandidates = [imageRecord.filePath, imageRecord.cacheFilePath];
+  const legacyImageRecord =
+    imageRecord.legacy && typeof imageRecord.legacy === "object"
+      ? imageRecord.legacy
+      : {};
+  const storagePathCandidates = [
+    imageRecord.filePath,
+    imageRecord.cacheFilePath,
+    legacyImageRecord.cacheFilePath,
+  ];
   for (const storagePathCandidate of storagePathCandidates) {
     const normalizedStoragePath = String(storagePathCandidate || "").trim();
     if (normalizedStoragePath) return normalizedStoragePath;
@@ -4146,26 +4173,29 @@ function normalizeSessionMessageImageItem(
     },
   );
 
-  const normalizedImageRecord = {
-    ...baseImageRecord,
-    assetId: assetImageRecord.assetId,
-    fileName: assetImageRecord.fileName,
-    filePath: assetImageRecord.filePath,
-    internalCacheId: assetImageRecord.internalCacheId,
-    itemId: assetImageRecord.itemId,
-    sourceRefKey: assetImageRecord.sourceRefKey,
-    inputMethod: assetImageRecord.inputMethod,
-    usageMeta: assetImageRecord.usageMeta,
-    legacy: assetImageRecord.legacy,
-    imageTraceId: assetImageRecord.imageTraceId,
-    parentImageTraceIds: assetImageRecord.parentImageTraceIds,
-    imageSourceKind: assetImageRecord.imageSourceKind,
-    imageSourceMethod: assetImageRecord.imageSourceMethod,
-    displayFileName: assetImageRecord.displayFileName,
-    legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
-    legacyIdConversionRemoveAfter:
-      assetImageRecord.legacyIdConversionRemoveAfter,
-  };
+  const normalizedImageRecord = stripTopLevelLegacyImageReferenceFields(
+    {
+      ...baseImageRecord,
+      assetId: assetImageRecord.assetId,
+      fileName: assetImageRecord.fileName,
+      filePath: assetImageRecord.filePath,
+      internalCacheId: assetImageRecord.internalCacheId,
+      itemId: assetImageRecord.itemId,
+      sourceRefKey: assetImageRecord.sourceRefKey,
+      inputMethod: assetImageRecord.inputMethod,
+      usageMeta: assetImageRecord.usageMeta,
+      legacy: assetImageRecord.legacy,
+      imageTraceId: assetImageRecord.imageTraceId,
+      parentImageTraceIds: assetImageRecord.parentImageTraceIds,
+      imageSourceKind: assetImageRecord.imageSourceKind,
+      imageSourceMethod: assetImageRecord.imageSourceMethod,
+      displayFileName: assetImageRecord.displayFileName,
+      legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
+      legacyIdConversionRemoveAfter:
+        assetImageRecord.legacyIdConversionRemoveAfter,
+    },
+    { clearPsCache: true },
+  );
   if (!hasResolvableImageRecord(normalizedImageRecord)) return null;
   return normalizedImageRecord;
 }
@@ -6354,6 +6384,31 @@ function pickLegacyImageReferenceSnapshot(imageRecord = {}) {
     },
     {},
   );
+}
+
+function stripTopLevelLegacyImageReferenceFields(
+  imageRecordInput = {},
+  { clearPsCache = false } = {},
+) {
+  const imageRecord =
+    imageRecordInput && typeof imageRecordInput === "object"
+      ? { ...imageRecordInput }
+      : {};
+  ["cacheId", "chatCacheId", "cacheFileName", "cacheFilePath"].forEach(
+    (fieldName) => {
+      if (Object.prototype.hasOwnProperty.call(imageRecord, fieldName)) {
+        delete imageRecord[fieldName];
+      }
+    },
+  );
+  if (clearPsCache) {
+    ["psCacheId", "psCacheExpiresAt"].forEach((fieldName) => {
+      if (Object.prototype.hasOwnProperty.call(imageRecord, fieldName)) {
+        delete imageRecord[fieldName];
+      }
+    });
+  }
+  return imageRecord;
 }
 
 function normalizeImageInputMethodValue(inputMethodInput, fallback = "unknown") {
@@ -10353,26 +10408,29 @@ function mergePersistedApiUsedImageRecord(sourceImageItem, storedImageItem) {
       usageMeta: mergedUsageMeta,
     },
   );
-  return {
-    ...mergedImageRecord,
-    assetId: assetImageRecord.assetId,
-    fileName: assetImageRecord.fileName,
-    filePath: assetImageRecord.filePath,
-    internalCacheId: assetImageRecord.internalCacheId,
-    itemId: assetImageRecord.itemId,
-    sourceRefKey: assetImageRecord.sourceRefKey,
-    inputMethod: assetImageRecord.inputMethod,
-    usageMeta: assetImageRecord.usageMeta,
-    legacy: assetImageRecord.legacy,
-    imageTraceId: assetImageRecord.imageTraceId,
-    parentImageTraceIds: assetImageRecord.parentImageTraceIds,
-    imageSourceKind: assetImageRecord.imageSourceKind,
-    imageSourceMethod: assetImageRecord.imageSourceMethod,
-    displayFileName: assetImageRecord.displayFileName,
-    legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
-    legacyIdConversionRemoveAfter:
-      assetImageRecord.legacyIdConversionRemoveAfter,
-  };
+  return stripTopLevelLegacyImageReferenceFields(
+    {
+      ...mergedImageRecord,
+      assetId: assetImageRecord.assetId,
+      fileName: assetImageRecord.fileName,
+      filePath: assetImageRecord.filePath,
+      internalCacheId: assetImageRecord.internalCacheId,
+      itemId: assetImageRecord.itemId,
+      sourceRefKey: assetImageRecord.sourceRefKey,
+      inputMethod: assetImageRecord.inputMethod,
+      usageMeta: assetImageRecord.usageMeta,
+      legacy: assetImageRecord.legacy,
+      imageTraceId: assetImageRecord.imageTraceId,
+      parentImageTraceIds: assetImageRecord.parentImageTraceIds,
+      imageSourceKind: assetImageRecord.imageSourceKind,
+      imageSourceMethod: assetImageRecord.imageSourceMethod,
+      displayFileName: assetImageRecord.displayFileName,
+      legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
+      legacyIdConversionRemoveAfter:
+        assetImageRecord.legacyIdConversionRemoveAfter,
+    },
+    { clearPsCache: true },
+  );
 }
 
 function restoreRuntimeDataUrlOnPersistedApiImages(

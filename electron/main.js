@@ -1271,6 +1271,8 @@ function resolveAssetRecordFileName(imageRecord = {}, options = {}) {
 function buildImageRecordLookupKeys(imageRecordInput = {}) {
   const imageRecord =
     imageRecordInput && typeof imageRecordInput === 'object' ? imageRecordInput : {};
+  const legacyImageRecord =
+    imageRecord.legacy && typeof imageRecord.legacy === 'object' ? imageRecord.legacy : {};
   const stableLookupKeys = Array.from(
     new Set(
       [
@@ -1280,6 +1282,9 @@ function buildImageRecordLookupKeys(imageRecordInput = {}) {
         imageRecord.cacheId,
         imageRecord.psCacheId,
         imageRecord.chatCacheId,
+        legacyImageRecord.cacheId,
+        legacyImageRecord.psCacheId,
+        legacyImageRecord.chatCacheId,
         imageRecord.fileName
       ]
         .map((item) => String(item || '').trim())
@@ -1289,7 +1294,12 @@ function buildImageRecordLookupKeys(imageRecordInput = {}) {
   if (stableLookupKeys.length) return stableLookupKeys;
   return Array.from(
     new Set(
-      [imageRecord.cacheFileName, imageRecord.originName]
+      [
+        imageRecord.cacheFileName,
+        legacyImageRecord.cacheFileName,
+        imageRecord.originName,
+        legacyImageRecord.originName
+      ]
         .map((item) => extractImageFileLeafName(item))
         .filter(Boolean)
     )
@@ -1299,13 +1309,18 @@ function buildImageRecordLookupKeys(imageRecordInput = {}) {
 function resolveAssetRecordDisplayName(imageRecordInput, fallbackLabel = 'image') {
   const imageRecord =
     imageRecordInput && typeof imageRecordInput === 'object' ? imageRecordInput : {};
+  const legacyImageRecord =
+    imageRecord.legacy && typeof imageRecord.legacy === 'object' ? imageRecord.legacy : {};
   const displayNameCandidates = [
     imageRecord.fileName,
     imageRecord.displayFileName,
     imageRecord.internalCacheId,
     imageRecord.itemId,
     imageRecord.cacheFileName,
+    legacyImageRecord.cacheFileName,
     imageRecord.originName,
+    legacyImageRecord.originName,
+    legacyImageRecord.oldFileName,
     imageRecord.name
   ];
   for (const displayNameCandidate of displayNameCandidates) {
@@ -1318,7 +1333,13 @@ function resolveAssetRecordDisplayName(imageRecordInput, fallbackLabel = 'image'
 function resolveAssetRecordStoragePath(imageRecordInput) {
   const imageRecord =
     imageRecordInput && typeof imageRecordInput === 'object' ? imageRecordInput : {};
-  const storagePathCandidates = [imageRecord.filePath, imageRecord.cacheFilePath];
+  const legacyImageRecord =
+    imageRecord.legacy && typeof imageRecord.legacy === 'object' ? imageRecord.legacy : {};
+  const storagePathCandidates = [
+    imageRecord.filePath,
+    imageRecord.cacheFilePath,
+    legacyImageRecord.cacheFilePath
+  ];
   for (const storagePathCandidate of storagePathCandidates) {
     const normalizedStoragePath = String(storagePathCandidate || '').trim();
     if (normalizedStoragePath) return normalizedStoragePath;
