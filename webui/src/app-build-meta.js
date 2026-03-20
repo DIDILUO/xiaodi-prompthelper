@@ -1,7 +1,7 @@
-﻿const APP_BUILD_META = Object.freeze({
+const APP_BUILD_META = Object.freeze({
   appVersionLabel: "v1.0.3",
-  appRevision: "r295",
-  appRevisionTag: "recovered-ce8k-r295",
+  appRevision: "r296",
+  appRevisionTag: "recovered-ce8k-r296",
 });
 
 export default APP_BUILD_META;

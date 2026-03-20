@@ -2039,11 +2039,53 @@ function buildPendingUserImageForChatDraft(
       typeof normalizedUserImageItem.usageMeta === "object"
         ? { ...normalizedUserImageItem.usageMeta }
         : void 0,
-    normalizedLegacy =
+    normalizedLegacyBase =
       normalizedUserImageItem?.legacy &&
       typeof normalizedUserImageItem.legacy === "object"
         ? { ...normalizedUserImageItem.legacy }
-        : void 0;
+        : void 0,
+    normalizedLegacyCacheId = String(
+      normalizedUserImageItem?.cacheId ||
+        normalizedLegacyBase?.cacheId ||
+        normalizedUserImageItem?.psCacheId ||
+        "",
+    ).trim(),
+    normalizedLegacyChatCacheId = String(
+      normalizedUserImageItem?.chatCacheId || normalizedLegacyBase?.chatCacheId || "",
+    ).trim(),
+    normalizedLegacyPsCacheId = String(
+      normalizedUserImageItem?.psCacheId ||
+        normalizedLegacyBase?.psCacheId ||
+        "",
+    ).trim(),
+    normalizedLegacyCacheFileName = String(
+      normalizedUserImageItem?.cacheFileName ||
+        normalizedLegacyBase?.cacheFileName ||
+        "",
+    ).trim(),
+    normalizedLegacyCacheFilePath = String(
+      normalizedUserImageItem?.cacheFilePath ||
+        normalizedLegacyBase?.cacheFilePath ||
+        "",
+    ).trim(),
+    normalizedPsCacheExpiresAt = Number.isFinite(normalizedUserImageItem.psCacheExpiresAt)
+      ? Number(normalizedUserImageItem.psCacheExpiresAt)
+      : void 0,
+    normalizedLegacy = {
+      ...(normalizedLegacyBase && typeof normalizedLegacyBase === "object"
+        ? normalizedLegacyBase
+        : {}),
+    };
+  if (normalizedLegacyCacheId) normalizedLegacy.cacheId = normalizedLegacyCacheId;
+  if (normalizedLegacyChatCacheId)
+    normalizedLegacy.chatCacheId = normalizedLegacyChatCacheId;
+  if (normalizedLegacyPsCacheId) normalizedLegacy.psCacheId = normalizedLegacyPsCacheId;
+  if (normalizedLegacyCacheFileName)
+    normalizedLegacy.cacheFileName = normalizedLegacyCacheFileName;
+  if (normalizedLegacyCacheFilePath)
+    normalizedLegacy.cacheFilePath = normalizedLegacyCacheFilePath;
+  if (Number.isFinite(normalizedPsCacheExpiresAt))
+    normalizedLegacy.psCacheExpiresAt = normalizedPsCacheExpiresAt;
   return {
     id: normalizedUserImageItem.id || `img-${localMessageTimestamp}`,
     assetId: normalizedAssetId,
@@ -2052,30 +2094,14 @@ function buildPendingUserImageForChatDraft(
     originName: normalizedDisplayName,
     fileName: normalizedFileName,
     filePath: normalizedFilePath,
-    cacheFileName: normalizedFileName,
     internalCacheId: normalizedInternalCacheId,
     itemId: normalizedItemId,
     sourceRefKey: normalizedSourceRefKey,
     inputMethod: normalizedInputMethod,
     usageMeta: normalizedUsageMeta,
-    legacy: normalizedLegacy,
+    legacy: Object.keys(normalizedLegacy).length ? normalizedLegacy : void 0,
     source: normalizedUserImageItem.source,
     role: normalizedUserImageItem.role,
-    cacheId: String(
-      normalizedUserImageItem?.cacheId ||
-        normalizedLegacy?.cacheId ||
-        normalizedUserImageItem?.psCacheId ||
-        "",
-    ).trim(),
-    chatCacheId: String(normalizedUserImageItem?.chatCacheId || "").trim(),
-    psCacheId: String(
-      normalizedUserImageItem?.psCacheId ||
-        normalizedLegacy?.psCacheId ||
-        "",
-    ).trim(),
-    psCacheExpiresAt: Number.isFinite(normalizedUserImageItem.psCacheExpiresAt)
-      ? Number(normalizedUserImageItem.psCacheExpiresAt)
-      : void 0,
     width:
       Number.isFinite(normalizedUserImageWidth) && normalizedUserImageWidth > 0
         ? normalizedUserImageWidth
@@ -3857,16 +3883,26 @@ function deriveCacheIdFromPathLike(pathLikeInput = "") {
 }
 
 function resolveSessionImageCacheIds(rawImageItem) {
-  const normalizedRawCacheId = String(rawImageItem?.cacheId || "").trim();
-  const normalizedRawPsCacheId = String(rawImageItem?.psCacheId || "").trim();
+  const legacyImageRecord =
+      rawImageItem?.legacy && typeof rawImageItem.legacy === "object"
+        ? rawImageItem.legacy
+        : {},
+    normalizedRawCacheId = String(
+      rawImageItem?.cacheId || legacyImageRecord?.cacheId || "",
+    ).trim(),
+    normalizedRawPsCacheId = String(
+      rawImageItem?.psCacheId || legacyImageRecord?.psCacheId || "",
+    ).trim();
   const normalizedRawInternalCacheId = String(
     rawImageItem?.internalCacheId || "",
   ).trim();
   const normalizedRawItemId = String(rawImageItem?.itemId || "").trim();
   const normalizedFileDerivedCacheId = deriveCacheIdFromPathLike(
     rawImageItem?.cacheFileName ||
+      legacyImageRecord?.cacheFileName ||
       rawImageItem?.fileName ||
       rawImageItem?.cacheFilePath ||
+      legacyImageRecord?.cacheFilePath ||
       rawImageItem?.filePath ||
       "",
   );
@@ -4699,20 +4735,63 @@ function hydrateSessionImagesFromCacheRecords(
             ).trim());
 
         hasMessageImagesHydrated = true;
+        const normalizedMessageImageLegacy = {
+          ...(messageImageItem?.legacy &&
+          typeof messageImageItem.legacy === "object"
+            ? messageImageItem.legacy
+            : {}),
+          ...(uploadRegionPreviewData?.legacy &&
+          typeof uploadRegionPreviewData.legacy === "object"
+            ? uploadRegionPreviewData.legacy
+            : {}),
+        };
+        const normalizedLegacyCacheId = String(
+          messageImageItem?.cacheId ||
+            uploadRegionPreviewData?.cacheId ||
+            normalizedMessageImageLegacy.cacheId ||
+            "",
+        ).trim();
+        const normalizedLegacyChatCacheId = String(
+          messageImageItem?.chatCacheId ||
+            uploadRegionPreviewData?.chatCacheId ||
+            normalizedMessageImageLegacy.chatCacheId ||
+            "",
+        ).trim();
+        const normalizedLegacyPsCacheId = String(
+          messageImageItem?.psCacheId ||
+            uploadRegionPreviewData?.psCacheId ||
+            normalizedMessageImageLegacy.psCacheId ||
+            "",
+        ).trim();
+        const normalizedLegacyCacheFileName = String(
+          uploadRegionPreviewData?.cacheFileName ||
+            messageImageItem?.cacheFileName ||
+            normalizedMessageImageLegacy.cacheFileName ||
+            "",
+        ).trim();
+        const normalizedLegacyCacheFilePath = String(
+          uploadRegionPreviewData?.cacheFilePath ||
+            uploadRegionPreviewData?.filePath ||
+            messageImageItem?.cacheFilePath ||
+            normalizedMessageImageLegacy.cacheFilePath ||
+            "",
+        ).trim();
+        if (normalizedLegacyCacheId)
+          normalizedMessageImageLegacy.cacheId = normalizedLegacyCacheId;
+        if (normalizedLegacyChatCacheId)
+          normalizedMessageImageLegacy.chatCacheId = normalizedLegacyChatCacheId;
+        if (normalizedLegacyPsCacheId)
+          normalizedMessageImageLegacy.psCacheId = normalizedLegacyPsCacheId;
+        if (normalizedLegacyCacheFileName)
+          normalizedMessageImageLegacy.cacheFileName =
+            normalizedLegacyCacheFileName;
+        if (normalizedLegacyCacheFilePath)
+          normalizedMessageImageLegacy.cacheFilePath =
+            normalizedLegacyCacheFilePath;
         return normalizeSessionMessageImageItem({
           ...messageImageItem,
           assetId: String(
             messageImageItem?.assetId || uploadRegionPreviewData?.assetId || "",
-          ).trim(),
-          cacheId: String(
-              messageImageItem?.cacheId ||
-              uploadRegionPreviewData?.cacheId ||
-              "",
-          ).trim(),
-          psCacheId: String(
-              messageImageItem?.psCacheId ||
-              uploadRegionPreviewData?.psCacheId ||
-              "",
           ).trim(),
           fileName: String(
             messageImageItem?.fileName ||
@@ -4726,18 +4805,6 @@ function hydrateSessionImagesFromCacheRecords(
                 ""
               : messageImageItem?.filePath) ||
               uploadRegionPreviewData?.filePath ||
-              "",
-          ).trim(),
-          cacheFileName: String(
-            uploadRegionPreviewData?.cacheFileName ||
-              messageImageItem?.cacheFileName ||
-              uploadRegionPreviewData?.fileName ||
-              "",
-          ).trim(),
-          cacheFilePath: String(
-            uploadRegionPreviewData?.cacheFilePath ||
-              uploadRegionPreviewData?.filePath ||
-              messageImageItem?.cacheFilePath ||
               "",
           ).trim(),
           internalCacheId: String(
@@ -4772,11 +4839,9 @@ function hydrateSessionImagesFromCacheRecords(
             typeof messageImageItem.usageMeta === "object"
               ? { ...messageImageItem.usageMeta }
               : uploadRegionPreviewData?.usageMeta,
-          legacy:
-            messageImageItem?.legacy &&
-            typeof messageImageItem.legacy === "object"
-              ? { ...messageImageItem.legacy }
-              : uploadRegionPreviewData?.legacy,
+          legacy: Object.keys(normalizedMessageImageLegacy).length
+            ? normalizedMessageImageLegacy
+            : void 0,
           dataUrl: normalizedCacheDataUrl,
           type: String(
             messageImageItem?.type ||
