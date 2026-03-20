@@ -31287,20 +31287,23 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         );
         const imageLookupKeys = buildImageRecordLookupKeys(imageItem);
         const primaryImageLookupKey = String(imageLookupKeys[0] || "").trim();
+        const {
+          chatCacheId: normalizedOpenChatCacheId,
+          psCacheId: normalizedOpenPsCacheId,
+        } = resolveSessionImageCacheIds(imageItem);
         const imageLegacySnapshot =
           imageItem?.legacy && typeof imageItem.legacy === "object"
             ? imageItem.legacy
             : {};
         const normalizedLegacyPsCacheId = String(
-          imageItem?.psCacheId ||
+          normalizedOpenPsCacheId ||
             imageLegacySnapshot?.psCacheId ||
             (isPsCacheIdText(primaryImageLookupKey)
               ? primaryImageLookupKey
               : ""),
         ).trim();
         const normalizedLegacyCacheId = String(
-          imageItem?.cacheId ||
-            imageItem?.chatCacheId ||
+          normalizedOpenChatCacheId ||
             imageLegacySnapshot?.cacheId ||
             (!isPsCacheIdText(primaryImageLookupKey) &&
             /^[a-f0-9]{16,128}$/i.test(primaryImageLookupKey)
@@ -31308,7 +31311,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               : ""),
         ).trim();
         const normalizedLegacyChatCacheId = String(
-          imageItem?.chatCacheId || imageLegacySnapshot?.chatCacheId || "",
+          normalizedOpenChatCacheId ||
+            imageLegacySnapshot?.chatCacheId ||
+            "",
         ).trim();
         const normalizedLegacyOpenPayload = Object.entries({
           ...(assetViewerPayload?.legacy &&
@@ -31782,6 +31787,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             )
               continue;
             try {
+              const {
+                chatCacheId: normalizedUploadChatCacheId,
+                psCacheId: normalizedUploadPsCacheId,
+                fileDerivedCacheId: normalizedUploadFileDerivedCacheId,
+              } = resolveSessionImageCacheIds(uploadImageItem);
               const chatCacheLookupResult = await window.shell.chatImageCacheGet(
                   {
                     assetId: String(uploadImageItem?.assetId || "").trim(),
@@ -31793,9 +31803,14 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                       uploadImageItem?.fileName || uploadImageDisplayName || "",
                     ).trim(),
                     filePath: String(
-                      uploadImageItem?.filePath || uploadImageItem?.cacheFilePath || "",
+                      resolveAssetRecordStoragePath(uploadImageItem) || "",
                     ).trim(),
-                    cacheId: String(uploadImageItem?.cacheId || "").trim(),
+                    cacheId: String(
+                      normalizedUploadChatCacheId ||
+                        normalizedUploadPsCacheId ||
+                        normalizedUploadFileDerivedCacheId ||
+                        "",
+                    ).trim(),
                     cacheFileName: uploadImageDisplayName,
                   },
                 ),
