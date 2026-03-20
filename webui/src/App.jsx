@@ -7117,24 +7117,7 @@ async function readFileAsDataUrl(imageFile) {
 
 function normalizeImageItems(imageItemsInput) {
   return Array.from(imageItemsInput || [])
-    .filter(
-      (imageItemCandidate) => {
-        if (!imageItemCandidate) return false;
-        const normalizedDataUrl = String(imageItemCandidate?.dataUrl || "").trim();
-        if (normalizedDataUrl.startsWith("data:image/")) return true;
-        return [
-          imageItemCandidate?.assetId,
-          imageItemCandidate?.internalCacheId,
-          imageItemCandidate?.itemId,
-          imageItemCandidate?.fileName,
-          imageItemCandidate?.filePath,
-          imageItemCandidate?.cacheFilePath,
-          imageItemCandidate?.psCacheId,
-          imageItemCandidate?.cacheId,
-          imageItemCandidate?.chatCacheId,
-        ].some((lookupValue) => !!String(lookupValue || "").trim());
-      },
-    )
+    .filter((imageItemCandidate) => hasResolvableImageRecord(imageItemCandidate))
     .map((rawImageItem) => {
       const rawLegacyImageSnapshot =
         rawImageItem?.legacy && typeof rawImageItem.legacy === "object"
@@ -24890,24 +24873,8 @@ function App() {
     }, [previewImages]),
     React.useEffect(() => {
       const hasAnyUploadImage = Array.isArray(composerImages)
-        ? composerImages.some(
-            (composerImageItem) => {
-              const normalizedDataUrl = String(
-                composerImageItem?.dataUrl || "",
-              ).trim();
-              if (/^data:image\//i.test(normalizedDataUrl)) return true;
-              return [
-                composerImageItem?.assetId,
-                composerImageItem?.internalCacheId,
-                composerImageItem?.itemId,
-                composerImageItem?.fileName,
-                composerImageItem?.filePath,
-                composerImageItem?.cacheFilePath,
-                composerImageItem?.psCacheId,
-                composerImageItem?.cacheId,
-                composerImageItem?.chatCacheId,
-              ].some((lookupValue) => !!String(lookupValue || "").trim());
-            },
+        ? composerImages.some((composerImageItem) =>
+            hasResolvableImageRecord(composerImageItem),
           )
         : false;
       if (hasAnyUploadImage) return;
@@ -31894,21 +31861,8 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           ? composerImagesRef.current
           : [],
         slotImageItem = uploadItems[normalizedSlotIndex],
-        hasSlotImage = !!slotImageItem && (() => {
-          const normalizedDataUrl = String(slotImageItem?.dataUrl || "").trim();
-          if (normalizedDataUrl) return true;
-          return [
-            slotImageItem?.assetId,
-            slotImageItem?.internalCacheId,
-            slotImageItem?.itemId,
-            slotImageItem?.fileName,
-            slotImageItem?.filePath,
-            slotImageItem?.cacheFilePath,
-            slotImageItem?.psCacheId,
-            slotImageItem?.cacheId,
-            slotImageItem?.chatCacheId,
-          ].some((lookupValue) => !!String(lookupValue || "").trim());
-        })();
+        hasSlotImage =
+          !!slotImageItem && hasResolvableImageRecord(slotImageItem);
       if (
         normalizedSlotIndex < 0 ||
         !hasSlotImage ||
