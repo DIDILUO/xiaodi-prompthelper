@@ -15390,6 +15390,83 @@ function createRunQueueTaskItemResults(totalCountInput = 1) {
   ).filter(Boolean);
 }
 
+function normalizeRunQueueTaskSnapshot(taskSnapshotInput = {}) {
+  const taskSnapshot =
+    taskSnapshotInput && typeof taskSnapshotInput === "object"
+      ? taskSnapshotInput
+      : null;
+  if (!taskSnapshot) return null;
+  const normalizedGenerationCount = Math.max(
+      1,
+      Number(taskSnapshot.generationCount || taskSnapshot.requestedItemCount) || 1,
+    ),
+    normalizedTimeoutMs = Math.max(0, Number(taskSnapshot.timeoutMs) || 0),
+    normalizedImageApiConfig =
+      taskSnapshot.imageApiConfig &&
+      typeof taskSnapshot.imageApiConfig === "object"
+        ? {
+            baseUrl: String(taskSnapshot.imageApiConfig.baseUrl || "").trim(),
+            apiKey: String(taskSnapshot.imageApiConfig.apiKey || "").trim(),
+            model: String(taskSnapshot.imageApiConfig.model || "").trim(),
+            providerMode: String(
+              taskSnapshot.imageApiConfig.providerMode ||
+                taskSnapshot.providerMode ||
+                "",
+            ).trim(),
+            timeoutMs: Math.max(
+              0,
+              Number(taskSnapshot.imageApiConfig.timeoutMs || normalizedTimeoutMs) ||
+                0,
+            ),
+          }
+        : null;
+  return {
+    imageSource:
+      String(taskSnapshot.imageSource || "upload").trim() ===
+      "assistant-prev-user"
+        ? "assistant-prev-user"
+        : "upload",
+    sourceLabel: String(taskSnapshot.sourceLabel || "").trim(),
+    providerKey: String(taskSnapshot.providerKey || "").trim(),
+    providerLabel: String(taskSnapshot.providerLabel || "").trim(),
+    providerMode: String(
+      taskSnapshot.providerMode || normalizedImageApiConfig?.providerMode || "",
+    ).trim(),
+    modelLabel: String(taskSnapshot.modelLabel || "").trim(),
+    sizeLabel: String(taskSnapshot.sizeLabel || "").trim(),
+    sizeText: String(
+      taskSnapshot.sizeText || taskSnapshot.sizeLabel || "",
+    ).trim(),
+    ratioLabel: String(taskSnapshot.ratioLabel || "").trim(),
+    generationCount: normalizedGenerationCount,
+    requestedItemCount: normalizedGenerationCount,
+    timeoutMs:
+      normalizedTimeoutMs ||
+      Math.max(0, Number(normalizedImageApiConfig?.timeoutMs) || 0),
+    imageApiConfig: normalizedImageApiConfig,
+  };
+}
+
+function resolveRunQueueTaskSnapshot(taskRecordOrTaskOptionsInput = {}) {
+  const taskRecordOrTaskOptions =
+    taskRecordOrTaskOptionsInput &&
+    typeof taskRecordOrTaskOptionsInput === "object"
+      ? taskRecordOrTaskOptionsInput
+      : null;
+  if (!taskRecordOrTaskOptions) return null;
+  const taskSnapshotCandidates = [
+    taskRecordOrTaskOptions.taskSnapshot,
+    taskRecordOrTaskOptions.options?.taskSnapshot,
+  ];
+  for (const taskSnapshotCandidate of taskSnapshotCandidates) {
+    const normalizedTaskSnapshot = normalizeRunQueueTaskSnapshot(
+      taskSnapshotCandidate,
+    );
+    if (normalizedTaskSnapshot) return normalizedTaskSnapshot;
+  }
+  return null;
+}
+
 function normalizeRunQueueHistoryTaskItem(taskItemInput) {
   const taskItem =
     taskItemInput && typeof taskItemInput === "object"
@@ -15464,6 +15541,21 @@ function normalizeRunQueueHistoryTaskItem(taskItemInput) {
               thumbItem.name,
           )
       : [];
+  const normalizedTaskSnapshot = normalizeRunQueueTaskSnapshot(
+    taskItem.taskSnapshot || {
+      imageSource: taskItem.imageSource,
+      sourceLabel: taskItem.sourceLabel,
+      providerKey: taskItem.providerKey,
+      providerLabel: taskItem.providerLabel,
+      providerMode: taskItem.providerMode,
+      modelLabel: taskItem.modelLabel,
+      sizeLabel: taskItem.sizeLabel,
+      ratioLabel: taskItem.ratioLabel,
+      generationCount:
+        taskItem.generationCount || taskItem.requestedItemCount || 1,
+      timeoutMs: taskItem.timeoutMs,
+    },
+  );
   return {
     id: normalizedTaskId,
     phase: "history",
@@ -15492,9 +15584,41 @@ function normalizeRunQueueHistoryTaskItem(taskItemInput) {
     summaryText: String(taskItem.summaryText || "").trim(),
     detailPrimaryText: String(taskItem.detailPrimaryText || "").trim(),
     detailSecondaryText: String(taskItem.detailSecondaryText || "").trim(),
-    sourceLabel: String(taskItem.sourceLabel || "").trim(),
-    providerLabel: String(taskItem.providerLabel || "").trim(),
-    modelLabel: String(taskItem.modelLabel || "").trim(),
+    imageSource:
+      String(
+        normalizedTaskSnapshot?.imageSource || taskItem.imageSource || "upload",
+      ).trim() === "assistant-prev-user"
+        ? "assistant-prev-user"
+        : "upload",
+    sourceLabel: String(
+      normalizedTaskSnapshot?.sourceLabel || taskItem.sourceLabel || "",
+    ).trim(),
+    providerKey: String(
+      normalizedTaskSnapshot?.providerKey || taskItem.providerKey || "",
+    ).trim(),
+    providerLabel: String(
+      normalizedTaskSnapshot?.providerLabel || taskItem.providerLabel || "",
+    ).trim(),
+    providerMode: String(
+      normalizedTaskSnapshot?.providerMode || taskItem.providerMode || "",
+    ).trim(),
+    modelLabel: String(
+      normalizedTaskSnapshot?.modelLabel || taskItem.modelLabel || "",
+    ).trim(),
+    sizeLabel: String(
+      normalizedTaskSnapshot?.sizeLabel || taskItem.sizeLabel || "",
+    ).trim(),
+    ratioLabel: String(
+      normalizedTaskSnapshot?.ratioLabel || taskItem.ratioLabel || "",
+    ).trim(),
+    generationCount: Math.max(
+      1,
+      Number(
+        normalizedTaskSnapshot?.generationCount ||
+          taskItem.generationCount ||
+          requestedItemCount,
+      ) || 1,
+    ),
     sourceImageRefs,
     thumbDataUrl:
       computedThumbBundle.thumbDataUrl ||
@@ -15510,6 +15634,7 @@ function normalizeRunQueueHistoryTaskItem(taskItemInput) {
     completedItemCount,
     successItemCount,
     failedItemCount,
+    taskSnapshot: normalizedTaskSnapshot,
     itemResults,
     returnedImages,
   };
@@ -15608,9 +15733,21 @@ function serializeRunQueueHistoryTaskItemForStorage(taskItemInput) {
     detailSecondaryText: String(
       normalizedTaskItem.detailSecondaryText || "",
     ).trim(),
+    imageSource: String(normalizedTaskItem.imageSource || "upload").trim(),
+    providerKey: String(normalizedTaskItem.providerKey || "").trim(),
     sourceLabel: String(normalizedTaskItem.sourceLabel || "").trim(),
     providerLabel: String(normalizedTaskItem.providerLabel || "").trim(),
+    providerMode: String(normalizedTaskItem.providerMode || "").trim(),
     modelLabel: String(normalizedTaskItem.modelLabel || "").trim(),
+    sizeLabel: String(normalizedTaskItem.sizeLabel || "").trim(),
+    ratioLabel: String(normalizedTaskItem.ratioLabel || "").trim(),
+    generationCount: Math.max(
+      1,
+      Number(
+        normalizedTaskItem.generationCount ||
+          normalizedTaskItem.requestedItemCount,
+      ) || 1,
+    ),
     timeoutMs: Math.max(0, Number(normalizedTaskItem.timeoutMs) || 0),
     canRerun: !!normalizedTaskItem.canRerun,
     resultMessage: String(normalizedTaskItem.resultMessage || "").trim(),
@@ -15721,6 +15858,7 @@ function createRunQueueTaskRecord({
   normalizedRunTaskPromptText,
   runTaskImageSourceMode,
   normalizedRunTaskImages,
+  taskSnapshotInput,
   runQueueIdCounterValue,
   timestampMs,
 } = {}) {
@@ -15744,7 +15882,15 @@ function createRunQueueTaskRecord({
     requestedItemCount = Math.max(
       1,
       Number(runTaskInputOptions?.requestedItemCount) || 1,
-    );
+    ),
+    normalizedTaskSnapshot = normalizeRunQueueTaskSnapshot({
+      ...(taskSnapshotInput && typeof taskSnapshotInput === "object"
+        ? taskSnapshotInput
+        : {}),
+      imageSource: normalizedSourceMode,
+      generationCount: requestedItemCount,
+      requestedItemCount,
+    });
   return {
     id: `imgq-${normalizedTimestamp}-${normalizedCounter}`,
     createdAtMs: normalizedTimestamp,
@@ -15755,6 +15901,7 @@ function createRunQueueTaskRecord({
     failedItemCount: 0,
     resultMessage: "",
     itemResults: createRunQueueTaskItemResults(requestedItemCount),
+    taskSnapshot: normalizedTaskSnapshot,
     options: {
       promptText: String(normalizedRunTaskPromptText || "").trim(),
       imageSource: normalizedSourceMode,
@@ -15771,6 +15918,7 @@ function buildRunQueueTaskFromInputCore({
   fallbackPromptText = "",
   uploadSourceImages = [],
   assistantSourceImages = [],
+  taskSnapshotInput = null,
   runQueueIdCounterValue,
   timestampMs,
   normalizeImageItemHandler,
@@ -15803,6 +15951,7 @@ function buildRunQueueTaskFromInputCore({
       normalizedRunTaskPromptText,
       runTaskImageSourceMode: normalizedRunTaskImageSourceMode,
       normalizedRunTaskImages,
+      taskSnapshotInput,
       runQueueIdCounterValue,
       timestampMs,
     });
@@ -32068,7 +32217,14 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     runImagePipelineOptions = {},
     runQueueTaskRecordInput = null,
   ) => {
-      const currentRunQueueSettings = getLiveRunQueueSettings();
+      const currentRunQueueSettings = getLiveRunQueueSettings(),
+        runQueueTaskRecord =
+          runQueueTaskRecordInput && typeof runQueueTaskRecordInput === "object"
+            ? runQueueTaskRecordInput
+            : null,
+        runTaskSnapshot = resolveRunQueueTaskSnapshot(
+          runQueueTaskRecord || runImagePipelineOptions,
+        );
       const trimmedPromptText = String(
         runImagePipelineOptions?.promptText ?? "",
       ).trim();
@@ -32086,18 +32242,33 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           returnedImages: [],
         };
       }
-      const runTaskProviderKey = currentRunQueueSettings.providerKey,
+      const runTaskProviderKey = String(
+          runTaskSnapshot?.providerKey || currentRunQueueSettings.providerKey || "",
+        ).trim(),
         runGenerationImageSizeLabel = String(
-          currentRunQueueSettings.generationImageSizeLabel || "",
+          runTaskSnapshot?.sizeLabel ||
+            runTaskSnapshot?.sizeText ||
+            currentRunQueueSettings.generationImageSizeLabel ||
+            "",
         ).trim(),
         runGenerationImageSizeText = String(
-          currentRunQueueSettings.generationImageSizeText ||
+          runTaskSnapshot?.sizeText ||
+            runTaskSnapshot?.sizeLabel ||
+            currentRunQueueSettings.generationImageSizeText ||
             runGenerationImageSizeLabel,
         ).trim(),
         runGenerationAspectRatio = String(
-          currentRunQueueSettings.generationAspectRatio || "AUTO",
+          runTaskSnapshot?.ratioLabel ||
+            currentRunQueueSettings.generationAspectRatio ||
+            "AUTO",
         ).trim(),
-        runGenerationCount = currentRunQueueSettings.generationCount,
+        runGenerationCount = parseGenerationCount(
+          Number(runQueueTaskRecord?.requestedItemCount) ||
+            Number(runImagePipelineOptions?.requestedItemCount) ||
+            Number(runTaskSnapshot?.generationCount) ||
+            currentRunQueueSettings.generationCount,
+          defaultImageApiConfig.generationCount,
+        ),
         runTaskTimeoutOverrideMs =
           Number.isFinite(Number(runImagePipelineOptions?.timeoutOverrideMs)) &&
           Number(runImagePipelineOptions?.timeoutOverrideMs) > 0
@@ -32107,17 +32278,36 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               )
             : 0,
         normalizedImageApiConfig = {
-          baseUrl: String(currentRunQueueSettings.imageConfig?.baseUrl || "").trim(),
-          apiKey: String(currentRunQueueSettings.imageConfig?.apiKey || "").trim(),
-          model: String(currentRunQueueSettings.imageConfig?.model || "").trim(),
+          baseUrl: String(
+            runTaskSnapshot?.imageApiConfig?.baseUrl ||
+              currentRunQueueSettings.imageConfig?.baseUrl ||
+              "",
+          ).trim(),
+          apiKey: String(
+            runTaskSnapshot?.imageApiConfig?.apiKey ||
+              currentRunQueueSettings.imageConfig?.apiKey ||
+              "",
+          ).trim(),
+          model: String(
+            runTaskSnapshot?.imageApiConfig?.model ||
+              runTaskSnapshot?.modelLabel ||
+              currentRunQueueSettings.imageConfig?.model ||
+              "",
+          ).trim(),
           timeoutMs: Math.max(
             5e3,
             Number(
-              runTaskTimeoutOverrideMs || currentRunQueueSettings.imageConfig?.timeoutMs,
+              runTaskTimeoutOverrideMs ||
+                runTaskSnapshot?.imageApiConfig?.timeoutMs ||
+                runTaskSnapshot?.timeoutMs ||
+                currentRunQueueSettings.imageConfig?.timeoutMs,
             ) ||
               defaultImageApiConfig.timeoutMs,
           ),
-          providerMode: currentRunQueueSettings.imageConfig?.providerMode,
+          providerMode:
+            runTaskSnapshot?.imageApiConfig?.providerMode ||
+            runTaskSnapshot?.providerMode ||
+            currentRunQueueSettings.imageConfig?.providerMode,
         },
         imageApiValidationErrors = validateImageApiConfig(
           normalizedImageApiConfig,
@@ -32150,14 +32340,13 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           normalizedImageApiConfig.providerMode,
         ),
         imageSourceType =
-          String(runImagePipelineOptions?.imageSource || "upload").trim() ===
-          "assistant-prev-user"
+          String(
+            runTaskSnapshot?.imageSource ||
+              runImagePipelineOptions?.imageSource ||
+              "upload",
+          ).trim() === "assistant-prev-user"
             ? "assistant-prev-user"
             : "upload";
-      const runQueueTaskRecord =
-          runQueueTaskRecordInput && typeof runQueueTaskRecordInput === "object"
-            ? runQueueTaskRecordInput
-            : null;
       let runQueueAbortController = null,
         runImageRequestStartedAt = Date.now(),
         selectedSourceImages = [],
@@ -32193,16 +32382,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           (selectedSourceImages = await hydrateInputImagesFromCache(
             selectedSourceImages,
           ));
-        if (
-          runImagePipelineOptions &&
-          typeof runImagePipelineOptions === "object" &&
-          Array.isArray(selectedSourceImages)
-        ) {
-          runImagePipelineOptions.images = selectedSourceImages
-            .map(normalizeRunQueueTaskImageItem)
-            .filter(Boolean);
-          syncRunQueueBadgeState();
-        }
         const runImageRequestContext = buildRunImageRequestContext({
           sourceImages: selectedSourceImages,
           promptText: trimmedPromptText,
@@ -32216,42 +32395,24 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         normalizedTargetMetaList = runImageRequestContext.normalizedTargetMetaList;
         if (normalizedSourceImages.length > 0) {
           const persistedRunSourceImageRefs = await persistApiUsedImageList(
-              normalizedSourceImages,
-              window.shell?.apiImageStorePut,
-              {
-                usageMeta: {
-                  ownerType: "api-input-cache",
-                  runApiUsed: true,
-                },
-                context: {
-                  scope: "run-api",
-                  taskId: String(runQueueTaskRecord?.id || "").trim(),
-                  sessionId: String(
-                    runImagePipelineOptions?.sessionId ||
-                      runQueueTaskRecord?.options?.sessionId ||
-                      "",
-                  ).trim(),
-                },
+            normalizedSourceImages,
+            window.shell?.apiImageStorePut,
+            {
+              usageMeta: {
+                ownerType: "api-input-cache",
+                runApiUsed: true,
               },
-            ),
-            normalizedPersistedRunSourceImageRefs =
-              persistedRunSourceImageRefs
-                .map((imageItem) => normalizeRunQueueTaskImageItem(imageItem))
-                .filter(Boolean);
-          if (
-            runImagePipelineOptions &&
-            typeof runImagePipelineOptions === "object"
-          ) {
-            runImagePipelineOptions.images = normalizedPersistedRunSourceImageRefs;
-          }
-          if (
-            runQueueTaskRecord?.options &&
-            typeof runQueueTaskRecord.options === "object"
-          ) {
-            runQueueTaskRecord.options.images =
-              normalizedPersistedRunSourceImageRefs;
-            syncRunQueueBadgeState();
-          }
+              context: {
+                scope: "run-api",
+                taskId: String(runQueueTaskRecord?.id || "").trim(),
+                sessionId: String(
+                  runImagePipelineOptions?.sessionId ||
+                    runQueueTaskRecord?.options?.sessionId ||
+                    "",
+                ).trim(),
+              },
+            },
+          );
           normalizedSourceImages = restoreRuntimeDataUrlOnPersistedApiImages(
             normalizedSourceImages,
             persistedRunSourceImageRefs,
@@ -33320,6 +33481,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           taskOptionsInput && typeof taskOptionsInput === "object"
             ? taskOptionsInput
             : {},
+        taskSnapshot = resolveRunQueueTaskSnapshot(taskOptionsInput),
         timeoutOverrideMs =
           Number.isFinite(Number(taskOptions.timeoutOverrideMs)) &&
           Number(taskOptions.timeoutOverrideMs) > 0
@@ -33327,7 +33489,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             : 0,
         fallbackTimeoutMs = Math.max(
           5e3,
-          Number(imageConfig?.timeoutMs) || defaultImageApiConfig.timeoutMs,
+          Number(taskSnapshot?.timeoutMs) ||
+            Number(taskSnapshot?.imageApiConfig?.timeoutMs) ||
+            Number(imageConfig?.timeoutMs) ||
+            defaultImageApiConfig.timeoutMs,
         ),
         startedAtMs =
           Number.isFinite(Number(runtimeOptions?.startedAtMs)) &&
@@ -33383,6 +33548,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           taskRecord.options && typeof taskRecord.options === "object"
             ? taskRecord.options
             : {},
+        taskSnapshot = resolveRunQueueTaskSnapshot(taskRecord),
         sourceImages = Array.isArray(taskOptions.images) ? taskOptions.images : [],
         normalizedSourceImages = sourceImages
           .map(normalizeRunQueueTaskImageItem)
@@ -33421,6 +33587,55 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             normalizeRunQueueHistoryImageItem(taskImageItem, taskImageIndex),
           )
           .filter(Boolean),
+        historySourceLabel =
+          String(
+            sourceLabelInput ||
+              taskSnapshot?.sourceLabel ||
+              (String(taskOptions.imageSource || "upload").trim() ===
+              "assistant-prev-user"
+                ? "对话图片"
+                : "上传图片"),
+          ).trim() || "上传图片",
+        historyProviderLabel =
+          String(taskSnapshot?.providerLabel || providerLabelInput || "").trim() ||
+          (String(taskSnapshot?.providerKey || "").trim()
+            ? resolveProviderSiteLabel(
+                String(taskSnapshot?.providerKey || "").trim(),
+                imageProviderPresets,
+                String(taskSnapshot?.providerKey || "").trim() || "服务商未设",
+              )
+            : "服务商未设"),
+        historyModelLabel =
+          String(modelLabelInput || taskSnapshot?.modelLabel || "").trim() ||
+          "模型未设",
+        historySizeLabel =
+          String(
+            sizeLabelInput || taskSnapshot?.sizeLabel || taskSnapshot?.sizeText || "",
+          ).trim() || "尺寸未设",
+        historyRatioLabel =
+          String(ratioLabelInput || taskSnapshot?.ratioLabel || "").trim() || "比例未设",
+        historyTimeoutMs = Math.max(
+          0,
+          Number(timeoutMsInput) || resolveRunQueueTaskTimeoutMs(taskRecord),
+        ),
+        normalizedHistoryTaskSnapshot = normalizeRunQueueTaskSnapshot({
+          ...(taskSnapshot && typeof taskSnapshot === "object" ? taskSnapshot : {}),
+          imageSource:
+            String(
+              taskSnapshot?.imageSource || taskOptions.imageSource || "upload",
+            ).trim() === "assistant-prev-user"
+              ? "assistant-prev-user"
+              : "upload",
+          sourceLabel: historySourceLabel,
+          providerLabel: historyProviderLabel,
+          modelLabel: historyModelLabel,
+          sizeLabel: historySizeLabel,
+          sizeText: historySizeLabel,
+          ratioLabel: historyRatioLabel,
+          generationCount: requestedItemCount,
+          requestedItemCount,
+          timeoutMs: historyTimeoutMs,
+        }),
         normalizedTaskId = String(taskRecord.id || "").trim();
       if (!normalizedTaskId) return null;
       return normalizeRunQueueHistoryTaskItem({
@@ -33431,20 +33646,29 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         finishedAtMs: Date.now(),
         promptText: String(taskOptions.promptText || "").trim(),
         imageCount: normalizedSourceImages.length || historyReturnedImages.length,
-        summaryText: `${String(sizeLabelInput || "").trim() || "尺寸未设"} / ${String(ratioLabelInput || "").trim() || "比例未设"} / x${requestedItemCount}`,
-        detailPrimaryText: `${String(sourceLabelInput || "").trim() || "未知来源"} · ${String(modelLabelInput || "").trim() || "模型未设"}`,
-        detailSecondaryText: `${String(providerLabelInput || "").trim() || "服务商未设"} · ${statusInput === "success" ? "已完成" : statusInput === "failed" ? "失败" : statusInput === "aborted" ? "已中止" : "已移除"} · ${formatConsoleLogTime(Date.now())}`,
-        sourceLabel: String(sourceLabelInput || "").trim(),
-        providerLabel: String(providerLabelInput || "").trim(),
-        modelLabel: String(modelLabelInput || "").trim() || "模型未设",
+        summaryText: `${historySizeLabel} / ${historyRatioLabel} / x${requestedItemCount}`,
+        detailPrimaryText: `${historySourceLabel} · ${historyModelLabel}`,
+        detailSecondaryText: `${historyProviderLabel} · ${statusInput === "success" ? "已完成" : statusInput === "failed" ? "失败" : statusInput === "aborted" ? "已中止" : "已移除"} · ${formatConsoleLogTime(Date.now())}`,
+        imageSource: normalizedHistoryTaskSnapshot?.imageSource || "upload",
+        providerKey: String(normalizedHistoryTaskSnapshot?.providerKey || "").trim(),
+        sourceLabel: historySourceLabel,
+        providerLabel: historyProviderLabel,
+        providerMode: String(
+          normalizedHistoryTaskSnapshot?.providerMode || "",
+        ).trim(),
+        modelLabel: historyModelLabel,
+        sizeLabel: historySizeLabel,
+        ratioLabel: historyRatioLabel,
+        generationCount: requestedItemCount,
         sourceImageRefs: historySourceImageRefs,
-        timeoutMs: Math.max(0, Number(timeoutMsInput) || 0),
+        timeoutMs: historyTimeoutMs,
         canRerun: !!String(taskOptions.promptText || "").trim(),
         resultMessage: String(resultMessageInput || "").trim(),
         requestedItemCount,
         completedItemCount,
         successItemCount,
         failedItemCount,
+        taskSnapshot: normalizedHistoryTaskSnapshot,
         itemResults,
       });
     },
@@ -33457,23 +33681,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         pendingTaskRecords = Array.isArray(runQueueItemsRef.current)
           ? runQueueItemsRef.current
           : [],
-        liveGenerationSizeLabel = String(
-          generationImageSizeLabel || generationImageSizeText || "",
-        ).trim(),
-        liveGenerationAspectRatio = String(
-          normalizedGenerationAspectRatio || "",
-        ).trim(),
-        liveGenerationCount = parseGenerationCount(
-          normalizedGenerationCount,
-          defaultImageApiConfig.generationCount,
-        ),
-        liveProviderKey = String(imageProviderKey || "").trim(),
-        liveProviderLabel = resolveProviderSiteLabel(
-          liveProviderKey,
-          imageProviderPresets,
-          liveProviderKey || "服务商未设",
-        ),
-        liveModelLabel = String(imageConfig?.model || "").trim(),
         nextTaskListSnapshot = [],
         pushTaskSnapshot = (
           taskRecordInput,
@@ -33491,8 +33698,14 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               taskRecord.options && typeof taskRecord.options === "object"
                 ? taskRecord.options
                 : {},
+            taskSnapshot = resolveRunQueueTaskSnapshot(taskRecord),
             normalizedPromptText = String(taskOptions.promptText || "").trim(),
             taskImageList = Array.isArray(taskOptions.images) ? taskOptions.images : [],
+            taskSourceImageRefs = taskImageList
+              .map((taskImageItem, taskImageIndex) =>
+                normalizeRunQueueHistoryImageItem(taskImageItem, taskImageIndex),
+              )
+              .filter(Boolean),
             firstTaskImage = taskImageList[0] || null,
             taskThumbDataUrl = resolveRunQueueTaskThumbSrc(firstTaskImage),
             taskRefThumbList = taskImageList.map((taskImageItem, taskImageIndex) => ({
@@ -33503,11 +33716,17 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 `image_${taskImageIndex + 1}`,
               ),
             })),
-            taskSizeLabel = liveGenerationSizeLabel,
-            taskRatioLabel = liveGenerationAspectRatio,
+            taskSizeLabel =
+              String(
+                taskSnapshot?.sizeLabel || taskSnapshot?.sizeText || "",
+              ).trim() || "尺寸未设",
+            taskRatioLabel =
+              String(taskSnapshot?.ratioLabel || "").trim() || "比例未设",
             taskCount = Math.max(
               1,
-              Number(taskRecord.requestedItemCount) || liveGenerationCount,
+              Number(taskRecord.requestedItemCount) ||
+                Number(taskSnapshot?.generationCount) ||
+                1,
             ),
             taskCompletedCount = Math.max(
               0,
@@ -33533,20 +33752,30 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               Number.isFinite(taskStartedAtMs) && taskStartedAtMs > 0
                 ? Math.floor(taskStartedAtMs)
                 : 0,
-            taskTimeoutMs = resolveRunQueueTaskTimeoutMs(taskOptions, {
+            taskTimeoutMs = resolveRunQueueTaskTimeoutMs(taskRecord, {
               startedAtMs: normalizedTaskStartedAtMs,
               deadlineMs:
                 phase === "running"
                   ? Number(runQueueTimeoutDeadlineRef.current)
                   : 0,
             }),
-            taskProviderLabel = liveProviderLabel,
-            taskModelLabel = liveModelLabel,
+            taskProviderLabel =
+              String(taskSnapshot?.providerLabel || "").trim() ||
+              (String(taskSnapshot?.providerKey || "").trim()
+                ? resolveProviderSiteLabel(
+                    String(taskSnapshot?.providerKey || "").trim(),
+                    imageProviderPresets,
+                    String(taskSnapshot?.providerKey || "").trim() || "服务商未设",
+                  )
+                : "服务商未设"),
+            taskModelLabel =
+              String(taskSnapshot?.modelLabel || "").trim() || "模型未设",
             taskSourceLabel =
-              String(taskOptions.imageSource || "upload").trim() ===
+              String(taskSnapshot?.sourceLabel || "").trim() ||
+              (String(taskSnapshot?.imageSource || taskOptions.imageSource || "upload").trim() ===
               "assistant-prev-user"
                 ? "对话图片"
-                : "上传图片",
+                : "上传图片"),
             normalizedQueueOrder =
               Number.isFinite(Number(pendingIndex)) && Number(pendingIndex) >= 0
                 ? Math.floor(Number(pendingIndex)) + 1
@@ -33574,11 +33803,21 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             summaryText: `${taskSizeLabel || "尺寸未设"} / ${taskRatioLabel || "比例未设"} / x${taskCount}`,
             detailPrimaryText: taskDetailPrimaryText,
             detailSecondaryText: taskDetailSecondaryText,
+            imageSource:
+              String(taskSnapshot?.imageSource || taskOptions.imageSource || "upload").trim() ===
+              "assistant-prev-user"
+                ? "assistant-prev-user"
+                : "upload",
+            providerKey: String(taskSnapshot?.providerKey || "").trim(),
             sourceLabel: taskSourceLabel,
             providerLabel: taskProviderLabel,
+            providerMode: String(taskSnapshot?.providerMode || "").trim(),
             modelLabel: taskModelLabel || "模型未设",
+            sizeLabel: taskSizeLabel,
+            ratioLabel: taskRatioLabel,
             thumbDataUrl: taskThumbDataUrl,
             refThumbList: taskRefThumbRenderList,
+            sourceImageRefs: taskSourceImageRefs,
             timeoutMs: taskTimeoutMs,
             startedAtMs: normalizedTaskStartedAtMs,
             canRerun: !!normalizedPromptText,
@@ -33716,30 +33955,47 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       );
       if (queueTaskIndex < 0) return false;
       const removedQueueTask = runQueueItemsRef.current.splice(queueTaskIndex, 1)[0];
+      const removedQueueTaskSnapshot = resolveRunQueueTaskSnapshot(removedQueueTask);
       appendRunQueueHistoryRecord(
         buildRunQueueHistoryRecord({
           taskRecordInput: removedQueueTask,
           statusInput: "removed",
           sourceLabelInput:
-            String(removedQueueTask?.options?.imageSource || "upload").trim() ===
-            "assistant-prev-user"
+            String(removedQueueTaskSnapshot?.sourceLabel || "").trim() ||
+            (String(
+              removedQueueTaskSnapshot?.imageSource ||
+                removedQueueTask?.options?.imageSource ||
+                "upload",
+            ).trim() === "assistant-prev-user"
               ? "对话图片"
-              : "上传图片",
-          providerLabelInput: resolveProviderSiteLabel(
-            String(imageProviderKey || "").trim(),
-            imageProviderPresets,
-            String(imageProviderKey || "").trim() || "服务商未设",
+              : "上传图片"),
+          providerLabelInput:
+            String(removedQueueTaskSnapshot?.providerLabel || "").trim() ||
+            (String(removedQueueTaskSnapshot?.providerKey || "").trim()
+              ? resolveProviderSiteLabel(
+                  String(removedQueueTaskSnapshot?.providerKey || "").trim(),
+                  imageProviderPresets,
+                  String(removedQueueTaskSnapshot?.providerKey || "").trim() ||
+                    "服务商未设",
+                )
+              : "服务商未设"),
+          modelLabelInput:
+            String(removedQueueTaskSnapshot?.modelLabel || "").trim() || "模型未设",
+          sizeLabelInput:
+            String(
+              removedQueueTaskSnapshot?.sizeLabel ||
+                removedQueueTaskSnapshot?.sizeText ||
+                "",
+            ).trim() || "尺寸未设",
+          ratioLabelInput:
+            String(removedQueueTaskSnapshot?.ratioLabel || "").trim() || "比例未设",
+          generationCountInput: Math.max(
+            1,
+            Number(removedQueueTask?.requestedItemCount) ||
+              Number(removedQueueTaskSnapshot?.generationCount) ||
+              1,
           ),
-          modelLabelInput: String(imageConfig?.model || "").trim() || "模型未设",
-          sizeLabelInput: String(
-            generationImageSizeLabel || generationImageSizeText || "",
-          ).trim(),
-          ratioLabelInput: String(normalizedGenerationAspectRatio || "").trim(),
-          generationCountInput: parseGenerationCount(
-            normalizedGenerationCount,
-            defaultImageApiConfig.generationCount,
-          ),
-          timeoutMsInput: resolveRunQueueTaskTimeoutMs(removedQueueTask?.options),
+          timeoutMsInput: resolveRunQueueTaskTimeoutMs(removedQueueTask),
           resultMessageInput: "已从排队中移除该任务。",
         }),
       );
@@ -33750,7 +34006,23 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       return true;
     },
     buildRunQueueTaskFromInput = async (runTaskInputOptions = {}) => {
-      const normalizedRunTaskSourceMode =
+      const currentRunQueueSettings = getLiveRunQueueSettings(),
+        explicitTaskSnapshot =
+          runTaskInputOptions?.taskSnapshot &&
+          typeof runTaskInputOptions.taskSnapshot === "object"
+            ? runTaskInputOptions.taskSnapshot
+            : null,
+        explicitGenerationCount = Number(
+          runTaskInputOptions?.requestedItemCount ||
+            runTaskInputOptions?.generationCount,
+        ),
+        normalizedRequestedItemCount = parseGenerationCount(
+          Number.isFinite(explicitGenerationCount) && explicitGenerationCount > 0
+            ? explicitGenerationCount
+            : normalizedGenerationCount,
+          defaultImageApiConfig.generationCount,
+        ),
+        normalizedRunTaskSourceMode =
           String(runTaskInputOptions?.imageSource || "upload").trim() ===
           "assistant-prev-user"
             ? "assistant-prev-user"
@@ -33805,17 +34077,108 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         ...runTaskInputOptions,
         sessionId: normalizedRunTaskSessionId,
         timeoutOverrideMs: normalizedRunTaskTimeoutOverrideMs,
-        requestedItemCount: parseGenerationCount(
-          normalizedGenerationCount,
-          defaultImageApiConfig.generationCount,
-        ),
+        requestedItemCount: normalizedRequestedItemCount,
       };
+      const normalizedTaskSnapshot = normalizeRunQueueTaskSnapshot({
+        imageSource: normalizedRunTaskSourceMode,
+        sourceLabel:
+          normalizedRunTaskSourceMode === "assistant-prev-user"
+            ? "对话图片"
+            : "上传图片",
+        providerKey:
+          String(
+            explicitTaskSnapshot?.providerKey || currentRunQueueSettings.providerKey || "",
+          ).trim(),
+        providerLabel: String(
+          explicitTaskSnapshot?.providerLabel ||
+            resolveProviderSiteLabel(
+              String(
+                explicitTaskSnapshot?.providerKey ||
+                  currentRunQueueSettings.providerKey ||
+                  "",
+              ).trim(),
+              imageProviderPresets,
+              String(
+                explicitTaskSnapshot?.providerKey ||
+                  currentRunQueueSettings.providerKey ||
+                  "",
+              ).trim() || "服务商未设",
+            ) ||
+            "",
+        ).trim(),
+        providerMode: String(
+          explicitTaskSnapshot?.providerMode ||
+            currentRunQueueSettings.imageConfig?.providerMode ||
+            "",
+        ).trim(),
+        modelLabel: String(
+          explicitTaskSnapshot?.modelLabel ||
+            currentRunQueueSettings.imageConfig?.model ||
+            "",
+        ).trim(),
+        sizeLabel: String(
+          explicitTaskSnapshot?.sizeLabel ||
+            currentRunQueueSettings.generationImageSizeLabel ||
+            currentRunQueueSettings.generationImageSizeText ||
+            "",
+        ).trim(),
+        sizeText: String(
+          explicitTaskSnapshot?.sizeText ||
+            explicitTaskSnapshot?.sizeLabel ||
+            currentRunQueueSettings.generationImageSizeText ||
+            currentRunQueueSettings.generationImageSizeLabel ||
+            "",
+        ).trim(),
+        ratioLabel: String(
+          explicitTaskSnapshot?.ratioLabel ||
+            currentRunQueueSettings.generationAspectRatio ||
+            "",
+        ).trim(),
+        generationCount:
+          explicitTaskSnapshot?.generationCount || normalizedRequestedItemCount,
+        timeoutMs:
+          normalizedRunTaskTimeoutOverrideMs ||
+          Number(explicitTaskSnapshot?.timeoutMs) ||
+          Number(currentRunQueueSettings.imageConfig?.timeoutMs) ||
+          defaultImageApiConfig.timeoutMs,
+        imageApiConfig: {
+          baseUrl: String(
+            explicitTaskSnapshot?.imageApiConfig?.baseUrl ||
+              currentRunQueueSettings.imageConfig?.baseUrl ||
+              "",
+          ).trim(),
+          apiKey: String(
+            explicitTaskSnapshot?.imageApiConfig?.apiKey ||
+              currentRunQueueSettings.imageConfig?.apiKey ||
+              "",
+          ).trim(),
+          model: String(
+            explicitTaskSnapshot?.imageApiConfig?.model ||
+              explicitTaskSnapshot?.modelLabel ||
+              currentRunQueueSettings.imageConfig?.model ||
+              "",
+          ).trim(),
+          providerMode: String(
+            explicitTaskSnapshot?.imageApiConfig?.providerMode ||
+              explicitTaskSnapshot?.providerMode ||
+              currentRunQueueSettings.imageConfig?.providerMode ||
+              "",
+          ).trim(),
+          timeoutMs:
+            normalizedRunTaskTimeoutOverrideMs ||
+            Number(explicitTaskSnapshot?.imageApiConfig?.timeoutMs) ||
+            Number(explicitTaskSnapshot?.timeoutMs) ||
+            Number(currentRunQueueSettings.imageConfig?.timeoutMs) ||
+            defaultImageApiConfig.timeoutMs,
+        },
+      });
       runQueueIdCounterRef.current += 1;
       const runQueueTaskBuildResult = buildRunQueueTaskFromInputCore({
         runTaskInputOptions: normalizedRunTaskInputOptions,
         fallbackPromptText: "",
         uploadSourceImages: hydratedUploadSourceImageList,
         assistantSourceImages: hydratedAssistantSourceImageList,
+        taskSnapshotInput: normalizedTaskSnapshot,
         runQueueIdCounterValue: runQueueIdCounterRef.current,
         timestampMs: Date.now(),
         normalizeImageItemHandler: normalizeRunQueueTaskImageItem,
@@ -33850,26 +34213,37 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                   typeof nextRunQueueTaskItem.options === "object"
                     ? nextRunQueueTaskItem.options
                     : {},
-                currentRunQueueSettings = getLiveRunQueueSettings(),
-                runningTaskProviderKey = currentRunQueueSettings.providerKey,
-                runningTaskProviderLabel = resolveProviderSiteLabel(
-                  runningTaskProviderKey,
-                  imageProviderPresets,
-                  runningTaskProviderKey || "服务商未设",
+                runningTaskSnapshot = resolveRunQueueTaskSnapshot(
+                  nextRunQueueTaskItem,
                 ),
+                runningTaskProviderLabel =
+                  String(runningTaskSnapshot?.providerLabel || "").trim() ||
+                  (String(runningTaskSnapshot?.providerKey || "").trim()
+                    ? resolveProviderSiteLabel(
+                        String(runningTaskSnapshot?.providerKey || "").trim(),
+                        imageProviderPresets,
+                        String(runningTaskSnapshot?.providerKey || "").trim() ||
+                          "服务商未设",
+                      )
+                    : "服务商未设"),
                 runningTaskModelLabel =
-                  String(currentRunQueueSettings.imageConfig?.model || "").trim() ||
+                  String(runningTaskSnapshot?.modelLabel || "").trim() ||
                   "模型未设",
-                runningTaskSizeLabel = String(
-                  currentRunQueueSettings.generationImageSizeLabel ||
-                    currentRunQueueSettings.generationImageSizeText ||
-                    "",
-                ).trim(),
-                runningTaskRatioLabel = String(
-                  currentRunQueueSettings.generationAspectRatio || "",
-                ).trim(),
-                runningTaskGenerationCount =
-                  currentRunQueueSettings.generationCount,
+                runningTaskSizeLabel =
+                  String(
+                    runningTaskSnapshot?.sizeLabel ||
+                      runningTaskSnapshot?.sizeText ||
+                      "",
+                  ).trim() || "尺寸未设",
+                runningTaskRatioLabel =
+                  String(runningTaskSnapshot?.ratioLabel || "").trim() ||
+                  "比例未设",
+                runningTaskGenerationCount = Math.max(
+                  1,
+                  Number(nextRunQueueTaskItem?.requestedItemCount) ||
+                    Number(runningTaskSnapshot?.generationCount) ||
+                    1,
+                ),
                 runningTaskSourceImages = Array.isArray(runningTaskOptions.images)
                   ? runningTaskOptions.images
                   : [],
@@ -33892,10 +34266,14 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                     ? `${Math.round(runningFirstSourceImageWidth)}x${Math.round(runningFirstSourceImageHeight)}`
                     : "尺寸未知",
                 runningTaskSourceLabel =
-                  String(runningTaskOptions.imageSource || "upload").trim() ===
-                  "assistant-prev-user"
+                  String(runningTaskSnapshot?.sourceLabel || "").trim() ||
+                  (String(
+                    runningTaskSnapshot?.imageSource ||
+                      runningTaskOptions.imageSource ||
+                      "upload",
+                  ).trim() === "assistant-prev-user"
                     ? "对话图片"
-                    : "上传区图片";
+                    : "上传区图片");
               let runQueueTaskExecutionSummary = null;
               appendConsoleLogEntry(
                 "info",
@@ -33968,7 +34346,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                     ratioLabelInput: runningTaskRatioLabel,
                     generationCountInput: runningTaskGenerationCount,
                     timeoutMsInput: resolveRunQueueTaskTimeoutMs(
-                      nextRunQueueTaskItem?.options,
+                      nextRunQueueTaskItem,
                       {
                         startedAtMs: Number(nextRunQueueTaskItem?.startedAtMs) || 0,
                       },
@@ -34019,33 +34397,47 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       if (
         (queuedRunTaskCount > 0 &&
           (runQueueItemsRef.current.forEach((runQueueItem) => {
+            const runQueueItemSnapshot = resolveRunQueueTaskSnapshot(runQueueItem);
             appendRunQueueHistoryRecord(
               buildRunQueueHistoryRecord({
                 taskRecordInput: runQueueItem,
                 statusInput: "removed",
                 sourceLabelInput:
-                  String(runQueueItem?.options?.imageSource || "upload").trim() ===
-                  "assistant-prev-user"
+                  String(runQueueItemSnapshot?.sourceLabel || "").trim() ||
+                  (String(
+                    runQueueItemSnapshot?.imageSource ||
+                      runQueueItem?.options?.imageSource ||
+                      "upload",
+                  ).trim() === "assistant-prev-user"
                     ? "对话图片"
-                    : "上传图片",
-                providerLabelInput: resolveProviderSiteLabel(
-                  String(imageProviderKey || "").trim(),
-                  imageProviderPresets,
-                  String(imageProviderKey || "").trim() || "服务商未设",
-                ),
+                    : "上传图片"),
+                providerLabelInput:
+                  String(runQueueItemSnapshot?.providerLabel || "").trim() ||
+                  (String(runQueueItemSnapshot?.providerKey || "").trim()
+                    ? resolveProviderSiteLabel(
+                        String(runQueueItemSnapshot?.providerKey || "").trim(),
+                        imageProviderPresets,
+                        String(runQueueItemSnapshot?.providerKey || "").trim() ||
+                          "服务商未设",
+                      )
+                    : "服务商未设"),
                 modelLabelInput:
-                  String(imageConfig?.model || "").trim() || "模型未设",
-                sizeLabelInput: String(
-                  generationImageSizeLabel || generationImageSizeText || "",
-                ).trim(),
-                ratioLabelInput: String(
-                  normalizedGenerationAspectRatio || "",
-                ).trim(),
-                generationCountInput: parseGenerationCount(
-                  normalizedGenerationCount,
-                  defaultImageApiConfig.generationCount,
+                  String(runQueueItemSnapshot?.modelLabel || "").trim() || "模型未设",
+                sizeLabelInput:
+                  String(
+                    runQueueItemSnapshot?.sizeLabel ||
+                      runQueueItemSnapshot?.sizeText ||
+                      "",
+                  ).trim() || "尺寸未设",
+                ratioLabelInput:
+                  String(runQueueItemSnapshot?.ratioLabel || "").trim() || "比例未设",
+                generationCountInput: Math.max(
+                  1,
+                  Number(runQueueItem?.requestedItemCount) ||
+                    Number(runQueueItemSnapshot?.generationCount) ||
+                    1,
                 ),
-                timeoutMsInput: resolveRunQueueTaskTimeoutMs(runQueueItem?.options),
+                timeoutMsInput: resolveRunQueueTaskTimeoutMs(runQueueItem),
                 resultMessageInput: "任务在执行前被批量停止。",
               }),
             );
@@ -34166,22 +34558,29 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           0,
           enqueuedSourceImages.length - enqueuedSourcePreviewNames.length,
         ),
-        enqueuedGenerationSizeLabel = String(
-          generationImageSizeLabel || generationImageSizeText || "尺寸未设",
-        ).trim(),
-        enqueuedGenerationAspectRatio = String(
-          normalizedGenerationAspectRatio || "比例未设",
-        ).trim(),
-        enqueuedGenerationCount = parseGenerationCount(
-          normalizedGenerationCount,
-          defaultImageApiConfig.generationCount,
+        enqueuedTaskSnapshot = resolveRunQueueTaskSnapshot(runQueueTaskCandidate),
+        enqueuedGenerationSizeLabel =
+          String(
+            enqueuedTaskSnapshot?.sizeLabel ||
+              enqueuedTaskSnapshot?.sizeText ||
+              "尺寸未设",
+          ).trim() || "尺寸未设",
+        enqueuedGenerationAspectRatio =
+          String(enqueuedTaskSnapshot?.ratioLabel || "比例未设").trim() || "比例未设",
+        enqueuedGenerationCount = Math.max(
+          1,
+          Number(runQueueTaskCandidate?.requestedItemCount) ||
+            Number(enqueuedTaskSnapshot?.generationCount) ||
+            1,
         ),
         enqueuedSessionId = String(enqueuedTaskOptions.sessionId || "").trim(),
         enqueuedSourceLabel =
-          String(enqueuedTaskOptions.imageSource || "upload").trim() ===
-          "assistant-prev-user"
+          String(enqueuedTaskSnapshot?.sourceLabel || "").trim() ||
+          (String(
+            enqueuedTaskSnapshot?.imageSource || enqueuedTaskOptions.imageSource || "upload",
+          ).trim() === "assistant-prev-user"
             ? "对话图片"
-            : "上传区图片";
+            : "上传区图片");
       appendConsoleLogEntry(
         "info",
         `已提交跑图任务：${enqueuedGenerationSizeLabel || "尺寸未设"} / ${enqueuedGenerationAspectRatio || "比例未设"} / x${enqueuedGenerationCount}，来源 ${enqueuedSourceLabel}，共 ${enqueuedSourceImages.length} 张，首张 ${firstSourceImageSizeLabel} | ${firstSourceImageName}，样例=[${enqueuedSourcePreviewText}]${enqueuedSourceOverflowCount > 0 ? ` +${enqueuedSourceOverflowCount}` : ""}`,
@@ -34239,6 +34638,13 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
               String(pendingTaskRecord?.id || "").trim() ===
               normalizedRunQueueTaskId,
           ) ||
+          (Array.isArray(runQueueTaskHistoryState)
+            ? runQueueTaskHistoryState.find(
+                (historyTaskRecord) =>
+                  String(historyTaskRecord?.id || "").trim() ===
+                  normalizedRunQueueTaskId,
+              )
+            : null) ||
           null,
         matchedTaskOptions =
           matchedRunQueueTaskRecord &&
@@ -34247,39 +34653,67 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           typeof matchedRunQueueTaskRecord.options === "object"
             ? matchedRunQueueTaskRecord.options
             : null;
-      if (!matchedTaskOptions) return false;
-      const rerunTaskPromptText = String(matchedTaskOptions.promptText || "").trim();
+      const matchedTaskSnapshot = resolveRunQueueTaskSnapshot(
+          matchedRunQueueTaskRecord,
+        ),
+        rerunTaskPromptText = String(
+          matchedTaskOptions?.promptText ||
+            matchedRunQueueTaskRecord?.promptText ||
+            "",
+        ).trim();
       if (!rerunTaskPromptText) {
         appendConsoleLogEntry("warn", "重跑失败：任务提示词为空", "api");
         return false;
       }
-      const rerunTaskImageList = Array.isArray(matchedTaskOptions.images)
-          ? matchedTaskOptions.images
-              .map(normalizeRunQueueTaskImageItem)
-              .filter(Boolean)
-          : [],
+      const rerunTaskRequestedItemCount = Math.max(
+          1,
+          Number(matchedRunQueueTaskRecord?.requestedItemCount) ||
+            Number(matchedTaskSnapshot?.generationCount) ||
+            1,
+        ),
+        rerunTaskImageList = (
+          Array.isArray(matchedTaskOptions?.images) && matchedTaskOptions.images.length
+            ? matchedTaskOptions.images
+            : Array.isArray(matchedRunQueueTaskRecord?.sourceImageRefs)
+              ? matchedRunQueueTaskRecord.sourceImageRefs
+              : []
+        )
+          .map(normalizeRunQueueTaskImageItem)
+          .filter(Boolean),
         rerunTaskPayload = {
           promptText: rerunTaskPromptText,
           imageSource:
-            String(matchedTaskOptions.imageSource || "upload").trim() ===
-            "assistant-prev-user"
+            String(
+              matchedTaskSnapshot?.imageSource ||
+                matchedTaskOptions?.imageSource ||
+                matchedRunQueueTaskRecord?.imageSource ||
+                "upload",
+            ).trim() === "assistant-prev-user"
               ? "assistant-prev-user"
               : "upload",
           assistantMessageId: String(
-            matchedTaskOptions.assistantMessageId || "",
+            matchedTaskOptions?.assistantMessageId || "",
           ).trim(),
           sessionId: String(
-            matchedTaskOptions.sessionId ||
-              matchedTaskOptions.sessionIdSnapshot ||
+            matchedTaskOptions?.sessionId ||
+              matchedTaskOptions?.sessionIdSnapshot ||
               activeSessionIdRef.current ||
               activeChatSession?.id ||
               "",
           ).trim(),
+          requestedItemCount: rerunTaskRequestedItemCount,
           images: rerunTaskImageList,
+          taskSnapshot: normalizeRunQueueTaskSnapshot({
+            ...(matchedTaskSnapshot && typeof matchedTaskSnapshot === "object"
+              ? matchedTaskSnapshot
+              : {}),
+            generationCount: rerunTaskRequestedItemCount,
+            requestedItemCount: rerunTaskRequestedItemCount,
+          }),
         },
         rerunSuccess = await enqueueRunTask(rerunTaskPayload);
       rerunSuccess &&
-        appendConsoleLogEntry("info", "已重新加入跑图队列", "api");
+        appendConsoleLogEntry("info", "已将该历史任务重新加入跑图队列", "api");
       return rerunSuccess;
     },
     extendRunQueueTaskTimeoutById = (
@@ -53308,7 +53742,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                         {`${runQueueTaskItem.sourceLabel || "未知来源"} · ${runQueueTaskItem.providerLabel || "服务商未设"} · ${runQueueTaskItem.modelLabel || "模型未设"}`}
                       </div>
                     </div>
-                    {!isHistoryTask ? (
+                    {isHistoryTask ? (
                       <div className="run-queue-task-ref-actions">
                         <button
                           type="button"
@@ -53317,7 +53751,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                             runQueueTaskRerunClickEvent.stopPropagation();
                             void rerunRunQueueTaskById(runQueueTaskItem.id);
                           }}
-                          data-tip-text="重试该任务"
+                          data-tip-text="重新加入队列"
                           data-tip-placement="bottom"
                           disabled={!runQueueTaskItem.canRerun}
                         >
@@ -53327,6 +53761,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                             alt="retry-run-queue-task"
                           />
                         </button>
+                      </div>
+                    ) : (
+                      <div className="run-queue-task-ref-actions">
                         <button
                           type="button"
                           className="run-queue-task-action-btn run-queue-task-delay-btn"
@@ -53344,7 +53781,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                           />
                         </button>
                       </div>
-                    ) : null}
+                    )}
                   </div>
                   {runQueueTaskItem.resultMessage ? (
                     <div className="run-queue-task-result-text">
