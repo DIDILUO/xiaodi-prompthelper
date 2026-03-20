@@ -1947,6 +1947,54 @@ function persistChatImageForSession(
     }
     markChanged();
   };
+  const mergeLegacyReferenceSnapshot = (imageRecordInput = {}) => {
+    const nextLegacySnapshot = {
+      ...(next?.legacy && typeof next.legacy === 'object' ? next.legacy : {}),
+      ...pickLegacyImageReferenceSnapshot(imageRecordInput)
+    };
+    const normalizedLegacySnapshot = Object.entries(nextLegacySnapshot).reduce(
+      (result, [fieldName, fieldValue]) => {
+        const normalizedFieldValue = String(fieldValue || '').trim();
+        if (normalizedFieldValue) {
+          result[fieldName] = normalizedFieldValue;
+        }
+        return result;
+      },
+      {}
+    );
+    const currentLegacySnapshot =
+      next?.legacy && typeof next.legacy === 'object' ? next.legacy : {};
+    if (JSON.stringify(currentLegacySnapshot) === JSON.stringify(normalizedLegacySnapshot)) {
+      return;
+    }
+    ensureMutable();
+    if (Object.keys(normalizedLegacySnapshot).length) {
+      next.legacy = normalizedLegacySnapshot;
+    } else {
+      delete next.legacy;
+    }
+    markChanged();
+  };
+  const clearTopLevelLegacyReferenceFields = ({
+    clearPsCache = false
+  } = {}) => {
+    const fieldNames = ['cacheId', 'chatCacheId', 'cacheFileName', 'cacheFilePath'];
+    if (clearPsCache) {
+      fieldNames.push('psCacheId', 'psCacheExpiresAt');
+    }
+    let didDeleteField = false;
+    fieldNames.forEach((fieldName) => {
+      if (!Object.prototype.hasOwnProperty.call(next || {}, fieldName)) return;
+      if (!didDeleteField) {
+        ensureMutable();
+        didDeleteField = true;
+      }
+      delete next[fieldName];
+    });
+    if (didDeleteField) {
+      markChanged();
+    }
+  };
   const resolveStableDisplayFileName = (fallbackFileName = '') =>
     String(
       next?.fileName ||
@@ -2022,21 +2070,19 @@ function persistChatImageForSession(
     const cached = writeChatImageCacheFromDataUrl(dataUrl, context);
     if (cached?.cacheId) {
       usedCacheIds.add(cached.cacheId);
-      setFieldIfChanged('cacheId', cached.cacheId);
-      setFieldIfChanged('cacheFileName', cached.fileName);
-      setFieldIfChanged('cacheFilePath', cached.filePath);
       setFieldIfChanged('cacheMimeType', cached.mimeType);
       if (String(next.dataUrl || '').trim()) {
         ensureMutable();
         next.dataUrl = '';
         markChanged();
       }
-      if (String(next.psCacheId || '').trim()) {
-        ensureMutable();
-        delete next.psCacheId;
-        delete next.psCacheExpiresAt;
-        markChanged();
-      }
+      mergeLegacyReferenceSnapshot({
+        ...next,
+        cacheId: cached.cacheId,
+        chatCacheId: cached.cacheId,
+        cacheFileName: cached.fileName,
+        cacheFilePath: cached.filePath,
+      });
       syncStableAssetFields(
         {
           ...next,
@@ -2055,6 +2101,7 @@ function persistChatImageForSession(
           filePath: cached.filePath,
         }
       );
+      clearTopLevelLegacyReferenceFields({ clearPsCache: true });
       return next;
     }
   }
@@ -2062,7 +2109,6 @@ function persistChatImageForSession(
   const { chatCacheId, psCacheId, fileDerivedId } = resolveChatImageIdsFromRecord(image);
   if (chatCacheId) {
     usedCacheIds.add(chatCacheId);
-    setFieldIfChanged('cacheId', chatCacheId);
     const existingChatCache = resolveChatImageCacheFileRecord(
       {
         ...next,
@@ -2077,23 +2123,27 @@ function persistChatImageForSession(
       next.dataUrl = '';
       markChanged();
     }
+    let fallbackCacheFileName = '';
     if (existingChatCache?.fileName) {
-      setFieldIfChanged('cacheFileName', existingChatCache.fileName);
-      setFieldIfChanged('cacheFilePath', existingChatCache.filePath);
+      fallbackCacheFileName = existingChatCache.fileName;
       setFieldIfChanged('cacheMimeType', existingChatCache.mimeType);
     } else if (!String(next.cacheFileName || '').trim() && fileDerivedId && !isPsCacheId(fileDerivedId)) {
       const currentMimeType = String(next.cacheMimeType || next.type || '').trim();
       const nextExt = getExtByMimeType(currentMimeType || 'image/png');
-      setFieldIfChanged('cacheFileName', `${fileDerivedId}.${nextExt}`);
+      fallbackCacheFileName = `${fileDerivedId}.${nextExt}`;
     }
-    if (String(next.psCacheId || '').trim() && !isPsCacheId(chatCacheId)) {
-      ensureMutable();
-      delete next.psCacheId;
-      delete next.psCacheExpiresAt;
-      markChanged();
-    } else if (psCacheId && !String(next.psCacheId || '').trim()) {
-      setFieldIfChanged('psCacheId', psCacheId);
-    }
+    mergeLegacyReferenceSnapshot({
+      ...next,
+      cacheId: chatCacheId,
+      chatCacheId,
+      cacheFileName: String(
+        existingChatCache?.fileName || next.cacheFileName || fallbackCacheFileName || ''
+      ).trim(),
+      cacheFilePath: String(
+        existingChatCache?.filePath || next.cacheFilePath || next.filePath || ''
+      ).trim(),
+      psCacheId,
+    });
     syncStableAssetFields(
       {
         ...next,
@@ -2112,6 +2162,7 @@ function persistChatImageForSession(
         filePath: String(existingChatCache?.filePath || next.cacheFilePath || next.filePath || '').trim(),
       }
     );
+    clearTopLevelLegacyReferenceFields({ clearPsCache: true });
     return next;
   }
 
@@ -2125,21 +2176,20 @@ function persistChatImageForSession(
       });
       if (migrated?.cacheId) {
         usedCacheIds.add(migrated.cacheId);
-        setFieldIfChanged('cacheId', migrated.cacheId);
-        setFieldIfChanged('cacheFileName', migrated.fileName);
-        setFieldIfChanged('cacheFilePath', migrated.filePath);
         setFieldIfChanged('cacheMimeType', migrated.mimeType);
         if (String(next.dataUrl || '').trim()) {
           ensureMutable();
           next.dataUrl = '';
           markChanged();
         }
-        if (String(next.psCacheId || '').trim()) {
-          ensureMutable();
-          delete next.psCacheId;
-          delete next.psCacheExpiresAt;
-          markChanged();
-        }
+        mergeLegacyReferenceSnapshot({
+          ...next,
+          cacheId: migrated.cacheId,
+          chatCacheId: migrated.cacheId,
+          cacheFileName: migrated.fileName,
+          cacheFilePath: migrated.filePath,
+          psCacheId,
+        });
         syncStableAssetFields(
           {
             ...next,
@@ -2158,11 +2208,9 @@ function persistChatImageForSession(
             filePath: migrated.filePath,
           }
         );
+        clearTopLevelLegacyReferenceFields({ clearPsCache: true });
         return next;
       }
-    }
-    if (!String(next.psCacheId || '').trim()) {
-      setFieldIfChanged('psCacheId', psCacheId);
     }
   }
   return next;
@@ -2407,25 +2455,9 @@ function persistApiInputImageList(sourceImageListInput = [], options = {}) {
         imageIndex
       }
     );
-    const resolvedIds = resolveChatImageIdsFromRecord(persistedImage);
     return {
       ...(persistedImage && typeof persistedImage === 'object' ? persistedImage : {}),
       clientRef,
-      cacheId: String(
-        persistedImage?.cacheId || resolvedIds.chatCacheId || ''
-      ).trim(),
-      chatCacheId: String(
-        persistedImage?.chatCacheId
-          || resolvedIds.chatCacheId
-          || persistedImage?.cacheId
-          || ''
-      ).trim(),
-      cacheFileName: String(
-        persistedImage?.cacheFileName || persistedImage?.fileName || ''
-      ).trim(),
-      cacheFilePath: String(
-        persistedImage?.cacheFilePath || persistedImage?.filePath || ''
-      ).trim()
     };
   });
 }

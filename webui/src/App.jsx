@@ -7146,14 +7146,6 @@ function normalizeImageItems(imageItemsInput) {
         legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
         legacyIdConversionRemoveAfter:
           assetImageRecord.legacyIdConversionRemoveAfter,
-        cacheFileName:
-          assetImageRecord.fileName || baseImageRecord.cacheFileName || "",
-        cacheFilePath:
-          assetImageRecord.filePath || baseImageRecord.cacheFilePath || "",
-        cacheId:
-          baseImageRecord.cacheId ||
-          String(assetImageRecord.legacy?.cacheId || "").trim() ||
-          "",
       };
     });
 }
@@ -15105,6 +15097,15 @@ function normalizeRunQueueTaskImageItem(imageItem) {
     type: String(imageItem.type || "image/*"),
     source: normalizeImageSource(imageItem.source),
     inputMethod: normalizeImageSource(imageItem.source),
+    filePath: String(
+      imageItem.filePath || rawLegacyImageSnapshot.filePath || "",
+    ).trim(),
+    cacheFileName: String(
+      imageItem.cacheFileName || rawLegacyImageSnapshot.cacheFileName || "",
+    ).trim(),
+    cacheFilePath: String(
+      imageItem.cacheFilePath || rawLegacyImageSnapshot.cacheFilePath || "",
+    ).trim(),
     role: String(imageItem.role || ""),
     slotIndex: Number.isFinite(imageItem.slotIndex)
       ? Number(imageItem.slotIndex)
@@ -15156,17 +15157,6 @@ function normalizeRunQueueTaskImageItem(imageItem) {
     legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
     legacyIdConversionRemoveAfter:
       assetImageRecord.legacyIdConversionRemoveAfter,
-    cacheFileName:
-      assetImageRecord.fileName ||
-      normalizedLegacyImageRecord.fileName ||
-      "",
-    cacheFilePath:
-      assetImageRecord.filePath ||
-      normalizedLegacyImageRecord.filePath ||
-      "",
-    cacheId: normalizedLegacyImageRecord.cacheId || "",
-    psCacheId: normalizedLegacyImageRecord.psCacheId || "",
-    chatCacheId: normalizedLegacyImageRecord.chatCacheId || "",
   };
 }
 
@@ -15309,10 +15299,6 @@ function normalizeRunQueueHistoryImageItem(
           baseImageRecord.cacheId ||
           `${cacheFileName || "image"}-${fallbackIndex + 1}`,
       ).trim() || `history-image-${fallbackIndex + 1}`,
-    cacheFilePath,
-    cacheFileName: cacheFileName || `image_${fallbackIndex + 1}`,
-    cacheId: baseImageRecord.cacheId,
-    psCacheId: baseImageRecord.psCacheId,
     width:
       Number.isFinite(widthValue) && widthValue > 0
         ? Math.round(widthValue)
