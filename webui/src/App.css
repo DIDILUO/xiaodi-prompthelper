@@ -1930,11 +1930,14 @@ select {
   min-height: 0;
   flex: 1 1 auto;
   max-height: none;
+  width: calc(100% + var(--scrollbar-size-unified));
+  box-sizing: border-box;
+  margin-right: calc(-1 * var(--scrollbar-size-unified));
   display: flex;
   flex-direction: column;
   gap: 8px;
   overflow-y: auto;
-  padding-right: 0;
+  padding-right: var(--scrollbar-size-unified);
   overscroll-behavior: contain;
 }
 .run-queue-task-section-divider {
@@ -2239,6 +2242,9 @@ select {
 }
 .run-queue-task-history-status.is-partial {
   color: #ffc978;
+}
+.run-queue-task-history-status.is-pending {
+  color: #8fb6ff;
 }
 .run-queue-task-history-status.is-aborted,
 .run-queue-task-history-status.is-removed {

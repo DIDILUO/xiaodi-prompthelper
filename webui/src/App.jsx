@@ -29538,12 +29538,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       ? "插件重连中；请稍候。"
       : `插件连接状态：${pluginBridgeStatus.psConnected ? "已连接" : pluginBridgeStatus.ok ? "连接中" : "连接失败"}\n点击重新连接插件桥接`;
   React.useEffect(() => {
-    if (
-      !runQueueTaskPanelOpen ||
-      !imageRunQueueState.running ||
-      !!expandedRunQueueTaskId
-    )
-      return;
+    if (!runQueueTaskPanelOpen || !imageRunQueueState.running) return;
     setRunQueueElapsedNowMs(Date.now());
     const runQueueElapsedTimer = setInterval(() => {
       setRunQueueElapsedNowMs(Date.now());
@@ -29551,11 +29546,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     return () => {
       clearInterval(runQueueElapsedTimer);
     };
-  }, [runQueueTaskPanelOpen, imageRunQueueState.running, expandedRunQueueTaskId]);
-  React.useEffect(() => {
-    runQueueTaskPanelOpen &&
-      setRunQueueHistoryVisibleCount(CONST_RUN_QUEUE_HISTORY_PANEL_BATCH_SIZE);
-  }, [runQueueTaskPanelOpen]);
+  }, [runQueueTaskPanelOpen, imageRunQueueState.running]);
   React.useEffect(() => {
     if (runQueueTaskPanelOpen) return;
     (runQueueOutputHoverTimerRef.current &&
@@ -53827,7 +53818,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           });
         },
         runQueueHistoryToggleButtonText = hasMoreRunQueueHistory
-          ? `展开历史（剩余 ${hiddenRunQueueHistoryCount}）`
+          ? "展开历史"
           : "收起历史",
         runQueueTaskRunnerClassName = buildCometRunnerClassName(
           runQueueTaskButtonRunnerVisualState,
@@ -53850,6 +53841,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           renderOptions = {},
         ) => {
           const isHistoryTask = renderOptions?.isHistory === true,
+            isRunningTask =
+              !isHistoryTask && runQueueTaskItem.phase === "running",
+            isPendingTask =
+              !isHistoryTask && runQueueTaskItem.phase === "pending",
             isRunQueueTaskExpanded =
               expandedRunQueueTaskId === runQueueTaskItem.id,
             showRunQueueTaskHeadThumb = !isRunQueueTaskExpanded,
@@ -53896,9 +53891,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 ? Number(runQueueTaskItem.startedAtMs)
                 : 0,
             taskElapsedMs =
-              !isHistoryTask &&
-              runQueueTaskItem.phase === "running" &&
-              taskStartedAtMs > 0
+              isRunningTask && taskStartedAtMs > 0
                 ? Math.max(0, runQueueElapsedNowMs - taskStartedAtMs)
                 : 0,
             taskElapsedText = isHistoryTask
@@ -53907,16 +53900,17 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                     Number(runQueueTaskItem.createdAtMs) ||
                     Date.now(),
                 )
-              : formatRunQueueElapsedText(taskElapsedMs),
-            taskRemainingRatio =
-              runQueueTaskItem.phase === "running"
-                ? Math.max(0, 1 - taskElapsedMs / taskTimeoutMs)
-                : 1,
+              : isRunningTask
+                ? formatRunQueueElapsedText(taskElapsedMs)
+                : "排队中",
+            taskRemainingRatio = isRunningTask
+              ? Math.max(0, 1 - taskElapsedMs / taskTimeoutMs)
+              : 0,
             taskProgressWidthPercent = Math.max(
               0,
               Math.min(100, Math.round(taskRemainingRatio * 1000) / 10),
             ),
-            runQueueTaskProgressClassName = `run-queue-task-progress-fill ${runQueueTaskItem.phase === "running" ? "is-running" : "is-pending"}${taskProgressWidthPercent <= 0 ? " is-timeout" : ""}`;
+            runQueueTaskProgressClassName = `run-queue-task-progress-fill ${isRunningTask ? "is-running" : "is-pending"}${taskProgressWidthPercent <= 0 ? " is-timeout" : ""}`;
           return (
             <div
               key={runQueueTaskItem.id}
@@ -53963,7 +53957,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                       {taskElapsedText}
                     </div>
                   </div>
-                  {!isHistoryTask ? (
+                  {isRunningTask ? (
                     <div className="run-queue-task-progress-track">
                       <div
                         className={runQueueTaskProgressClassName}
@@ -53971,6 +53965,12 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                           width: `${taskProgressWidthPercent}%`,
                         }}
                       />
+                    </div>
+                  ) : isPendingTask ? (
+                    <div className="run-queue-task-history-status-row">
+                      <span className="run-queue-task-history-status is-pending">
+                        排队中
+                      </span>
                     </div>
                   ) : (
                     <div className="run-queue-task-history-status-row">
