@@ -7277,27 +7277,39 @@ function normalizeImageItems(imageItemsInput) {
           usageMeta: baseImageRecord.usageMeta,
         },
       );
+      const normalizedImageLegacy =
+        assetImageRecord.legacy && typeof assetImageRecord.legacy === "object"
+          ? { ...assetImageRecord.legacy }
+          : {};
+      if (Number.isFinite(normalizedImagePsCacheExpiresAt)) {
+        normalizedImageLegacy.psCacheExpiresAt = normalizedImagePsCacheExpiresAt;
+      }
 
-      return stripTopLevelLegacyImageReferenceFields({
-        ...baseImageRecord,
-        assetId: assetImageRecord.assetId,
-        fileName: assetImageRecord.fileName,
-        filePath: assetImageRecord.filePath,
-        internalCacheId: assetImageRecord.internalCacheId,
-        itemId: assetImageRecord.itemId,
-        sourceRefKey: assetImageRecord.sourceRefKey,
-        inputMethod: assetImageRecord.inputMethod,
-        usageMeta: assetImageRecord.usageMeta,
-        legacy: assetImageRecord.legacy,
-        imageTraceId: assetImageRecord.imageTraceId,
-        parentImageTraceIds: assetImageRecord.parentImageTraceIds,
-        imageSourceKind: assetImageRecord.imageSourceKind,
-        imageSourceMethod: assetImageRecord.imageSourceMethod,
-        displayFileName: assetImageRecord.displayFileName,
-        legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
-        legacyIdConversionRemoveAfter:
-          assetImageRecord.legacyIdConversionRemoveAfter,
-      });
+      return stripTopLevelLegacyImageReferenceFields(
+        {
+          ...baseImageRecord,
+          assetId: assetImageRecord.assetId,
+          fileName: assetImageRecord.fileName,
+          filePath: assetImageRecord.filePath,
+          internalCacheId: assetImageRecord.internalCacheId,
+          itemId: assetImageRecord.itemId,
+          sourceRefKey: assetImageRecord.sourceRefKey,
+          inputMethod: assetImageRecord.inputMethod,
+          usageMeta: assetImageRecord.usageMeta,
+          legacy: Object.keys(normalizedImageLegacy).length
+            ? normalizedImageLegacy
+            : void 0,
+          imageTraceId: assetImageRecord.imageTraceId,
+          parentImageTraceIds: assetImageRecord.parentImageTraceIds,
+          imageSourceKind: assetImageRecord.imageSourceKind,
+          imageSourceMethod: assetImageRecord.imageSourceMethod,
+          displayFileName: assetImageRecord.displayFileName,
+          legacyIdConversionTag: assetImageRecord.legacyIdConversionTag,
+          legacyIdConversionRemoveAfter:
+            assetImageRecord.legacyIdConversionRemoveAfter,
+        },
+        { clearPsCache: true },
+      );
     });
 }
 
@@ -9878,89 +9890,113 @@ async function cacheImagesToPsBridge(
           : {}),
         ...pickLegacyImageReferenceSnapshot(cachedMappedItem),
       };
-      return stripTopLevelLegacyImageReferenceFields({
-        ...imageCacheItem,
-        assetId: String(
-          cachedMappedItem.assetId ||
-            imageCacheItem.assetId ||
-            "",
-        ).trim(),
-        cacheId: String(
-            cachedMappedItem.cacheId ||
-            cachedMappedItemLegacy.cacheId ||
-            imageCacheItem.cacheId ||
-            "",
-        ).trim(),
-        psCacheId: String(
-          cachedMappedItem.psCacheId ||
-            cachedMappedItemLegacy.psCacheId ||
-            imageCacheItem.psCacheId ||
-            "",
-        ).trim(),
-        psCacheExpiresAt: Number.isFinite(cachedMappedItem.expiresAt)
+      const {
+          chatCacheId: normalizedCachedChatCacheId,
+          psCacheId: normalizedCachedPsCacheId,
+        } = resolveSessionImageCacheIds(cachedMappedItem),
+        normalizedCachedPsCacheExpiresAt = Number.isFinite(
+          cachedMappedItem?.expiresAt,
+        )
           ? Number(cachedMappedItem.expiresAt)
-          : void 0,
-        fileName: String(
-          cachedMappedItem.fileName ||
-            imageCacheItem.fileName ||
-            imageCacheItem.cacheFileName ||
-            "",
-        ).trim(),
-        filePath: String(
-          cachedMappedItem.filePath ||
-            imageCacheItem.filePath ||
-            imageCacheItem.cacheFilePath ||
-            "",
-        ).trim(),
-        cacheFileName: String(
-          cachedMappedItem.fileName ||
-            imageCacheItem.cacheFileName ||
-            imageCacheItem.fileName ||
-            "",
-        ).trim(),
-        cacheFilePath: String(
-          cachedMappedItem.filePath ||
-            imageCacheItem.cacheFilePath ||
-            imageCacheItem.filePath ||
-            "",
-        ).trim(),
-        internalCacheId: String(
-          cachedMappedItem.internalCacheId ||
-            cachedMappedItem.itemId ||
-            imageCacheItem.internalCacheId ||
+          : Number.isFinite(imageCacheItem?.psCacheExpiresAt)
+            ? Number(imageCacheItem.psCacheExpiresAt)
+            : Number.isFinite(normalizedCachedImageLegacy?.psCacheExpiresAt)
+              ? Number(normalizedCachedImageLegacy.psCacheExpiresAt)
+              : void 0;
+      if (normalizedCachedChatCacheId) {
+        normalizedCachedImageLegacy.cacheId = normalizedCachedChatCacheId;
+        normalizedCachedImageLegacy.chatCacheId = normalizedCachedChatCacheId;
+      }
+      if (normalizedCachedPsCacheId) {
+        normalizedCachedImageLegacy.psCacheId = normalizedCachedPsCacheId;
+      }
+      if (Number.isFinite(normalizedCachedPsCacheExpiresAt)) {
+        normalizedCachedImageLegacy.psCacheExpiresAt = normalizedCachedPsCacheExpiresAt;
+      }
+      return stripTopLevelLegacyImageReferenceFields(
+        {
+          ...imageCacheItem,
+          assetId: String(
+            cachedMappedItem.assetId ||
+              imageCacheItem.assetId ||
+              "",
+          ).trim(),
+          cacheId: String(
+              normalizedCachedChatCacheId ||
+              cachedMappedItemLegacy.cacheId ||
+              imageCacheItem.cacheId ||
+              "",
+          ).trim(),
+          psCacheId: String(
+            normalizedCachedPsCacheId ||
+              cachedMappedItemLegacy.psCacheId ||
+              imageCacheItem.psCacheId ||
+              "",
+          ).trim(),
+          psCacheExpiresAt: normalizedCachedPsCacheExpiresAt,
+          fileName: String(
             cachedMappedItem.fileName ||
-            "",
-        ).trim(),
-        itemId: String(
-          cachedMappedItem.itemId ||
-            imageCacheItem.itemId ||
+              imageCacheItem.fileName ||
+              imageCacheItem.cacheFileName ||
+              "",
+          ).trim(),
+          filePath: String(
+            cachedMappedItem.filePath ||
+              imageCacheItem.filePath ||
+              imageCacheItem.cacheFilePath ||
+              "",
+          ).trim(),
+          cacheFileName: String(
+            cachedMappedItem.fileName ||
+              imageCacheItem.cacheFileName ||
+              imageCacheItem.fileName ||
+              "",
+          ).trim(),
+          cacheFilePath: String(
+            cachedMappedItem.filePath ||
+              imageCacheItem.cacheFilePath ||
+              imageCacheItem.filePath ||
+              "",
+          ).trim(),
+          internalCacheId: String(
             cachedMappedItem.internalCacheId ||
-            cachedMappedItem.fileName ||
-            "",
-        ).trim(),
-        sourceRefKey: String(
-          cachedMappedItem.sourceRefKey ||
-            imageCacheItem.sourceRefKey ||
-            parseAssetIdentityFromFileName(
-              cachedMappedItem.fileName || imageCacheItem.fileName || "",
-            )?.sourceRefKey ||
-            "",
-        ).trim(),
-        inputMethod: String(
-          cachedMappedItem.inputMethod ||
-            imageCacheItem.inputMethod ||
-            imageCacheItem.source ||
-            "",
-        ).trim(),
-        usageMeta:
-          cachedMappedItem.usageMeta &&
-          typeof cachedMappedItem.usageMeta === "object"
-            ? { ...cachedMappedItem.usageMeta }
-            : imageCacheItem.usageMeta,
-        legacy: Object.keys(normalizedCachedImageLegacy).length
-          ? normalizedCachedImageLegacy
-          : void 0,
-      });
+              cachedMappedItem.itemId ||
+              imageCacheItem.internalCacheId ||
+              cachedMappedItem.fileName ||
+              "",
+          ).trim(),
+          itemId: String(
+            cachedMappedItem.itemId ||
+              imageCacheItem.itemId ||
+              cachedMappedItem.internalCacheId ||
+              cachedMappedItem.fileName ||
+              "",
+          ).trim(),
+          sourceRefKey: String(
+            cachedMappedItem.sourceRefKey ||
+              imageCacheItem.sourceRefKey ||
+              parseAssetIdentityFromFileName(
+                cachedMappedItem.fileName || imageCacheItem.fileName || "",
+              )?.sourceRefKey ||
+              "",
+          ).trim(),
+          inputMethod: String(
+            cachedMappedItem.inputMethod ||
+              imageCacheItem.inputMethod ||
+              imageCacheItem.source ||
+              "",
+          ).trim(),
+          usageMeta:
+            cachedMappedItem.usageMeta &&
+            typeof cachedMappedItem.usageMeta === "object"
+              ? { ...cachedMappedItem.usageMeta }
+              : imageCacheItem.usageMeta,
+          legacy: Object.keys(normalizedCachedImageLegacy).length
+            ? normalizedCachedImageLegacy
+            : void 0,
+        },
+        { clearPsCache: true },
+      );
     });
   } catch (ignoredError) {
     if (typeof onError === "function") onError(ignoredError);
