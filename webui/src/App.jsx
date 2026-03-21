@@ -2010,12 +2010,16 @@ function buildPendingUserImageForChatDraft(
     normalizedFileName = String(
       normalizedUserImageItem?.fileName || normalizedDisplayName || "",
     ).trim(),
+    {
+      chatCacheId: normalizedDraftChatCacheId,
+      psCacheId: normalizedDraftPsCacheId,
+    } = resolveSessionImageCacheIds(normalizedUserImageItem),
     normalizedInternalCacheId = String(
       normalizedUserImageItem?.internalCacheId ||
         normalizedUserImageItem?.itemId ||
         normalizedFileName ||
-        normalizedUserImageItem?.psCacheId ||
-        normalizedUserImageItem?.cacheId ||
+        normalizedDraftPsCacheId ||
+        normalizedDraftChatCacheId ||
         "",
     ).trim(),
     normalizedItemId = String(
@@ -2045,18 +2049,16 @@ function buildPendingUserImageForChatDraft(
         ? { ...normalizedUserImageItem.legacy }
         : void 0,
     normalizedLegacyCacheId = String(
-      normalizedUserImageItem?.cacheId ||
+      normalizedDraftChatCacheId ||
         normalizedLegacyBase?.cacheId ||
-        normalizedUserImageItem?.psCacheId ||
+        normalizedDraftPsCacheId ||
         "",
     ).trim(),
     normalizedLegacyChatCacheId = String(
-      normalizedUserImageItem?.chatCacheId || normalizedLegacyBase?.chatCacheId || "",
+      normalizedDraftChatCacheId || normalizedLegacyBase?.chatCacheId || "",
     ).trim(),
     normalizedLegacyPsCacheId = String(
-      normalizedUserImageItem?.psCacheId ||
-        normalizedLegacyBase?.psCacheId ||
-        "",
+      normalizedDraftPsCacheId || normalizedLegacyBase?.psCacheId || "",
     ).trim(),
     normalizedLegacyCacheFileName = String(
       normalizedUserImageItem?.cacheFileName ||
@@ -2068,9 +2070,11 @@ function buildPendingUserImageForChatDraft(
         normalizedLegacyBase?.cacheFilePath ||
         "",
     ).trim(),
-    normalizedPsCacheExpiresAt = Number.isFinite(normalizedUserImageItem.psCacheExpiresAt)
+    normalizedPsCacheExpiresAt = Number.isFinite(normalizedUserImageItem?.psCacheExpiresAt)
       ? Number(normalizedUserImageItem.psCacheExpiresAt)
-      : void 0,
+      : Number.isFinite(normalizedLegacyBase?.psCacheExpiresAt)
+        ? Number(normalizedLegacyBase.psCacheExpiresAt)
+        : void 0,
     normalizedLegacy = {
       ...(normalizedLegacyBase && typeof normalizedLegacyBase === "object"
         ? normalizedLegacyBase
@@ -4745,21 +4749,29 @@ function hydrateSessionImagesFromCacheRecords(
             ? uploadRegionPreviewData.legacy
             : {}),
         };
+        const {
+          chatCacheId: normalizedMessageImageChatCacheId,
+          psCacheId: normalizedMessageImagePsCacheId,
+        } = resolveSessionImageCacheIds(messageImageItem);
+        const {
+          chatCacheId: normalizedUploadPreviewChatCacheId,
+          psCacheId: normalizedUploadPreviewPsCacheId,
+        } = resolveSessionImageCacheIds(uploadRegionPreviewData);
         const normalizedLegacyCacheId = String(
-          messageImageItem?.cacheId ||
-            uploadRegionPreviewData?.cacheId ||
+          normalizedMessageImageChatCacheId ||
+            normalizedUploadPreviewChatCacheId ||
             normalizedMessageImageLegacy.cacheId ||
             "",
         ).trim();
         const normalizedLegacyChatCacheId = String(
-          messageImageItem?.chatCacheId ||
-            uploadRegionPreviewData?.chatCacheId ||
+          normalizedMessageImageChatCacheId ||
+            normalizedUploadPreviewChatCacheId ||
             normalizedMessageImageLegacy.chatCacheId ||
             "",
         ).trim();
         const normalizedLegacyPsCacheId = String(
-          messageImageItem?.psCacheId ||
-            uploadRegionPreviewData?.psCacheId ||
+          normalizedMessageImagePsCacheId ||
+            normalizedUploadPreviewPsCacheId ||
             normalizedMessageImageLegacy.psCacheId ||
             "",
         ).trim();
@@ -7169,6 +7181,16 @@ function normalizeImageItems(imageItemsInput) {
         rawImageItem,
         "image",
       );
+      const {
+        psCacheId: normalizedImageItemPsCacheId,
+      } = resolveSessionImageCacheIds(rawImageItem);
+      const normalizedImagePsCacheExpiresAt = Number.isFinite(
+        rawImageItem?.psCacheExpiresAt,
+      )
+        ? Number(rawImageItem.psCacheExpiresAt)
+        : Number.isFinite(rawLegacyImageSnapshot?.psCacheExpiresAt)
+          ? Number(rawLegacyImageSnapshot.psCacheExpiresAt)
+          : void 0;
 
       const baseImageRecord = {
         id:
@@ -7185,13 +7207,9 @@ function normalizeImageItems(imageItemsInput) {
           ? rawImageItem.slotIndex
           : void 0,
         psCacheId: String(
-          rawImageItem.psCacheId ||
-            rawLegacyImageSnapshot.psCacheId ||
-            "",
+          normalizedImageItemPsCacheId || rawLegacyImageSnapshot.psCacheId || "",
         ).trim(),
-        psCacheExpiresAt: Number.isFinite(rawImageItem.psCacheExpiresAt)
-          ? Number(rawImageItem.psCacheExpiresAt)
-          : void 0,
+        psCacheExpiresAt: normalizedImagePsCacheExpiresAt,
         width:
           Number.isFinite(rawImageWidth) && rawImageWidth > 0
             ? rawImageWidth
@@ -47888,15 +47906,19 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 psCacheEntry,
                 "",
               );
+              const {
+                chatCacheId: normalizedPsEntryChatCacheId,
+                psCacheId: normalizedPsEntryPsCacheId,
+              } = resolveSessionImageCacheIds(psCacheEntry);
               cacheRecordById.set(missingCacheId, {
                 ...(psCacheEntry || {}),
                 dataUrl: psCacheDataUrl,
                 cacheId: String(
-                    psCacheEntry?.cacheId ||
+                    normalizedPsEntryChatCacheId ||
                     "",
                 ).trim(),
                 psCacheId: String(
-                    psCacheEntry?.psCacheId ||
+                    normalizedPsEntryPsCacheId ||
                     "",
                 ).trim(),
                 internalCacheId: String(
