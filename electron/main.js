@@ -520,12 +520,24 @@ function deriveCacheIdFromFileName(fileNameInput = '') {
 }
 
 function resolveChatImageIdsFromRecord(imageRecord = {}) {
-  const rawCacheId = String(imageRecord?.cacheId || '').trim();
-  const rawPsCacheId = String(imageRecord?.psCacheId || '').trim();
+  const legacyImageRecord =
+    imageRecord?.legacy && typeof imageRecord.legacy === 'object'
+      ? imageRecord.legacy
+      : {};
+  const rawCacheId = String(
+    imageRecord?.cacheId || legacyImageRecord?.cacheId || ''
+  ).trim();
+  const rawPsCacheId = String(
+    imageRecord?.psCacheId || legacyImageRecord?.psCacheId || ''
+  ).trim();
+  const rawInternalCacheId = String(imageRecord?.internalCacheId || '').trim();
+  const rawItemId = String(imageRecord?.itemId || '').trim();
   const fileDerivedId = deriveCacheIdFromFileName(
     imageRecord?.cacheFileName
+      || legacyImageRecord?.cacheFileName
       || imageRecord?.fileName
       || imageRecord?.cacheFilePath
+      || legacyImageRecord?.cacheFilePath
       || imageRecord?.filePath
       || '',
   );
@@ -533,6 +545,10 @@ function resolveChatImageIdsFromRecord(imageRecord = {}) {
   let normalizedChatCacheId = '';
   if (rawCacheId && !isPsCacheId(rawCacheId)) {
     normalizedChatCacheId = rawCacheId;
+  } else if (rawInternalCacheId && !isPsCacheId(rawInternalCacheId)) {
+    normalizedChatCacheId = rawInternalCacheId;
+  } else if (rawItemId && !isPsCacheId(rawItemId)) {
+    normalizedChatCacheId = rawItemId;
   } else if (fileDerivedId && !isPsCacheId(fileDerivedId)) {
     normalizedChatCacheId = fileDerivedId;
   } else if (rawPsCacheId && !isPsCacheId(rawPsCacheId)) {
@@ -541,7 +557,12 @@ function resolveChatImageIdsFromRecord(imageRecord = {}) {
     normalizedChatCacheId = rawCacheId;
   }
 
-  const normalizedPsCacheId = rawPsCacheId || (isPsCacheId(rawCacheId) ? rawCacheId : '');
+  const normalizedPsCacheId =
+    rawPsCacheId
+    || (isPsCacheId(rawInternalCacheId) ? rawInternalCacheId : '')
+    || (isPsCacheId(rawItemId) ? rawItemId : '')
+    || (isPsCacheId(fileDerivedId) ? fileDerivedId : '')
+    || (isPsCacheId(rawCacheId) ? rawCacheId : '');
   return {
     chatCacheId: String(normalizedChatCacheId || '').trim(),
     psCacheId: String(normalizedPsCacheId || '').trim(),
@@ -1797,13 +1818,25 @@ function pruneDirectoryFilesByAge(dirPath, cutoffMs) {
 function collectChatImageCacheIdsFromSessions(sessions = []) {
   const ids = new Set();
   const source = Array.isArray(sessions) ? sessions : [];
-  source.forEach((session) => {
-    const messages = Array.isArray(session?.messages) ? session.messages : [];
+  const collectIdsFromMessageList = (messageListInput = []) => {
+    const messages = Array.isArray(messageListInput) ? messageListInput : [];
     messages.forEach((message) => {
       const images = Array.isArray(message?.images) ? message.images : [];
       images.forEach((image) => {
-        const cacheId = String(image?.cacheId || '').trim();
-        if (cacheId) ids.add(cacheId);
+        const { chatCacheId } = resolveChatImageIdsFromRecord(image);
+        if (chatCacheId) ids.add(chatCacheId);
+      });
+    });
+  };
+  source.forEach((session) => {
+    collectIdsFromMessageList(session?.messages);
+    const branchEntries = Array.isArray(session?.messageBranchState?.entries)
+      ? session.messageBranchState.entries
+      : [];
+    branchEntries.forEach((branchEntry) => {
+      const variants = Array.isArray(branchEntry?.variants) ? branchEntry.variants : [];
+      variants.forEach((variantItem) => {
+        collectIdsFromMessageList(variantItem?.messages);
       });
     });
   });
