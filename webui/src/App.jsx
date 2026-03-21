@@ -15661,6 +15661,146 @@ function createRunQueueTaskItemResults(totalCountInput = 1) {
   ).filter(Boolean);
 }
 
+function resolveRunQueueTaskEnqueuedAtMs(
+  taskRecordInput = {},
+  fallbackTimestampMs = 0,
+) {
+  const taskRecord =
+    taskRecordInput && typeof taskRecordInput === "object"
+      ? taskRecordInput
+      : null;
+  if (!taskRecord) return 0;
+  const timestampCandidates = [
+    taskRecord.enqueuedAtMs,
+    taskRecord.createdAtMs,
+    fallbackTimestampMs,
+  ];
+  for (const timestampCandidate of timestampCandidates) {
+    const normalizedTimestamp = Number(timestampCandidate);
+    if (Number.isFinite(normalizedTimestamp) && normalizedTimestamp > 0) {
+      return Math.floor(normalizedTimestamp);
+    }
+  }
+  return 0;
+}
+
+function resolveRunQueueTaskConfiguredTimeoutMs(taskRecordInput = {}) {
+  const taskRecord =
+    taskRecordInput && typeof taskRecordInput === "object"
+      ? taskRecordInput
+      : null;
+  if (!taskRecord) return defaultImageApiConfig.timeoutMs;
+  const taskOptions =
+      taskRecord.options && typeof taskRecord.options === "object"
+        ? taskRecord.options
+        : {},
+    taskSnapshot = resolveRunQueueTaskSnapshot(taskRecord),
+    timeoutOverrideMs =
+      Number.isFinite(Number(taskOptions.timeoutOverrideMs)) &&
+      Number(taskOptions.timeoutOverrideMs) > 0
+        ? Math.max(5e3, Math.round(Number(taskOptions.timeoutOverrideMs)))
+        : 0;
+  return (
+    timeoutOverrideMs ||
+    Math.max(
+      5e3,
+      Number(taskSnapshot?.timeoutMs) ||
+        Number(taskSnapshot?.imageApiConfig?.timeoutMs) ||
+        defaultImageApiConfig.timeoutMs,
+    )
+  );
+}
+
+function resolveRunQueueTaskDeadlineAtMs(
+  taskRecordInput = {},
+  runtimeOptions = {},
+) {
+  const taskRecord =
+    taskRecordInput && typeof taskRecordInput === "object"
+      ? taskRecordInput
+      : null;
+  if (!taskRecord) return 0;
+  const fallbackTimestampMs =
+      Number.isFinite(Number(runtimeOptions?.enqueuedAtMs)) &&
+      Number(runtimeOptions.enqueuedAtMs) > 0
+        ? Number(runtimeOptions.enqueuedAtMs)
+        : Number(runtimeOptions?.createdAtMs) || 0,
+    enqueuedAtMs = resolveRunQueueTaskEnqueuedAtMs(
+      taskRecord,
+      fallbackTimestampMs,
+    ),
+    explicitDeadlineMs = Number(runtimeOptions?.deadlineMs),
+    candidateDeadlineList = [
+      explicitDeadlineMs,
+      Number(taskRecord.deadlineAtMs),
+    ];
+  for (const deadlineCandidate of candidateDeadlineList) {
+    if (
+      Number.isFinite(deadlineCandidate) &&
+      deadlineCandidate > enqueuedAtMs &&
+      deadlineCandidate > 0
+    ) {
+      return Math.floor(deadlineCandidate);
+    }
+  }
+  const configuredTimeoutMs = resolveRunQueueTaskConfiguredTimeoutMs(taskRecord);
+  return enqueuedAtMs > 0 ? enqueuedAtMs + configuredTimeoutMs : 0;
+}
+
+function applyRunQueueTaskDeadline(
+  taskRecordInput,
+  deadlineAtMsInput,
+  fallbackTimestampMs = 0,
+) {
+  const taskRecord =
+    taskRecordInput && typeof taskRecordInput === "object"
+      ? taskRecordInput
+      : null;
+  if (!taskRecord) {
+    return {
+      enqueuedAtMs: 0,
+      deadlineAtMs: 0,
+      timeoutMs: 0,
+    };
+  }
+  const enqueuedAtMs = resolveRunQueueTaskEnqueuedAtMs(
+      taskRecord,
+      fallbackTimestampMs,
+    ),
+    deadlineAtMs =
+      Number.isFinite(Number(deadlineAtMsInput)) &&
+      Number(deadlineAtMsInput) > enqueuedAtMs
+        ? Math.floor(Number(deadlineAtMsInput))
+        : resolveRunQueueTaskDeadlineAtMs(taskRecord, {
+            enqueuedAtMs,
+          }),
+    normalizedTimeoutMs =
+      enqueuedAtMs > 0 && deadlineAtMs > enqueuedAtMs
+        ? Math.max(100, deadlineAtMs - enqueuedAtMs)
+        : resolveRunQueueTaskConfiguredTimeoutMs(taskRecord);
+  taskRecord.enqueuedAtMs = enqueuedAtMs;
+  taskRecord.deadlineAtMs =
+    enqueuedAtMs > 0 ? enqueuedAtMs + normalizedTimeoutMs : 0;
+  taskRecord.options && typeof taskRecord.options === "object" ||
+    (taskRecord.options = {});
+  taskRecord.options.timeoutOverrideMs = normalizedTimeoutMs;
+  const taskSnapshot = resolveRunQueueTaskSnapshot(taskRecord);
+  taskSnapshot &&
+    (taskRecord.taskSnapshot = normalizeRunQueueTaskSnapshot({
+      ...taskSnapshot,
+      timeoutMs: normalizedTimeoutMs,
+      imageApiConfig: {
+        ...(taskSnapshot.imageApiConfig || {}),
+        timeoutMs: normalizedTimeoutMs,
+      },
+    }));
+  return {
+    enqueuedAtMs: taskRecord.enqueuedAtMs,
+    deadlineAtMs: taskRecord.deadlineAtMs,
+    timeoutMs: normalizedTimeoutMs,
+  };
+}
+
 function normalizeRunQueueTaskSnapshot(taskSnapshotInput = {}) {
   const taskSnapshot =
     taskSnapshotInput && typeof taskSnapshotInput === "object"
@@ -15756,7 +15896,16 @@ function normalizeRunQueueHistoryTaskItem(taskItemInput) {
       return "success";
     })(),
     createdAtMs = Math.max(0, Number(taskItem.createdAtMs) || 0),
+    enqueuedAtMs = Math.max(
+      0,
+      Number(taskItem.enqueuedAtMs || taskItem.createdAtMs) || 0,
+    ),
     startedAtMs = Math.max(0, Number(taskItem.startedAtMs) || 0),
+    deadlineAtMs =
+      Number.isFinite(Number(taskItem.deadlineAtMs)) &&
+      Number(taskItem.deadlineAtMs) > enqueuedAtMs
+        ? Math.floor(Number(taskItem.deadlineAtMs))
+        : 0,
     finishedAtMs = Math.max(
       0,
       Number(taskItem.finishedAtMs || taskItem.createdAtMs) || 0,
@@ -15842,7 +15991,9 @@ function normalizeRunQueueHistoryTaskItem(taskItemInput) {
             ? "已中止"
             : "已移除",
     createdAtMs,
+    enqueuedAtMs,
     startedAtMs,
+    deadlineAtMs,
     finishedAtMs,
     promptText: String(taskItem.promptText || "").trim(),
     imageCount: Math.max(
@@ -16172,6 +16323,18 @@ function createRunQueueTaskRecord({
       1,
       Number(runTaskInputOptions?.requestedItemCount) || 1,
     ),
+    normalizedTaskTimeoutMs = Math.max(
+      5e3,
+      Number(
+        normalizedTimeoutOverrideMs ||
+          taskSnapshotInput?.timeoutMs ||
+          taskSnapshotInput?.imageApiConfig?.timeoutMs ||
+          defaultImageApiConfig.timeoutMs,
+      ) || defaultImageApiConfig.timeoutMs,
+    ),
+    normalizedEnqueuedAtMs = normalizedTimestamp,
+    normalizedDeadlineAtMs =
+      normalizedEnqueuedAtMs + normalizedTaskTimeoutMs,
     normalizedTaskSnapshot = normalizeRunQueueTaskSnapshot({
       ...(taskSnapshotInput && typeof taskSnapshotInput === "object"
         ? taskSnapshotInput
@@ -16179,10 +16342,13 @@ function createRunQueueTaskRecord({
       imageSource: normalizedSourceMode,
       generationCount: requestedItemCount,
       requestedItemCount,
+      timeoutMs: normalizedTaskTimeoutMs,
     });
   return {
     id: `imgq-${normalizedTimestamp}-${normalizedCounter}`,
     createdAtMs: normalizedTimestamp,
+    enqueuedAtMs: normalizedEnqueuedAtMs,
+    deadlineAtMs: normalizedDeadlineAtMs,
     startedAtMs: 0,
     requestedItemCount,
     completedItemCount: 0,
@@ -16197,7 +16363,7 @@ function createRunQueueTaskRecord({
       assistantMessageId: normalizedAssistantMessageId,
       sessionId: normalizedSessionId,
       images: Array.isArray(normalizedRunTaskImages) ? normalizedRunTaskImages : [],
-      timeoutOverrideMs: normalizedTimeoutOverrideMs,
+      timeoutOverrideMs: normalizedTaskTimeoutMs,
     },
   };
 }
@@ -23257,6 +23423,7 @@ function App() {
     runQueueProgressMetaRef = React.useRef(null),
     runQueueTimeoutTimerRef = React.useRef(null),
     runQueueTimeoutDeadlineRef = React.useRef(0),
+    runQueueDeadlineSweepTimerRef = React.useRef(null),
     runQueueIdCounterRef = React.useRef(0),
     runQueueToastThrottleUntilRef = React.useRef(0),
     runQueueLiveSettingsRef = React.useRef(null),
@@ -29538,7 +29705,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       ? "插件重连中；请稍候。"
       : `插件连接状态：${pluginBridgeStatus.psConnected ? "已连接" : pluginBridgeStatus.ok ? "连接中" : "连接失败"}\n点击重新连接插件桥接`;
   React.useEffect(() => {
-    if (!runQueueTaskPanelOpen || !imageRunQueueState.running) return;
+    if (
+      !runQueueTaskPanelOpen ||
+      (!imageRunQueueState.running && Number(imageRunQueueState.pending) < 1)
+    )
+      return;
     setRunQueueElapsedNowMs(Date.now());
     const runQueueElapsedTimer = setInterval(() => {
       setRunQueueElapsedNowMs(Date.now());
@@ -29546,7 +29717,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
     return () => {
       clearInterval(runQueueElapsedTimer);
     };
-  }, [runQueueTaskPanelOpen, imageRunQueueState.running]);
+  }, [runQueueTaskPanelOpen, imageRunQueueState.running, imageRunQueueState.pending]);
   React.useEffect(() => {
     if (runQueueTaskPanelOpen) return;
     (runQueueOutputHoverTimerRef.current &&
@@ -32591,6 +32762,11 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             runTaskSnapshot?.providerMode ||
             currentRunQueueSettings.imageConfig?.providerMode,
         },
+        runQueueTaskDeadlineAtMs = runQueueTaskRecord
+          ? resolveRunQueueTaskDeadlineAtMs(runQueueTaskRecord, {
+              enqueuedAtMs: resolveRunQueueTaskEnqueuedAtMs(runQueueTaskRecord),
+            })
+          : 0,
         imageApiValidationErrors = validateImageApiConfig(
           normalizedImageApiConfig,
         );
@@ -32795,7 +32971,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         ((runQueueAbortControllerRef.current = runQueueAbortController),
           (runQueueAbortReasonRef.current = ""),
           (runQueueProgressMetaRef.current = null));
-        armRunQueueTimeoutGuard(normalizedImageApiConfig.timeoutMs);
+        armRunQueueTimeoutGuard(
+          normalizedImageApiConfig.timeoutMs,
+          runQueueTaskDeadlineAtMs,
+        );
         const executeImageProviderRequestByBranch = async (
             providerExecutorBranch,
             expectedImageCount = 1,
@@ -33762,34 +33941,19 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
       const taskOptions =
           taskOptionsInput && typeof taskOptionsInput === "object"
             ? taskOptionsInput
-            : {},
-        taskSnapshot = resolveRunQueueTaskSnapshot(taskOptionsInput),
-        timeoutOverrideMs =
-          Number.isFinite(Number(taskOptions.timeoutOverrideMs)) &&
-          Number(taskOptions.timeoutOverrideMs) > 0
-            ? Math.max(5e3, Math.round(Number(taskOptions.timeoutOverrideMs)))
-            : 0,
-        fallbackTimeoutMs = Math.max(
-          5e3,
-          Number(taskSnapshot?.timeoutMs) ||
-            Number(taskSnapshot?.imageApiConfig?.timeoutMs) ||
-            Number(imageConfig?.timeoutMs) ||
-            defaultImageApiConfig.timeoutMs,
+            : null,
+        enqueuedAtMs = resolveRunQueueTaskEnqueuedAtMs(
+          taskOptions,
+          runtimeOptions?.enqueuedAtMs || runtimeOptions?.createdAtMs || 0,
         ),
-        startedAtMs =
-          Number.isFinite(Number(runtimeOptions?.startedAtMs)) &&
-          Number(runtimeOptions.startedAtMs) > 0
-            ? Math.floor(Number(runtimeOptions.startedAtMs))
-            : 0,
-        deadlineMs =
-          Number.isFinite(Number(runtimeOptions?.deadlineMs)) &&
-          Number(runtimeOptions.deadlineMs) > startedAtMs
-            ? Math.floor(Number(runtimeOptions.deadlineMs))
-            : 0;
-      if (startedAtMs > 0 && deadlineMs > startedAtMs) {
-        return Math.max(5e3, deadlineMs - startedAtMs);
+        deadlineMs = resolveRunQueueTaskDeadlineAtMs(taskOptions, {
+          enqueuedAtMs,
+          deadlineMs: runtimeOptions?.deadlineMs,
+        });
+      if (enqueuedAtMs > 0 && deadlineMs > enqueuedAtMs) {
+        return Math.max(100, deadlineMs - enqueuedAtMs);
       }
-      return timeoutOverrideMs || fallbackTimeoutMs;
+      return resolveRunQueueTaskConfiguredTimeoutMs(taskOptions || {});
     },
     appendRunQueueHistoryRecord = (historyTaskRecordInput) => {
       const normalizedHistoryTaskRecord = normalizeRunQueueHistoryTaskItem(
@@ -33896,9 +34060,17 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           ).trim() || "尺寸未设",
         historyRatioLabel =
           String(ratioLabelInput || taskSnapshot?.ratioLabel || "").trim() || "比例未设",
+        historyEnqueuedAtMs = resolveRunQueueTaskEnqueuedAtMs(taskRecord),
+        historyDeadlineAtMs = resolveRunQueueTaskDeadlineAtMs(taskRecord, {
+          enqueuedAtMs: historyEnqueuedAtMs,
+        }),
         historyTimeoutMs = Math.max(
           0,
-          Number(timeoutMsInput) || resolveRunQueueTaskTimeoutMs(taskRecord),
+          Number(timeoutMsInput) ||
+            resolveRunQueueTaskTimeoutMs(taskRecord, {
+              enqueuedAtMs: historyEnqueuedAtMs,
+              deadlineMs: historyDeadlineAtMs,
+            }),
         ),
         normalizedHistoryTaskSnapshot = normalizeRunQueueTaskSnapshot({
           ...(taskSnapshot && typeof taskSnapshot === "object" ? taskSnapshot : {}),
@@ -33924,7 +34096,9 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         id: normalizedTaskId,
         status: statusInput,
         createdAtMs: Number(taskRecord.createdAtMs) || Date.now(),
+        enqueuedAtMs: historyEnqueuedAtMs,
         startedAtMs: Number(taskRecord.startedAtMs) || 0,
+        deadlineAtMs: historyDeadlineAtMs,
         finishedAtMs: Date.now(),
         promptText: String(taskOptions.promptText || "").trim(),
         imageCount: normalizedSourceImages.length || historyReturnedImages.length,
@@ -34029,17 +34203,22 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                   )
                   .filter(Boolean)
               : [],
+            taskEnqueuedAtMs = resolveRunQueueTaskEnqueuedAtMs(taskRecord),
             taskStartedAtMs = Number(taskRecord?.startedAtMs),
             normalizedTaskStartedAtMs =
               Number.isFinite(taskStartedAtMs) && taskStartedAtMs > 0
                 ? Math.floor(taskStartedAtMs)
                 : 0,
-            taskTimeoutMs = resolveRunQueueTaskTimeoutMs(taskRecord, {
-              startedAtMs: normalizedTaskStartedAtMs,
+            taskDeadlineAtMs = resolveRunQueueTaskDeadlineAtMs(taskRecord, {
+              enqueuedAtMs: taskEnqueuedAtMs,
               deadlineMs:
                 phase === "running"
                   ? Number(runQueueTimeoutDeadlineRef.current)
-                  : 0,
+                  : Number(taskRecord?.deadlineAtMs) || 0,
+            }),
+            taskTimeoutMs = resolveRunQueueTaskTimeoutMs(taskRecord, {
+              enqueuedAtMs: taskEnqueuedAtMs,
+              deadlineMs: taskDeadlineAtMs,
             }),
             taskProviderLabel =
               String(taskSnapshot?.providerLabel || "").trim() ||
@@ -34100,8 +34279,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
             thumbDataUrl: taskThumbDataUrl,
             refThumbList: taskRefThumbRenderList,
             sourceImageRefs: taskSourceImageRefs,
+            enqueuedAtMs: taskEnqueuedAtMs,
             timeoutMs: taskTimeoutMs,
             startedAtMs: normalizedTaskStartedAtMs,
+            deadlineAtMs: taskDeadlineAtMs,
             canRerun: !!normalizedPromptText,
             requestedItemCount: taskCount,
             completedItemCount: taskCompletedCount,
@@ -34133,12 +34314,157 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         pending: pendingQueueTaskCount,
       });
       setRunQueueTaskListState(buildRunQueueTaskListSnapshot());
+      scheduleRunQueueDeadlineSweep();
     },
     clearRunQueueTimeoutGuard = () => {
       const runQueueTimeoutHandle = runQueueTimeoutTimerRef.current;
       runQueueTimeoutHandle != null && clearTimeout(runQueueTimeoutHandle);
       runQueueTimeoutTimerRef.current = null;
       runQueueTimeoutDeadlineRef.current = 0;
+    },
+    clearRunQueueDeadlineSweep = () => {
+      const runQueueDeadlineSweepHandle = runQueueDeadlineSweepTimerRef.current;
+      runQueueDeadlineSweepHandle != null &&
+        clearTimeout(runQueueDeadlineSweepHandle);
+      runQueueDeadlineSweepTimerRef.current = null;
+    },
+    expirePendingRunQueueTaskRecord = (
+      expiredTaskRecordInput,
+      expiredAtMsInput = Date.now(),
+      resultMessageInput = "排队超时，未开始执行。",
+    ) => {
+      const expiredTaskRecord =
+        expiredTaskRecordInput && typeof expiredTaskRecordInput === "object"
+          ? expiredTaskRecordInput
+          : null;
+      if (!expiredTaskRecord) return false;
+      const expiredTaskSnapshot = resolveRunQueueTaskSnapshot(expiredTaskRecord),
+        expiredAtMs = Math.max(0, Number(expiredAtMsInput) || Date.now());
+      expiredTaskRecord.deadlineAtMs =
+        Number.isFinite(Number(expiredTaskRecord.deadlineAtMs)) &&
+        Number(expiredTaskRecord.deadlineAtMs) > 0
+          ? Math.floor(Number(expiredTaskRecord.deadlineAtMs))
+          : expiredAtMs;
+      appendRunQueueHistoryRecord(
+        buildRunQueueHistoryRecord({
+          taskRecordInput: expiredTaskRecord,
+          statusInput: "failed",
+          sourceLabelInput:
+            String(expiredTaskSnapshot?.sourceLabel || "").trim() ||
+            (String(
+              expiredTaskSnapshot?.imageSource ||
+                expiredTaskRecord?.options?.imageSource ||
+                "upload",
+            ).trim() === "assistant-prev-user"
+              ? "对话图片"
+              : "上传图片"),
+          providerLabelInput:
+            String(expiredTaskSnapshot?.providerLabel || "").trim() ||
+            (String(expiredTaskSnapshot?.providerKey || "").trim()
+              ? resolveProviderSiteLabel(
+                  String(expiredTaskSnapshot?.providerKey || "").trim(),
+                  imageProviderPresets,
+                  String(expiredTaskSnapshot?.providerKey || "").trim() ||
+                    "服务商未设",
+                )
+              : "服务商未设"),
+          modelLabelInput:
+            String(expiredTaskSnapshot?.modelLabel || "").trim() || "模型未设",
+          sizeLabelInput:
+            String(
+              expiredTaskSnapshot?.sizeLabel ||
+                expiredTaskSnapshot?.sizeText ||
+                "",
+            ).trim() || "尺寸未设",
+          ratioLabelInput:
+            String(expiredTaskSnapshot?.ratioLabel || "").trim() || "比例未设",
+          generationCountInput: Math.max(
+            1,
+            Number(expiredTaskRecord?.requestedItemCount) ||
+              Number(expiredTaskSnapshot?.generationCount) ||
+              1,
+          ),
+          timeoutMsInput: resolveRunQueueTaskTimeoutMs(expiredTaskRecord, {
+            enqueuedAtMs: resolveRunQueueTaskEnqueuedAtMs(expiredTaskRecord),
+            deadlineMs: Number(expiredTaskRecord?.deadlineAtMs) || 0,
+          }),
+          resultMessageInput,
+        }),
+      );
+      clearRunQueueTaskOptionsInPlace(expiredTaskRecord);
+      return true;
+    },
+    flushExpiredPendingRunQueueTasks = (nowTimestampInput = Date.now()) => {
+      if (!Array.isArray(runQueueItemsRef.current) || !runQueueItemsRef.current.length)
+        return 0;
+      const nowTimestamp = Math.max(0, Number(nowTimestampInput) || Date.now()),
+        nextPendingTaskRecords = [],
+        expiredPendingTaskRecords = [];
+      runQueueItemsRef.current.forEach((queuedTaskRecord) => {
+        const queuedTaskDeadlineAtMs = resolveRunQueueTaskDeadlineAtMs(
+          queuedTaskRecord,
+        );
+        if (queuedTaskDeadlineAtMs > 0 && queuedTaskDeadlineAtMs <= nowTimestamp) {
+          expiredPendingTaskRecords.push(queuedTaskRecord);
+          return;
+        }
+        nextPendingTaskRecords.push(queuedTaskRecord);
+      });
+      if (!expiredPendingTaskRecords.length) return 0;
+      runQueueItemsRef.current = nextPendingTaskRecords;
+      expiredPendingTaskRecords.forEach((expiredPendingTaskRecord) => {
+        expirePendingRunQueueTaskRecord(
+          expiredPendingTaskRecord,
+          nowTimestamp,
+          "排队超时，未开始执行。",
+        );
+      });
+      syncRunQueueBadgeState();
+      appendConsoleLogEntry(
+        "warn",
+        expiredPendingTaskRecords.length === 1
+          ? "有 1 个排队任务已因超时移出。"
+          : `有 ${expiredPendingTaskRecords.length} 个排队任务已因超时移出。`,
+        "api",
+      );
+      updateMiniStatus(
+        "任务超时",
+        "warn",
+        expiredPendingTaskRecords.length === 1
+          ? "有排队任务已超时移出。"
+          : `有 ${expiredPendingTaskRecords.length} 个排队任务已超时移出。`,
+        "run",
+      );
+      !runQueueLoopActiveRef.current &&
+        nextPendingTaskRecords.length > 0 &&
+        scheduleRunQueueLoop();
+      return expiredPendingTaskRecords.length;
+    },
+    scheduleRunQueueDeadlineSweep = () => {
+      clearRunQueueDeadlineSweep();
+      if (!Array.isArray(runQueueItemsRef.current) || !runQueueItemsRef.current.length)
+        return 0;
+      const nowTimestamp = Date.now();
+      let nextPendingDeadlineAtMs = 0;
+      runQueueItemsRef.current.forEach((queuedTaskRecord) => {
+        const queuedTaskDeadlineAtMs = resolveRunQueueTaskDeadlineAtMs(
+          queuedTaskRecord,
+        );
+        if (queuedTaskDeadlineAtMs < 1) return;
+        (!nextPendingDeadlineAtMs ||
+          queuedTaskDeadlineAtMs < nextPendingDeadlineAtMs) &&
+          (nextPendingDeadlineAtMs = queuedTaskDeadlineAtMs);
+      });
+      if (nextPendingDeadlineAtMs < 1) return 0;
+      if (nextPendingDeadlineAtMs <= nowTimestamp) {
+        flushExpiredPendingRunQueueTasks(nowTimestamp);
+        return nextPendingDeadlineAtMs;
+      }
+      runQueueDeadlineSweepTimerRef.current = setTimeout(() => {
+        runQueueDeadlineSweepTimerRef.current = null;
+        flushExpiredPendingRunQueueTasks(Date.now());
+      }, Math.max(100, nextPendingDeadlineAtMs - nowTimestamp));
+      return nextPendingDeadlineAtMs;
     },
     armRunQueueTimeoutGuard = (timeoutMsInput, deadlineMsInput = 0) => {
       const normalizedTimeoutMs = Math.max(
@@ -34483,10 +34809,46 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         runQueueLoopActiveRef.current = true;
         try {
           for (; runQueueItemsRef.current.length > 0; ) {
+            flushExpiredPendingRunQueueTasks(Date.now());
+            if (!runQueueItemsRef.current.length) break;
             const nextRunQueueTaskItem =
               runQueueItemsRef.current.shift();
             if ((syncRunQueueBadgeState(), !!nextRunQueueTaskItem)) {
-              nextRunQueueTaskItem.startedAtMs = Date.now();
+              const nextTaskDispatchAtMs = Date.now(),
+                nextTaskEnqueuedAtMs = resolveRunQueueTaskEnqueuedAtMs(
+                  nextRunQueueTaskItem,
+                  nextTaskDispatchAtMs,
+                ),
+                nextTaskDeadlineAtMs = resolveRunQueueTaskDeadlineAtMs(
+                  nextRunQueueTaskItem,
+                  {
+                    enqueuedAtMs: nextTaskEnqueuedAtMs,
+                  },
+                );
+              if (
+                nextTaskDeadlineAtMs > 0 &&
+                nextTaskDeadlineAtMs <= nextTaskDispatchAtMs
+              ) {
+                expirePendingRunQueueTaskRecord(
+                  nextRunQueueTaskItem,
+                  nextTaskDispatchAtMs,
+                  "排队超时，未开始执行。",
+                );
+                syncRunQueueBadgeState();
+                continue;
+              }
+              nextRunQueueTaskItem.enqueuedAtMs =
+                nextTaskEnqueuedAtMs || nextTaskDispatchAtMs;
+              nextRunQueueTaskItem.deadlineAtMs = nextTaskDeadlineAtMs;
+              nextRunQueueTaskItem.startedAtMs = nextTaskDispatchAtMs;
+              nextRunQueueTaskItem.options &&
+                typeof nextRunQueueTaskItem.options === "object" &&
+                (nextRunQueueTaskItem.options.timeoutOverrideMs = Math.max(
+                  100,
+                  nextTaskDeadlineAtMs > nextTaskDispatchAtMs
+                    ? nextTaskDeadlineAtMs - nextTaskDispatchAtMs
+                    : resolveRunQueueTaskConfiguredTimeoutMs(nextRunQueueTaskItem),
+                ));
               ((runQueueCurrentTaskRef.current =
                 nextRunQueueTaskItem),
                 syncRunQueueBadgeState());
@@ -34630,7 +34992,10 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                     timeoutMsInput: resolveRunQueueTaskTimeoutMs(
                       nextRunQueueTaskItem,
                       {
-                        startedAtMs: Number(nextRunQueueTaskItem?.startedAtMs) || 0,
+                        enqueuedAtMs:
+                          Number(nextRunQueueTaskItem?.enqueuedAtMs) || 0,
+                        deadlineMs:
+                          Number(nextRunQueueTaskItem?.deadlineAtMs) || 0,
                       },
                     ),
                     resultMessageInput:
@@ -34652,6 +35017,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           }
         } finally {
           (clearRunQueueTimeoutGuard(),
+            clearRunQueueDeadlineSweep(),
             (runQueueLoopActiveRef.current = false),
             (runQueueLoopScheduledRef.current = false),
             (runQueueCurrentTaskRef.current = null),
@@ -35008,19 +35374,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         1e3,
         Math.round(Number(extendTimeoutMsInput) || CONST_RUN_QUEUE_TIMEOUT_EXTEND_MS),
       );
-      const ensureTaskTimeoutOverride = (taskRecordInput, timeoutMsInput) => {
-        if (!taskRecordInput || typeof taskRecordInput !== "object") return 0;
-        const taskRecord = taskRecordInput;
-        taskRecord.options && typeof taskRecord.options === "object" ||
-          (taskRecord.options = {});
-        const taskOptions = taskRecord.options;
-        const normalizedTimeoutMs = Math.max(
-          5e3,
-          Math.round(Number(timeoutMsInput) || defaultImageApiConfig.timeoutMs),
-        );
-        taskOptions.timeoutOverrideMs = normalizedTimeoutMs;
-        return normalizedTimeoutMs;
-      };
       const runningTaskRecord =
         runQueueCurrentTaskRef.current &&
         typeof runQueueCurrentTaskRef.current === "object"
@@ -35031,32 +35384,35 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
         String(runningTaskRecord.id || "").trim() === normalizedRunQueueTaskId
       ) {
         const nowTimestamp = Date.now(),
-          runningTaskStartedAtMs =
-            Number.isFinite(Number(runningTaskRecord.startedAtMs)) &&
-            Number(runningTaskRecord.startedAtMs) > 0
-              ? Number(runningTaskRecord.startedAtMs)
-              : nowTimestamp,
-          currentRunningTimeoutMs = Math.max(
-            5e3,
-            Number(runningTaskRecord?.options?.timeoutOverrideMs) ||
-              Number(imageConfig?.timeoutMs) ||
-              defaultImageApiConfig.timeoutMs,
-          ),
           currentDeadlineMs =
-            Number.isFinite(Number(runQueueTimeoutDeadlineRef.current)) &&
-            Number(runQueueTimeoutDeadlineRef.current) > nowTimestamp
-              ? Number(runQueueTimeoutDeadlineRef.current)
-              : runningTaskStartedAtMs + currentRunningTimeoutMs,
-          nextDeadlineMs = currentDeadlineMs + normalizedExtendTimeoutMs,
-          nextRunningTimeoutMs = ensureTaskTimeoutOverride(
+            resolveRunQueueTaskDeadlineAtMs(runningTaskRecord, {
+              enqueuedAtMs: resolveRunQueueTaskEnqueuedAtMs(
+                runningTaskRecord,
+                nowTimestamp,
+              ),
+              deadlineMs:
+                Number(runQueueTimeoutDeadlineRef.current) > 0
+                  ? Number(runQueueTimeoutDeadlineRef.current)
+                  : 0,
+            }) || nowTimestamp,
+          nextDeadlineMs =
+            Math.max(currentDeadlineMs, nowTimestamp) + normalizedExtendTimeoutMs,
+          nextRunningTiming = applyRunQueueTaskDeadline(
             runningTaskRecord,
-            Math.max(5e3, nextDeadlineMs - runningTaskStartedAtMs),
+            nextDeadlineMs,
+            nowTimestamp,
           );
-        armRunQueueTimeoutGuard(nextRunningTimeoutMs, nextDeadlineMs);
+        runningTaskRecord.options &&
+          typeof runningTaskRecord.options === "object" &&
+          (runningTaskRecord.options.timeoutOverrideMs = Math.max(
+            100,
+            nextDeadlineMs - nowTimestamp,
+          ));
+        armRunQueueTimeoutGuard(nextRunningTiming.timeoutMs, nextDeadlineMs);
         syncRunQueueBadgeState();
         appendConsoleLogEntry(
           "info",
-          `已延长当前任务超时 +${Math.round(normalizedExtendTimeoutMs / 1e3)}s（总 ${Math.round(nextRunningTimeoutMs / 1e3)}s）`,
+          `已延长当前任务超时 +${Math.round(normalizedExtendTimeoutMs / 1e3)}s（总 ${Math.round(nextRunningTiming.timeoutMs / 1e3)}s）`,
           "api",
         );
         return true;
@@ -35068,20 +35424,24 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
           String(queuedTaskRecord?.id || "").trim() === normalizedRunQueueTaskId,
       );
       if (!pendingTaskRecord) return false;
-      const currentPendingTimeoutMs = Math.max(
-          5e3,
-          Number(pendingTaskRecord?.options?.timeoutOverrideMs) ||
-            Number(imageConfig?.timeoutMs) ||
-            defaultImageApiConfig.timeoutMs,
-        ),
-        nextPendingTimeoutMs = ensureTaskTimeoutOverride(
+      const nowTimestamp = Date.now(),
+        currentPendingDeadlineMs =
+          resolveRunQueueTaskDeadlineAtMs(pendingTaskRecord, {
+            enqueuedAtMs: resolveRunQueueTaskEnqueuedAtMs(
+              pendingTaskRecord,
+              nowTimestamp,
+            ),
+          }) || nowTimestamp,
+        nextPendingTiming = applyRunQueueTaskDeadline(
           pendingTaskRecord,
-          currentPendingTimeoutMs + normalizedExtendTimeoutMs,
+          Math.max(currentPendingDeadlineMs, nowTimestamp) +
+            normalizedExtendTimeoutMs,
+          nowTimestamp,
         );
       syncRunQueueBadgeState();
       appendConsoleLogEntry(
         "info",
-        `已延长排队任务超时 +${Math.round(normalizedExtendTimeoutMs / 1e3)}s（总 ${Math.round(nextPendingTimeoutMs / 1e3)}s）`,
+        `已延长排队任务超时 +${Math.round(normalizedExtendTimeoutMs / 1e3)}s（总 ${Math.round(nextPendingTiming.timeoutMs / 1e3)}s）`,
         "api",
       );
       return true;
@@ -53882,17 +54242,36 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                 "",
             ).trim(),
             taskTimeoutMs = Math.max(
-              5e3,
+              100,
               Number(runQueueTaskItem.timeoutMs) || 3e4,
             ),
+            taskEnqueuedAtMs =
+              Number.isFinite(Number(runQueueTaskItem.enqueuedAtMs)) &&
+              Number(runQueueTaskItem.enqueuedAtMs) > 0
+                ? Number(runQueueTaskItem.enqueuedAtMs)
+                : Number.isFinite(Number(runQueueTaskItem.createdAtMs)) &&
+                    Number(runQueueTaskItem.createdAtMs) > 0
+                  ? Number(runQueueTaskItem.createdAtMs)
+                  : 0,
             taskStartedAtMs =
               Number.isFinite(Number(runQueueTaskItem.startedAtMs)) &&
               Number(runQueueTaskItem.startedAtMs) > 0
                 ? Number(runQueueTaskItem.startedAtMs)
                 : 0,
+            taskDeadlineAtMs =
+              Number.isFinite(Number(runQueueTaskItem.deadlineAtMs)) &&
+              Number(runQueueTaskItem.deadlineAtMs) > taskEnqueuedAtMs
+                ? Number(runQueueTaskItem.deadlineAtMs)
+                : 0,
+            taskRemainingMs =
+              !isHistoryTask && taskDeadlineAtMs > taskEnqueuedAtMs
+                ? Math.max(0, taskDeadlineAtMs - runQueueElapsedNowMs)
+                : 0,
             taskElapsedMs =
-              isRunningTask && taskStartedAtMs > 0
-                ? Math.max(0, runQueueElapsedNowMs - taskStartedAtMs)
+              !isHistoryTask && taskDeadlineAtMs > taskEnqueuedAtMs
+                ? Math.max(0, taskTimeoutMs - taskRemainingMs)
+                : isRunningTask && taskStartedAtMs > 0
+                  ? Math.max(0, runQueueElapsedNowMs - taskStartedAtMs)
                 : 0,
             taskElapsedText = isHistoryTask
               ? formatConsoleLogTime(
@@ -53900,11 +54279,16 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                     Number(runQueueTaskItem.createdAtMs) ||
                     Date.now(),
                 )
-              : isRunningTask
-                ? formatRunQueueElapsedText(taskElapsedMs)
-                : "排队中",
-            taskRemainingRatio = isRunningTask
-              ? Math.max(0, 1 - taskElapsedMs / taskTimeoutMs)
+              : taskDeadlineAtMs > taskEnqueuedAtMs
+                ? taskRemainingMs <= 0
+                  ? "已超时"
+                  : `剩余 ${formatRunQueueElapsedText(taskRemainingMs)}`
+                : isRunningTask
+                  ? formatRunQueueElapsedText(taskElapsedMs)
+                  : "排队中",
+            taskRemainingRatio =
+              !isHistoryTask && taskDeadlineAtMs > taskEnqueuedAtMs
+                ? Math.max(0, Math.min(1, taskRemainingMs / taskTimeoutMs))
               : 0,
             taskProgressWidthPercent = Math.max(
               0,
@@ -53957,7 +54341,7 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                       {taskElapsedText}
                     </div>
                   </div>
-                  {isRunningTask ? (
+                  {!isHistoryTask ? (
                     <div className="run-queue-task-progress-track">
                       <div
                         className={runQueueTaskProgressClassName}
@@ -53965,12 +54349,6 @@ ${isErrorLog ? "错误原因" : "原因"}: ${normalizedErrorMessage}`
                           width: `${taskProgressWidthPercent}%`,
                         }}
                       />
-                    </div>
-                  ) : isPendingTask ? (
-                    <div className="run-queue-task-history-status-row">
-                      <span className="run-queue-task-history-status is-pending">
-                        排队中
-                      </span>
                     </div>
                   ) : (
                     <div className="run-queue-task-history-status-row">
