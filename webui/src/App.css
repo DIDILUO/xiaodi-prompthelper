@@ -1686,6 +1686,12 @@ select {
   box-shadow: none;
   filter: none !important;
 }
+.square-btn.gray.run-queue-task-btn:hover {
+  background: var(--color-bg-border);
+}
+.square-btn.gray.run-queue-task-btn:active {
+  background: var(--color-bg-layer);
+}
 .run-queue-task-btn-icon-wrap {
   position: relative;
   width: 16px;
